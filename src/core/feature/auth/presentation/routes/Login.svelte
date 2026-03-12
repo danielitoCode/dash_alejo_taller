@@ -46,13 +46,11 @@
         }
     }
 
-    function getReturnUrl(): string {
-        return new URL(import.meta.env.BASE_URL, window.location.origin).toString();
-    }
-
     let googleFrameOpen = false;
     let registerFrameOpen = false;
     let googleProfile: GoogleIdTokenProfile | null = null;
+    let googleAuthSrc = "";
+    let googleRegisterSrc = "";
 
     function getGoogleAuthSrc(): string {
         const clientId = ENV.googleClientId;
@@ -89,6 +87,7 @@
             }
             navController.navigate("home", { id: userId });
         } catch {
+            googleRegisterSrc = getGoogleRegisterSrc(profile);
             registerFrameOpen = true;
         } finally {
             loading = false;
@@ -99,6 +98,7 @@
         if (loading) return;
         error = null;
         try {
+            googleAuthSrc = getGoogleAuthSrc();
             googleFrameOpen = true;
         } catch (e) {
             error = e instanceof Error ? e.message : "No se pudo iniciar sesión con Google";
@@ -190,7 +190,7 @@
     open={googleFrameOpen}
     title="Google"
     ariaLabel="Autenticación con Google"
-    src={googleFrameOpen ? getGoogleAuthSrc() : ""}
+    src={googleFrameOpen ? googleAuthSrc : ""}
     on:close={() => (googleFrameOpen = false)}
     on:frameMessage={(event) => {
         const data = (event as CustomEvent<{ data: any }>).detail.data;
@@ -210,7 +210,7 @@
     open={registerFrameOpen}
     title="Crear cuenta"
     ariaLabel="Registro con Google"
-    src={registerFrameOpen && googleProfile ? getGoogleRegisterSrc(googleProfile) : ""}
+    src={registerFrameOpen ? googleRegisterSrc : ""}
     on:close={() => (registerFrameOpen = false)}
     on:frameMessage={(event) => {
         const data = (event as CustomEvent<{ data: any }>).detail.data;

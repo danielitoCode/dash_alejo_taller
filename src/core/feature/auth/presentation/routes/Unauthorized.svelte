@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import type { NavController } from "../../../../../lib/navigation/NavController";
+    import { authContainer } from "../../di/auth.container";
 
     export let navController: NavController;
     export let message = "Tu usuario no está autorizado para acceder a la plataforma.";
@@ -8,6 +9,8 @@
     let seconds = 5;
 
     onMount(() => {
+        authContainer.useCases.sessions.closeSession.execute().catch(() => {});
+
         const id = window.setInterval(() => {
             seconds -= 1;
             if (seconds <= 0) {
@@ -104,4 +107,3 @@
         box-shadow: 0 10px 20px color-mix(in srgb, var(--md-sys-color-primary) 35%, transparent);
     }
 </style>
-

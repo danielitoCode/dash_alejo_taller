@@ -9,6 +9,14 @@ export class UserNetRepositoryImpl implements UserNetRepository {
 
     async getCurrentUser(): Promise<Partial<UserDTO>> {
         const current = await this.account.get();
+        const labels = (current as any)?.labels;
+
+        const roleFromLabels =
+            Array.isArray(labels) && labels.length
+                ? labels.includes("admin")
+                    ? "admin"
+                    : (typeof labels[0] === "string" ? labels[0] : null)
+                : null;
 
         return {
             id: current.$id,
@@ -16,7 +24,7 @@ export class UserNetRepositoryImpl implements UserNetRepository {
             email: current.email,
             phone: current.phone ?? "",
             photo_url: typeof current.prefs?.photo_url === "string" ? current.prefs.photo_url : "",
-            role: typeof current.prefs?.role === "string" ? current.prefs.role : null,
+            role: roleFromLabels ?? (typeof current.prefs?.role === "string" ? current.prefs.role : null),
             sub: typeof current.prefs?.sub === "string" ? current.prefs.sub : "",
             verification: current.emailVerification,
         };
