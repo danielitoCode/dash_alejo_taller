@@ -1,19 +1,23 @@
 
-import type {ProductDTO} from "../dto/ProductDTO";
-import {type Databases, ID, Query} from "appwrite";
-import type {ProductWriteDTO} from "../mapper/Mappers";
+import type { ProductDTO } from "../dto/ProductDTO";
+import { type Databases, ID, Query } from "appwrite";
+import type { ProductWriteDTO } from "../mapper/Mappers";
+import { ENV } from "../../../../infrastructure/env";
 
-const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID
-const COLLECTION_ID = "product"
+const COLLECTION_ID = "product";
 
 class ProductNetRepository {
-    constructor(private readonly databases: Databases ) {
+    constructor(private readonly databases: Databases) {}
+
+    private get databaseId(): string {
+        const id = ENV.databaseId;
+        if (!id) throw new Error("Falta configurar VITE_APPWRITE_DATABASE_ID");
+        return id;
     }
 
     async getAll(): Promise<ProductDTO[]> {
-        console.log("Sincronizando datos desde el repositorio de productos");
         const response = await this.databases.listDocuments<ProductDTO>(
-            DATABASE_ID,
+            this.databaseId,
             COLLECTION_ID
         )
 
@@ -22,7 +26,7 @@ class ProductNetRepository {
 
     async getById(id: string): Promise<ProductDTO> {
         return await this.databases.getDocument<ProductDTO>(
-            DATABASE_ID,
+            this.databaseId,
             COLLECTION_ID,
             id
         )
@@ -30,7 +34,7 @@ class ProductNetRepository {
 
     async update(id: string, data: Partial<ProductWriteDTO>): Promise<ProductDTO> {
         return await this.databases.updateDocument<ProductDTO>(
-            DATABASE_ID,
+            this.databaseId,
             COLLECTION_ID,
             id,
             data
@@ -39,7 +43,7 @@ class ProductNetRepository {
 
     async getByCategory(categoryId: string): Promise<ProductDTO[]> {
         const response = await this.databases.listDocuments<ProductDTO>(
-            DATABASE_ID,
+            this.databaseId,
             COLLECTION_ID,
             [Query.equal("categoryId", categoryId)]
         )
@@ -49,7 +53,7 @@ class ProductNetRepository {
 
     async create(product: ProductWriteDTO): Promise<ProductDTO> {
         return await this.databases.createDocument<ProductDTO>(
-            DATABASE_ID,
+            this.databaseId,
             COLLECTION_ID,
             product.$id || ID.unique(),
             product as ProductDTO
@@ -58,7 +62,7 @@ class ProductNetRepository {
 
     async delete(id: string): Promise<void> {
         await this.databases.deleteDocument(
-            DATABASE_ID,
+            this.databaseId,
             COLLECTION_ID,
             id
         )

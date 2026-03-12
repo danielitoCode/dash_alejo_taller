@@ -5,6 +5,8 @@
     import FrameModal from "../components/FrameModal.svelte";
     import { ENV } from "../../../../infrastructure/env";
     import { parseGoogleIdToken, type GoogleIdTokenProfile } from "../util/google-id-token";
+    import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
+    import { Chrome, LogIn, UserPlus } from "lucide-svelte";
 
     export let navController: NavController;
 
@@ -252,11 +254,13 @@
             {/if}
 
             <button class="btn primary" on:click={register} disabled={!canSubmit}>
+                <Icon icon={UserPlus} size={18} className="btn-ico" ariaLabel="Registrarse" />
                 {#if loading}Registrando...{:else}Registrarse{/if}
             </button>
 
             <button class="btn elevated" on:click={continueWithGoogle} disabled={loading}>
-                <span>Google</span>
+                <Icon icon={Chrome} size={18} className="btn-ico" ariaLabel="Google" />
+                <span>Continuar con Google</span>
                 <img src="/icon/googleIcon.png" alt="Google icon" class="g-badge" />
             </button>
 
@@ -458,6 +462,10 @@
         align-items: center;
         justify-content: center;
         gap: 10px;
+    }
+
+    .btn-ico {
+        opacity: 0.95;
     }
 
     .btn:disabled {

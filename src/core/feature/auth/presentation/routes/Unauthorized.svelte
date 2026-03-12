@@ -3,6 +3,8 @@
     import type { NavController } from "../../../../../lib/navigation/NavController";
     import { authContainer } from "../../di/auth.container";
     import type { NavBackStackEntry } from "../../../../../lib/navigation/NavBackStackEntry";
+    import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
+    import { ArrowLeft, ShieldAlert } from "lucide-svelte";
 
     export let navController: NavController;
     export let navBackStackEntry: NavBackStackEntry<{ message?: string }> | undefined = undefined;
@@ -28,14 +30,25 @@
 
 <section class="unauth-screen" aria-label="Acceso no autorizado">
     <div class="card">
-        <img src="/alejoicon_clean.svg" alt="Logo" class="logo" />
+        <div class="top">
+            <img src="/alejoicon_clean.svg" alt="Logo" class="logo" />
+            <div class="badge" aria-hidden="true">
+                <Icon icon={ShieldAlert} size={20} className="badge-ico" />
+            </div>
+        </div>
+
         <h1>Acceso restringido</h1>
         <p>{finalMessage}</p>
-        <div class="hint">
+
+        <div class="hint" aria-live="polite">
             <span>Volviendo al inicio de sesión en</span>
             <strong>{seconds}s</strong>
         </div>
-        <button class="btn" on:click={() => navController.navigate("login")}>Volver ahora</button>
+
+        <button class="btn" on:click={() => navController.navigate("login")}>
+            <Icon icon={ArrowLeft} size={18} className="btn-ico" ariaLabel="Volver" />
+            Volver ahora
+        </button>
     </div>
 </section>
 
@@ -47,7 +60,11 @@
         place-items: center;
         padding: 16px;
         background:
-            radial-gradient(circle at 50% 12%, color-mix(in srgb, var(--md-sys-color-primary) 22%, transparent), transparent 60%),
+            radial-gradient(
+                circle at 50% 12%,
+                color-mix(in srgb, var(--md-sys-color-primary) 22%, transparent),
+                transparent 60%
+            ),
             var(--md-sys-color-background);
         color: var(--md-sys-color-on-background);
     }
@@ -65,10 +82,34 @@
         box-shadow: 0 18px 44px color-mix(in srgb, black 22%, transparent);
     }
 
+    .top {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+
     .logo {
-        width: 56px;
-        height: 56px;
+        width: 54px;
+        height: 54px;
         object-fit: contain;
+        opacity: 0.95;
+    }
+
+    .badge {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        background: color-mix(in srgb, var(--md-sys-color-error-container) 72%, transparent);
+        color: var(--md-sys-color-on-error-container);
+        border: 1px solid color-mix(in srgb, var(--md-sys-color-error) 25%, transparent);
+        box-shadow: 0 12px 26px color-mix(in srgb, var(--md-sys-color-error) 18%, transparent);
+    }
+
+    .badge-ico {
         opacity: 0.95;
     }
 
@@ -108,5 +149,14 @@
         color: var(--md-sys-color-on-primary);
         background: var(--md-sys-color-primary);
         box-shadow: 0 10px 20px color-mix(in srgb, var(--md-sys-color-primary) 35%, transparent);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .btn-ico {
+        opacity: 0.95;
     }
 </style>
+

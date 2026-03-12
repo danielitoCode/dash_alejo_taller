@@ -3,6 +3,7 @@ import type {PromotionRepository} from "../../domain/repository/PromotionReposit
 import type {Promotion} from "../../domain/entity/Promotion";
 import {db} from "../../../../infrastructure/di/dexie.db";
 import {promotionFromDTO, promotionToDTO} from "../mapper/Mappers";
+import { logger } from "../../../../infrastructure/presentation/util/logger.service";
 
 export class PromotionOfflineFirstRepository implements PromotionRepository {
     constructor(private readonly net: PromotionNetRepository) {}
@@ -11,26 +12,25 @@ export class PromotionOfflineFirstRepository implements PromotionRepository {
         try {
             const created = await this.net.create(promotionToDTO(promotion))
             await db.promotions.put(created)
-        } catch {
-            const localDTO = promotionToDTO(promotion)
-            await db.promotions.put({
-                id: "",
-                ...localDTO,
-                $collectionId: "",
-                $databaseId: "",
-                $createdAt: new Date().toISOString(),
-                $updatedAt: new Date().toISOString(),
-                $permissions: [],
-                $sequence: 0
-            })
+        } catch (error: any) {
+            logger.error(
+                `Error al crear promoción en Appwrite: ${error?.message ?? "desconocido"}`,
+                error?.stack
+            );
+            throw error;
         }
     }
 
     async delete(id: string): Promise<void> {
         try {
             await this.net.delete(id)
-        } finally {
             await db.promotions.delete(id)
+        } catch (error: any) {
+            logger.error(
+                `Error al eliminar promoción en Appwrite: ${error?.message ?? "desconocido"}`,
+                error?.stack
+            );
+            throw error;
         }
     }
 

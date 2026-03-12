@@ -1,22 +1,25 @@
-import {infrastructureContainer} from "../../../../infrastructure/di/infrastructure.container";
-import type {CategoryDTO} from "../dto/CategoryDTO";
-import type {Databases, Models} from "appwrite";
-import {ID} from "appwrite";
-import type {ProductDTO} from "../../../product/data/dto/ProductDTO";
-import type {ProductWriteDTO} from "../../../product/data/mapper/Mappers";
-import type {CategoryWriteDTO} from "../mapper/Mappers";
-import {logger} from "../../../../infrastructure/presentation/util/logger.service";
+import type { CategoryDTO } from "../dto/CategoryDTO";
+import type { Databases, Models } from "appwrite";
+import { ID } from "appwrite";
+import type { CategoryWriteDTO } from "../mapper/Mappers";
+import { logger } from "../../../../infrastructure/presentation/util/logger.service";
+import { ENV } from "../../../../infrastructure/env";
 
-const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID
-const COLLECTION_ID = "category"
+const COLLECTION_ID = "categories";
 
 export class CategoryNetRepository {
     constructor(private readonly databases: Databases) {}
 
+    private get databaseId(): string {
+        const id = ENV.databaseId;
+        if (!id) throw new Error("Falta configurar VITE_APPWRITE_DATABASE_ID");
+        return id;
+    }
+
     async getAll(): Promise<CategoryDTO[]> {
-        logger.info("Catgando categorias")
+        logger.info("Cargando categorías");
         const response = await this.databases.listDocuments<CategoryDTO>(
-            DATABASE_ID,
+            this.databaseId,
             COLLECTION_ID
         )
 
@@ -29,7 +32,7 @@ export class CategoryNetRepository {
         data: Omit<CategoryDTO, keyof Models.Document>
     ): Promise<CategoryDTO> {
         return await this.databases.createDocument<CategoryDTO>(
-            DATABASE_ID,
+            this.databaseId,
             COLLECTION_ID,
             ID.unique(),
             data
@@ -38,7 +41,7 @@ export class CategoryNetRepository {
 
     async getById(id: string): Promise<CategoryDTO> {
         return await this.databases.getDocument<CategoryDTO>(
-            DATABASE_ID,
+            this.databaseId,
             COLLECTION_ID,
             id
         )
@@ -46,7 +49,7 @@ export class CategoryNetRepository {
 
     async delete(id: string): Promise<void> {
         await this.databases.deleteDocument(
-            DATABASE_ID,
+            this.databaseId,
             COLLECTION_ID,
             id
         )
@@ -54,7 +57,7 @@ export class CategoryNetRepository {
 
     async update(id: string, data: Partial<CategoryWriteDTO>): Promise<CategoryDTO> {
         return await this.databases.updateDocument<CategoryDTO>(
-            DATABASE_ID,
+            this.databaseId,
             COLLECTION_ID,
             id,
             data

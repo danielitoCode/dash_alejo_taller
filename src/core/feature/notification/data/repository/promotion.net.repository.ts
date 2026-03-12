@@ -1,21 +1,22 @@
-import {infrastructureContainer} from "../../../../infrastructure/di/infrastructure.container";
-import type {PromotionDTO} from "../dto/PromotionDTO";
-import {type Databases, ID, Query} from "appwrite";
-import type {ProductWriteDTO} from "../../../product/data/mapper/Mappers";
-import type {ProductDTO} from "../../../product/data/dto/ProductDTO";
-import type {PromotionWriteDTO} from "../mapper/Mappers";
-import type {PromotionRepository} from "../../domain/repository/PromotionRepository";
+import type { PromotionDTO } from "../dto/PromotionDTO";
+import { type Databases, ID, Query } from "appwrite";
+import type { PromotionWriteDTO } from "../mapper/Mappers";
+import { ENV } from "../../../../infrastructure/env";
 
-
-const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID
-const COLLECTION_ID = "promotions"
+const COLLECTION_ID = "promotions";
 
 export class PromotionNetRepository {
     constructor(private readonly databases: Databases) {}
 
+    private get databaseId(): string {
+        const id = ENV.databaseId;
+        if (!id) throw new Error("Falta configurar VITE_APPWRITE_DATABASE_ID");
+        return id;
+    }
+
     async getAll(): Promise<PromotionDTO[]> {
         const response = await this.databases.listDocuments<PromotionDTO>(
-            DATABASE_ID,
+            this.databaseId,
             COLLECTION_ID
         )
 
@@ -24,7 +25,7 @@ export class PromotionNetRepository {
 
     async create(promo: PromotionWriteDTO): Promise<PromotionDTO> {
         return await this.databases.createDocument<PromotionDTO>(
-            DATABASE_ID,
+            this.databaseId,
             COLLECTION_ID,
             promo.$id || ID.unique(),
             promo as PromotionDTO
@@ -33,7 +34,7 @@ export class PromotionNetRepository {
 
     async delete(id: string): Promise<void> {
         await this.databases.deleteDocument(
-            DATABASE_ID,
+            this.databaseId,
             COLLECTION_ID,
             id
         )
@@ -41,7 +42,7 @@ export class PromotionNetRepository {
 
     async getActive(now: number): Promise<PromotionDTO[]> {
         const response = await this.databases.listDocuments<PromotionDTO>(
-            DATABASE_ID,
+            this.databaseId,
             COLLECTION_ID,
             [
                 Query.lessThanEqual("validFromEpochMillis", now),

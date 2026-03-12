@@ -1,24 +1,36 @@
 <script lang="ts">
-    import type { NavController } from "../../../../lib/navigation/NavController";
+    import { onMount } from "svelte";
     import type { NavBackStackEntry } from "../../../../lib/navigation/NavBackStackEntry";
-    import { rememberNavController } from "../../../../lib/navigation/rememberNavController";
-    import { composable } from "../../../../lib/navigation/composable";
+    import type { NavController } from "../../../../lib/navigation/NavController";
     import NavHost from "../../../../lib/navigation/NavHost.svelte";
+    import { composable } from "../../../../lib/navigation/composable";
+    import { rememberNavController } from "../../../../lib/navigation/rememberNavController";
     import { authContainer } from "../../../feature/auth/di/auth.container";
-    import { users, product, category, sales, promo, settings, reservation } from "./nested.router";
-    import UserManagement from "../../../feature/auth/presentation/routes/UserManagement.svelte";
-    import ProductManagement from "../../../feature/product/presentation/routes/ProductManagement.svelte";
+    import { sessionStore } from "../../../feature/auth/presentation/viewmodel/session.store";
     import CategoryManagement from "../../../feature/category/presentation/routes/CategoryManagement.svelte";
-    import SaleManagement from "../../../feature/sale/presentation/routes/SaleManagement.svelte";
+    import ProductManagement from "../../../feature/product/presentation/routes/ProductManagement.svelte";
+    import { categoryStore } from "../../../feature/category/presentation/viewmodel/category.store";
+    import { productStore } from "../../../feature/product/presentation/viewmodel/product.store";
+    import { promotionStore } from "../../../feature/notification/presentation/viewmodel/promotion.store";
     import PromoManagement from "../../../feature/notification/presentation/routes/PromoManagement.svelte";
+    import SaleManagement from "../../../feature/sale/presentation/routes/SaleManagement.svelte";
+    import UserManagement from "../../../feature/auth/presentation/routes/UserManagement.svelte";
+    import Icon from "../components/Icon.svelte";
     import SettingsManagement from "../routes/SettingsManagement.svelte";
     import ReservationManagement from "../routes/ReservationManagement.svelte";
-    import {productStore} from "../../../feature/product/presentation/viewmodel/product.store";
-    import {categoryStore} from "../../../feature/category/presentation/viewmodel/category.store";
-    import {promotionStore} from "../../../feature/notification/presentation/viewmodel/promotion.store";
-    import {onMount} from "svelte";
-    import {toastStore} from "../viewmodel/toast.store";
-    import {sessionStore} from "../../../feature/auth/presentation/viewmodel/session.store";
+    import { toastStore } from "../viewmodel/toast.store";
+    import { category, product, promo, reservation, sales, settings, users } from "./nested.router";
+    import {
+        BadgeDollarSign,
+        CalendarCheck2,
+        LogOut,
+        Menu,
+        Megaphone,
+        Package,
+        Settings,
+        Tags,
+        Users
+    } from "lucide-svelte";
 
     export let navController: NavController;
     export let navBackStackEntry: NavBackStackEntry<{ id?: string }>;
@@ -29,13 +41,13 @@
     const currentUser = sessionStore.getCurrentUser();
 
     const items = [
-        { label: "Usuarios", path: users.path },
-        { label: "Productos", path: product.path },
-        { label: "Categorías", path: category.path },
-        { label: "Ventas", path: sales.path },
-        { label: "Promos", path: promo.path },
-        { label: "Reservas", path: reservation.path },
-        { label: "Ajustes", path: settings.path }
+        { label: "Usuarios", path: users.path, icon: Users },
+        { label: "Productos", path: product.path, icon: Package },
+        { label: "Categorías", path: category.path, icon: Tags },
+        { label: "Ventas", path: sales.path, icon: BadgeDollarSign },
+        { label: "Promos", path: promo.path, icon: Megaphone },
+        { label: "Reservas", path: reservation.path, icon: CalendarCheck2 },
+        { label: "Ajustes", path: settings.path, icon: Settings }
     ];
 
     const internalStackStore = internalNavController._getStackStore();
@@ -71,44 +83,73 @@
                 navController.navigate("login");
             });
 
-        productStore.syncAll().catch(() => { toastStore.error("Error al sincronizar datos"); });
-        categoryStore.syncAll().catch(() => { toastStore.error("Error al sincronizar datos"); });
-        promotionStore.syncAll().catch(() => { toastStore.error("Error al sincronizar datos"); });
+        productStore.syncAll().catch(() => {
+            toastStore.error("Error al sincronizar datos");
+        });
+        categoryStore.syncAll().catch(() => {
+            toastStore.error("Error al sincronizar datos");
+        });
+        promotionStore.syncAll().catch(() => {
+            toastStore.error("Error al sincronizar datos");
+        });
     });
 </script>
 
 <section class="nested-shell">
     <aside class="sidebar {sidebarOpen ? 'open' : ''}">
-        <header>
-            <h2>Business Dashboard</h2>
-            {#await currentUser}
-                <p>Loading user</p>
-            {:then user}
-                <p>{user.name}</p>
-            {:catch error}
-                <p>{error.message}</p>
-            {/await}
-            <small>{currentUser}</small>
+        <header class="sidebar-head">
+            <div class="brand">
+                <img src="/alejoicon_clean.svg" alt="Logo" class="brand-logo" />
+                <div class="brand-meta">
+                    <h2>Business Dashboard</h2>
+                    {#await currentUser}
+                        <p>Loading user…</p>
+                    {:then user}
+                        <p>{user.name}</p>
+                    {:catch error}
+                        <p>{error.message}</p>
+                    {/await}
+                </div>
+            </div>
         </header>
 
-        <nav>
+        <nav class="sidebar-nav" aria-label="Menú">
             {#each items as item}
-                <button class:selected={currentPath === item.path} on:click={() => go(item.path)}>{item.label}</button>
+                <button
+                    class:selected={currentPath === item.path}
+                    on:click={() => go(item.path)}
+                    aria-current={currentPath === item.path ? "page" : undefined}
+                    title={item.label}
+                >
+                    <Icon icon={item.icon} size={18} className="nav-ico" ariaLabel={item.label} />
+                    <span class="nav-label">{item.label}</span>
+                </button>
             {/each}
         </nav>
 
-        <button class="logout" on:click={logout}>Cerrar sesión</button>
+        <button class="logout" on:click={logout} aria-label="Cerrar sesión" title="Cerrar sesión">
+            <Icon icon={LogOut} size={18} className="nav-ico" ariaLabel="Cerrar sesión" />
+            <span class="logout-label">Cerrar sesión</span>
+        </button>
     </aside>
 
     <main class="content">
         <div class="top-mobile">
-            <button class="menu-toggle" on:click={() => (sidebarOpen = !sidebarOpen)}>☰</button>
+            <button
+                class="menu-toggle"
+                type="button"
+                aria-label={sidebarOpen ? "Cerrar menú" : "Abrir menú"}
+                on:click={() => (sidebarOpen = !sidebarOpen)}
+            >
+                <Icon icon={Menu} size={20} className="menu-ico" ariaLabel="Menú" />
+            </button>
             <strong>Panel de gestión</strong>
+            <span class="ghost" aria-hidden="true">{userId}</span>
         </div>
 
         <NavHost
-                navController={internalNavController}
-                routes={[
+            navController={internalNavController}
+            routes={[
                 composable(users, () => UserManagement),
                 composable(product, () => ProductManagement),
                 composable(category, () => CategoryManagement),
@@ -126,27 +167,248 @@
 </section>
 
 <style>
-    .nested-shell { min-height: 100dvh; display: grid; grid-template-columns: 280px 1fr; background: var(--md-sys-color-background); }
-    .sidebar { border-right: 1px solid var(--md-sys-color-outline-variant); background: var(--md-sys-color-surface); padding: 14px; display: grid; grid-template-rows: auto 1fr auto; gap: 12px; }
-    header h2 { margin: 0; font-size: 1.05rem; } header small { color: var(--md-sys-color-on-surface-variant); }
-    nav { display: grid; gap: 8px; align-content: start; }
-    nav button,.logout { text-align: left; border: 1px solid var(--md-sys-color-outline-variant); background: transparent; color: var(--md-sys-color-on-surface); border-radius: 10px; padding: 10px; }
-    nav button.selected { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border-color: var(--md-sys-color-primary); }
-    .content { padding: 16px; }
-    .top-mobile { display:none; }
-    .scrim { display:none; }
+    .nested-shell {
+        height: 100dvh;
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        background: var(--md-sys-color-background);
+        color: var(--md-sys-color-on-background);
+        overflow: hidden;
+    }
+
+    .sidebar {
+        border-right: 1px solid var(--md-sys-color-outline-variant);
+        background: var(--md-sys-color-surface);
+        padding: 14px;
+        height: 100%;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .brand {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .brand-logo {
+        width: 44px;
+        height: 44px;
+        object-fit: contain;
+        opacity: 0.95;
+    }
+
+    .brand-meta {
+        min-width: 0;
+        display: grid;
+        gap: 2px;
+    }
+
+    .sidebar-head h2 {
+        margin: 0;
+        font-size: 1.05rem;
+        line-height: 1.15;
+    }
+
+    .sidebar-head p {
+        margin: 0;
+        color: var(--md-sys-color-on-surface-variant);
+        font-size: 0.92rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .sidebar-nav {
+        display: grid;
+        gap: 8px;
+        align-content: start;
+        overflow: auto;
+        min-height: 0;
+        padding-right: 6px;
+    }
+
+    .sidebar-nav button,
+    .logout {
+        text-align: left;
+        border: 1px solid var(--md-sys-color-outline-variant);
+        background: transparent;
+        color: var(--md-sys-color-on-surface);
+        border-radius: 12px;
+        padding: 10px 12px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 650;
+        transition: background-color 160ms ease, border-color 160ms ease, transform 120ms ease;
+    }
+
+    .nav-ico {
+        opacity: 0.92;
+    }
+
+    .sidebar-nav button:hover {
+        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 40%, transparent);
+    }
+
+    .sidebar-nav button:active {
+        transform: translateY(1px);
+    }
+
+    .sidebar-nav button.selected {
+        background: var(--md-sys-color-primary);
+        color: var(--md-sys-color-on-primary);
+        border-color: var(--md-sys-color-primary);
+    }
+
+    .sidebar-nav button.selected .nav-ico {
+        opacity: 1;
+    }
+
+    .logout {
+        margin-top: auto;
+        justify-content: center;
+        color: var(--md-sys-color-on-error-container);
+        background: color-mix(in srgb, var(--md-sys-color-error-container) 72%, transparent);
+        border-color: color-mix(in srgb, var(--md-sys-color-error) 22%, transparent);
+    }
+
+    .content {
+        height: 100%;
+        padding: 16px;
+        min-width: 0;
+        overflow: auto;
+    }
+
+    .top-mobile {
+        display: none;
+    }
+
+    .scrim {
+        display: none;
+    }
 
     @media (max-width: 860px) {
-        .nested-shell { grid-template-columns: 1fr; }
-        .sidebar {
-            position: fixed; top:0; left:0; bottom:0; width: min(84vw, 320px); z-index: 40;
-            transform: translateX(-105%); transition: transform 180ms ease;
-            box-shadow: 0 20px 35px rgba(0,0,0,.25);
+        .nested-shell {
+            grid-template-columns: 1fr;
         }
-        .sidebar.open { transform: translateX(0); }
-        .content { padding: 12px; }
-        .top-mobile { display:flex; gap:10px; align-items:center; margin-bottom:12px; }
-        .menu-toggle { width:40px; height:40px; border-radius:10px; border:1px solid var(--md-sys-color-outline-variant); background: var(--md-sys-color-surface); }
-        .scrim { display:block; position: fixed; inset: 0; background: color-mix(in srgb, black 30%, transparent); z-index: 20; border:0; }
+
+        .sidebar {
+            position: fixed;
+            inset: 0 auto 0 0;
+            width: min(84vw, 320px);
+            z-index: 40;
+            transform: translateX(-105%);
+            transition: transform 180ms ease;
+            box-shadow: 0 20px 35px rgba(0, 0, 0, 0.25);
+        }
+
+        .sidebar.open {
+            transform: translateX(0);
+        }
+
+        .content {
+            height: 100dvh;
+            padding: 12px;
+        }
+
+        .top-mobile {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .menu-toggle {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            border: 1px solid var(--md-sys-color-outline-variant);
+            background: var(--md-sys-color-surface);
+            display: grid;
+            place-items: center;
+        }
+
+        .menu-ico {
+            opacity: 0.9;
+        }
+
+        .ghost {
+            opacity: 0;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        .scrim {
+            display: block;
+            position: fixed;
+            inset: 0;
+            background: color-mix(in srgb, black 30%, transparent);
+            z-index: 20;
+            border: 0;
+        }
+    }
+
+    /* Tablet: rail compacto (solo iconos) */
+    @media (min-width: 861px) and (max-width: 1100px) {
+        .nested-shell {
+            grid-template-columns: 84px 1fr;
+        }
+
+        .sidebar {
+            padding: 12px 10px;
+        }
+
+        .brand {
+            justify-content: center;
+        }
+
+        .brand-logo {
+            width: 46px;
+            height: 46px;
+        }
+
+        .brand-meta {
+            display: none;
+        }
+
+        .sidebar-nav button,
+        .logout {
+            justify-content: center;
+            padding: 10px;
+            border-radius: 14px;
+        }
+
+        .sidebar-nav button .nav-label,
+        .logout .logout-label {
+            display: none;
+        }
+
+        .logout {
+            width: 100%;
+        }
+    }
+
+    .sidebar-nav::-webkit-scrollbar,
+    .content::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+
+    .sidebar-nav::-webkit-scrollbar-thumb,
+    .content::-webkit-scrollbar-thumb {
+        background: color-mix(in srgb, var(--md-sys-color-outline) 30%, transparent);
+        border-radius: 999px;
+        border: 2px solid transparent;
+        background-clip: padding-box;
+    }
+
+    .sidebar-nav::-webkit-scrollbar-track,
+    .content::-webkit-scrollbar-track {
+        background: transparent;
     }
 </style>

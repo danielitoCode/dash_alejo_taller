@@ -50,27 +50,12 @@ export class ProductOfflineFirstRepository implements ProductRepository {
             const created = await this.net.create(productToDTO(product))
             await db.products.put(created)
             return productFromDTO(created)
-        } catch {
-            const localDTO = productToDTO(product)
-
-            const localId = localDTO.$id || crypto.randomUUID()
-            const now = new Date().toISOString()
-
-            await db.products.put({
-                ...localDTO,
-                id: localId,
-                $id: localId,
-                $collectionId: "products",
-                $databaseId: import.meta.env.VITE_APPWRITE_DATABASE_ID || "",
-                $createdAt: now,
-                $updatedAt: now,
-                $permissions: [],
-                $sequence: 0
-            })
-            return {
-                ...product,
-                id: localId
-            }
+        } catch (error: any) {
+            logger.error(
+                `Error al crear producto en Appwrite: ${error?.message ?? "desconocido"}`,
+                error?.stack
+            );
+            throw error;
         }
     }
 
@@ -90,18 +75,25 @@ export class ProductOfflineFirstRepository implements ProductRepository {
             const updated = await this.net.update(id, productToDTO(merged))
             await db.products.put(updated)
             return productFromDTO(updated)
-        } catch {
-            const localDTO = productToDTO(merged)
-            await db.products.update(id, localDTO)
-            return merged
+        } catch (error: any) {
+            logger.error(
+                `Error al actualizar producto en Appwrite: ${error?.message ?? "desconocido"}`,
+                error?.stack
+            );
+            throw error;
         }
     }
 
     async delete(id: string): Promise<void> {
         try {
             await this.net.delete(id)
-        } finally {
             await db.products.delete(id)
+        } catch (error: any) {
+            logger.error(
+                `Error al eliminar producto en Appwrite: ${error?.message ?? "desconocido"}`,
+                error?.stack
+            );
+            throw error;
         }
     }
 

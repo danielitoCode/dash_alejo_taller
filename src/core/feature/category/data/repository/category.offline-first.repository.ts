@@ -35,7 +35,7 @@ export class CategoryOfflineFirstRepository implements CategoryRepository {
     async update(id: string, category: Partial<Category>): Promise<Category> {
         const current = await this.getById(id)
         if (!current) {
-            throw new Error(`Product with id ${id} not found`)
+            throw new Error(`Category with id ${id} not found`)
         }
 
         const merged: Category = {
@@ -48,18 +48,25 @@ export class CategoryOfflineFirstRepository implements CategoryRepository {
             const updated = await this.net.update(id, categoryToDTO(merged))
             await db.categories.put(updated)
             return categoryFromDTO(updated)
-        } catch {
-            const localDTO = categoryToDTO(merged)
-            await db.categories.update(id, localDTO)
-            return merged
+        } catch (error: any) {
+            logger.error(
+                `Error al actualizar categoría en Appwrite: ${error?.message ?? "desconocido"}`,
+                error?.stack
+            );
+            throw error;
         }
     }
 
     async delete(id: string): Promise<void> {
         try {
             await this.net.delete(id)
-        } finally {
             await db.categories.delete(id)
+        } catch (error: any) {
+            logger.error(
+                `Error al eliminar categoría en Appwrite: ${error?.message ?? "desconocido"}`,
+                error?.stack
+            );
+            throw error;
         }
     }
 
@@ -73,18 +80,12 @@ export class CategoryOfflineFirstRepository implements CategoryRepository {
             })
             await db.categories.put(created)
             return categoryFromDTO(created)
-        } catch {
-            const localDTO = categoryToDTO(category)
-            await db.categories.put({
-                ...localDTO,
-                $collectionId: "",
-                $databaseId: "",
-                $createdAt: new Date().toISOString(),
-                $updatedAt: new Date().toISOString(),
-                $permissions: [],
-                $sequence: 0
-            })
-            return category
+        } catch (error: any) {
+            logger.error(
+                `Error al crear categoría en Appwrite: ${error?.message ?? "desconocido"}`,
+                error?.stack
+            );
+            throw error;
         }
     }
 

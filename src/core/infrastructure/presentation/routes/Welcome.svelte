@@ -1,6 +1,8 @@
 <script lang="ts">
     import Screen from "../components/Screen.svelte";
+    import Icon from "../components/Icon.svelte";
     import type { NavController } from "../../../../lib/navigation/NavController";
+    import { LogIn, UserPlus } from "lucide-svelte";
 
     export let navController: NavController;
 
@@ -61,18 +63,20 @@
         <div class="content-shell">
             <section class="landing-left" aria-label="Acciones">
                 <section class="landing-title" aria-label="Bienvenida">
-                    <img
-                        src="/alejoicon_clean.svg"
-                        alt="Logo"
-                        class="brand-mark"
-                    />
+                    <img src="/alejoicon_clean.svg" alt="Logo" class="brand-mark" />
                     <h1>Bienvenido</h1>
                     <p>Inicia sesión o crea tu cuenta para continuar.</p>
                 </section>
 
                 <section class="landing-buttons" aria-label="Navegación">
-                    <button class="btn btn-primary" on:click={signIn}>Iniciar sesión</button>
-                    <button class="btn btn-elevated" on:click={signUp}>Crear cuenta</button>
+                    <button class="btn btn-primary" on:click={signIn}>
+                        <Icon icon={LogIn} size={18} className="btn-ico" ariaLabel="Iniciar sesión" />
+                        Iniciar sesión
+                    </button>
+                    <button class="btn btn-elevated" on:click={signUp}>
+                        <Icon icon={UserPlus} size={18} className="btn-ico" ariaLabel="Crear cuenta" />
+                        Crear cuenta
+                    </button>
                 </section>
             </section>
 
@@ -269,6 +273,10 @@
         font-weight: 600;
         cursor: pointer;
         transition: transform 120ms ease, box-shadow 180ms ease, background-color 180ms ease, filter 180ms ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
     }
 
     .btn:active {
@@ -290,6 +298,10 @@
 
     .btn:hover {
         filter: brightness(1.04);
+    }
+
+    .btn-ico {
+        opacity: 0.95;
     }
 
     /* Mobile / tablet: el carrusel queda detrás con opacidad + degradado para legibilidad */
@@ -438,5 +450,5 @@
             transform: translateY(0);
         }
     }
-
 </style>
+

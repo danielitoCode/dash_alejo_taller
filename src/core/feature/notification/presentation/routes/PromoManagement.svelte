@@ -1,74 +1,100 @@
 <script lang="ts">
     import { onMount } from "svelte";
+    import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
     import { promotionStore } from "../viewmodel/promotion.store";
-    import type {Promotion} from "../../domain/entity/Promotion";
-    import {productStore} from "../../../product/presentation/viewmodel/product.store";
-    onMount(() => { promotionStore.syncAll().catch(() => {}); });
+    import { productStore } from "../../../product/presentation/viewmodel/product.store";
+    import { BadgePercent, Search, Trash2 } from "lucide-svelte";
 
-    let listPromoTest: Promotion[] = [
-        {id: "test1", title:"PromoTest1", message:"Mensaje de prueba 1", validFromEpochMillis:43, validUntilEpochMillis:443},
-        {id: "test2", title:"PromoTest2", message:"Mensaje de prueba 2", validFromEpochMillis:43, validUntilEpochMillis:443},
-        {id: "test3", title:"PromoTest3", message:"Mensaje de prueba 3", validFromEpochMillis:43, validUntilEpochMillis:443}
-    ];
+    onMount(() => {
+        promotionStore.syncAll().catch(() => {});
+    });
+
+    let query = "";
+
+    function discountPercent(oldPrice?: number | null, currentPrice?: number | null): number {
+        if (!oldPrice || !currentPrice || oldPrice <= 0) return 0;
+        return Math.round(((oldPrice - currentPrice) / oldPrice) * 100);
+    }
+
+    $: items = $promotionStore.items;
+    $: filtered =
+        query.trim().length === 0
+            ? items
+            : items.filter((p) => {
+                  const q = query.trim().toLowerCase();
+                  return (
+                      (p.title || "").toLowerCase().includes(q) ||
+                      (p.message || "").toLowerCase().includes(q) ||
+                      (p.id || "").toLowerCase().includes(q)
+                  );
+              });
 </script>
-<section class="card">
-    <h4>Gestión de promociones</h4>
-    {#if $promotionStore.items.length===0}<p>No hay promociones creadas.</p>{/if}
-    <!--{#each listPromoTest as promo}-->
-    {#each $promotionStore.items as promo}
-        <article>
+
+<section class="mgmt-page" aria-label="Gestión de promociones">
+    <header class="mgmt-header">
+        <div class="mgmt-toolbar">
             <div>
-                <strong>{promo.title}</strong>
-                <small>Descuento: {promo.oldPrice && promo.currentPrice ? Math.round(((promo.oldPrice-promo.currentPrice)/promo.oldPrice)*100) : 0}% · ${promo.oldPrice ?? 0} → ${promo.currentPrice ?? 0}</small>
+                <h1 class="mgmt-title">Promociones</h1>
+                <p class="mgmt-subtitle">
+                    Revisa promociones generadas por cambios de precio. El panel muestra el descuento calculado.
+                </p>
             </div>
-            <button
-                    class="btn btn-elevated"
-                    on:click={()=>productStore.removeById(promo.id)}
-            >Eliminar</button>
-        </article>
-    {/each}
+
+            <div class="mgmt-meta">
+                <span class="mgmt-chip">
+                    <Icon icon={BadgePercent} size={18} ariaLabel="Total" />
+                    {filtered.length} / {items.length}
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <section class="mgmt-card" aria-label="Listado">
+        <div class="mgmt-toolbar" style="margin-bottom:12px">
+            <h2 class="mgmt-card-title" style="margin:0">Listado</h2>
+
+            <label class="mgmt-field" style="min-width:min(420px,100%); margin:0">
+                <span class="mgmt-muted" style="display:none">Buscar</span>
+                <div style="display:flex; gap:10px; align-items:center">
+                    <Icon icon={Search} size={18} ariaLabel="Buscar" />
+                    <input
+                        class="mgmt-input"
+                        type="search"
+                        placeholder="Buscar promociones..."
+                        aria-label="Buscar promociones"
+                        bind:value={query}
+                    />
+                </div>
+            </label>
+        </div>
+
+        <div class="mgmt-list">
+            {#if items.length === 0}
+                <div class="mgmt-muted">No hay promociones creadas.</div>
+            {/if}
+
+            {#if filtered.length === 0 && items.length > 0}
+                <div class="mgmt-muted">No hay resultados.</div>
+            {/if}
+
+            {#each filtered as promo (promo.id)}
+                <article class="mgmt-row" aria-label={promo.title}>
+                    <div class="mgmt-row-main">
+                        <div class="mgmt-row-title">{promo.title}</div>
+                        <p class="mgmt-row-sub">
+                            {promo.message || "Sin mensaje"} · Descuento: {discountPercent(promo.oldPrice, promo.currentPrice)}%
+                            · ${promo.oldPrice ?? 0} → ${promo.currentPrice ?? 0}
+                        </p>
+                    </div>
+
+                    <div class="mgmt-row-actions">
+                        <button class="mgmt-btn danger" on:click={() => productStore.removeById(promo.id)}>
+                            <Icon icon={Trash2} size={18} ariaLabel="Eliminar" />
+                            Eliminar
+                        </button>
+                    </div>
+                </article>
+            {/each}
+        </div>
+    </section>
 </section>
-<style>
-    h4 {
-        margin: 0;
-        font-size: clamp(2rem, 3.6vw, 2.4rem);
-        line-height: 1.12;
-    }
-
-    .card{
-        display:grid;
-        gap:8px
-    }
-
-    article{
-        display:grid;
-        grid-template-columns:1fr auto;
-        gap:8px;
-        align-items:center;
-        border:1px solid var(--md-sys-color-outline-variant);
-        padding:8px;
-        border-radius:12px
-    }
-
-    small{
-        display:block
-    }
-
-    .btn {
-        height: 35px;
-        border-radius: 16px;
-        border: 0;
-        font-size: 1rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: transform 120ms ease, box-shadow 180ms ease, background-color 180ms ease;
-    }
-
-    .btn-elevated {
-        min-width: 90px;
-        color: var(--md-sys-color-on-surface);
-        background: var(--md-sys-color-surface);
-        border: 1px solid var(--md-sys-color-outline-variant);
-        box-shadow: 0 6px 14px color-mix(in srgb, var(--md-sys-color-outline) 24%, transparent);
-    }
-</style>

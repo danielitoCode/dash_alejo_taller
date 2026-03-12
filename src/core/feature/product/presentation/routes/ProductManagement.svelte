@@ -1,18 +1,25 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { productStore } from "../viewmodel/product.store";
+    import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
+    import ImagePicker from "../../../../infrastructure/presentation/components/ImagePicker.svelte";
+    import { logger } from "../../../../infrastructure/presentation/util/logger.service";
+    import { toastStore } from "../../../../infrastructure/presentation/viewmodel/toast.store";
     import type { Product } from "../../domain/entity/Product";
+    import CategoryName from "../../../category/presentation/component/CategoryName.svelte";
     import { categoryStore } from "../../../category/presentation/viewmodel/category.store";
     import { promotionStore } from "../../../notification/presentation/viewmodel/promotion.store";
-    import {getCategoryNameById} from "../../../category/presentation/component/category.query";
-    import CategoryName from "../../../category/presentation/component/CategoryName.svelte";
+    import { productStore } from "../viewmodel/product.store";
+    import { BadgeDollarSign, Pencil, Plus, Save, Search, Trash2, X } from "lucide-svelte";
 
     let draftName = "";
     let draftDescription = "";
-    let draftPrice = 0;
+    let draftPrice: number | string = 0;
     let draftPhotoUrl = "";
     let draftCategoryId = "";
     let editId: string | null = null;
+    let query = "";
+    let imagePending = false;
+    let imageKey = 0;
 
     onMount(() => {
         productStore.syncAll().catch(() => {});
@@ -27,6 +34,7 @@
         draftPrice = 0;
         draftPhotoUrl = "";
         draftCategoryId = "";
+        imageKey += 1;
     }
 
     async function create() {
@@ -41,9 +49,15 @@
             categoryId: draftCategoryId
         };
 
-        await productStore.create(data);
-
-        resetForm();
+        try {
+            toastStore.info("Creando producto…");
+            await productStore.create(data);
+            toastStore.success("Producto creado.");
+            resetForm();
+        } catch (e: any) {
+            logger.error(e?.message ?? e, e?.stack);
+            toastStore.error(e instanceof Error ? e.message : "No se pudo crear el producto.");
+        }
     }
 
     function startEdit(product: Product): void {
@@ -55,211 +69,197 @@
         draftCategoryId = product.categoryId;
     }
 
-    async function save(){
+    async function save() {
         if (!editId || !draftName.trim() || !draftCategoryId || Number(draftPrice) <= 0) return;
 
         const old = $productStore.items.find((p) => p.id === editId);
-
         if (!old) return;
 
         if (Number(draftPrice) < old.price) {
             const discountPercent = Math.round(((old.price - Number(draftPrice)) / old.price) * 100);
             const now = Date.now();
-            await promotionStore.create({
-                id: "",
-                title: `Promo por baja de precio: ${old.name}`,
-                message: `Descuento del ${discountPercent}%`,
-                imageUrl: old.photoUrl,
-                oldPrice: old.price,
-                currentPrice: Number(draftPrice),
-                validFromEpochMillis: now,
-                validUntilEpochMillis: now + 1000 * 60 * 60 * 24 * 30
-            });
-        }
-
-        await productStore.updatePrice(
-            {
-                ...old,
-                name: draftName.trim(),
-                description: draftDescription.trim(),
-                photoUrl: draftPhotoUrl.trim() || old.photoUrl,
-                categoryId: draftCategoryId
-            },
-            Number(draftPrice)
-        );
-
-        resetForm();
-    }
-</script>
-<section class="card">
-    <h4 class="media-title">Gestión de productos</h4>
-    <p class="media-title">Si el precio baja, se crea promoción automáticamente con % de descuento.</p>
-    <section class="form-card">
-        <div class="grid">
-            <input placeholder="Nombre" bind:value={draftName} />
-            <input placeholder="Descripción" bind:value={draftDescription} />
-            <input type="number" bind:value={draftPrice} min="0" step="0.01" />
-            <input placeholder="URL de foto" bind:value={draftPhotoUrl} />
-            <select bind:value={draftCategoryId}>
-                <option value="" disabled>Categoría</option>
-                {#each $categoryStore.items as category}
-                    <option value={category.id}>{category.name}</option>
-                {/each}
-            </select>
-            {#if editId}
-                <button class="btn btn-primary" on:click={save}>Guardar cambios</button>
-                <button class="btn btn-elevated" on:click={resetForm}>Cancelar</button>
-            {:else}
-                <button class="btn btn-primary" on:click={create}>Crear producto</button>
-            {/if}
-        </div>
-    </section>
-
-    <div class="list">
-        {#each $productStore.items as product}
-            <article>
-                <img src={product.photoUrl} alt={product.name}/>
-                <div>
-                    <small><CategoryName categoryId={product.categoryId} /></small>
-                    <strong>{product.name}</strong>
-                    <p class="media-title">${product.price.toFixed(2)}</p>
-                </div>
-                <button
-                        class="btn btn-elevated"
-                        on:click={()=>startEdit(product)}
-                >Editar</button>
-                <button
-                        class="btn btn-elevated"
-                        on:click={()=>productStore.removeById(product.id)}
-                >Eliminar</button>
-            </article>
-        {/each}
-        </div>
-    </section>
-    <style>
-        h4 {
-            margin: 0;
-            font-size: clamp(2rem, 3.6vw, 2.4rem);
-            line-height: 1.12;
-        }
-
-        strong {
-            margin: 0;
-            font-size: clamp(2rem, 3.6vw, 2.4rem);
-            line-height: 1.12;
-        }
-
-        p {
-            margin: 0;
-            color: color-mix(in srgb, var(--md-sys-color-on-background) 90%, transparent);
-            font-size: clamp(1rem, 2vw, 1.1rem);
-        }
-
-        .form-card {
-            width: 100%;
-            max-width: 520px;
-            justify-self: center;
-            background: var(--md-sys-color-surface);
-            border: 1px solid var(--md-sys-color-outline-variant);
-            border-radius: 20px;
-            padding: 20px;
-            display: grid;
-            gap: 10px;
-            box-shadow: 0 10px 24px color-mix(in srgb, var(--md-sys-color-outline) 20%, transparent);
-        }
-
-        select {
-            width: 100%;
-            border: 1px solid var(--md-sys-color-outline-variant);
-            border-radius: 12px;
-            padding: 0 12px;
-            font: inherit;
-            color: var(--md-sys-color-on-surface);
-            background: color-mix(in srgb, var(--md-sys-color-surface) 88%, var(--md-sys-color-surface-variant));
-        }
-
-        input {
-            width: 100%;
-            border: 1px solid var(--md-sys-color-outline-variant);
-            border-radius: 12px;
-            padding: 0 12px;
-            font: inherit;
-            color: var(--md-sys-color-on-surface);
-            background: color-mix(in srgb, var(--md-sys-color-surface) 88%, var(--md-sys-color-surface-variant));
-        }
-
-        .card{
-            display:grid;
-            gap:10px
-        }
-
-        .grid{
-            display:grid;
-            grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
-            gap:8px
-        }
-
-        .list{
-            display:grid;
-            gap:8px}
-
-        article{
-            display:grid;
-            grid-template-columns:64px 1fr auto auto;
-            gap:8px;
-            align-items:center;
-            border:1px solid var(--md-sys-color-outline-variant);
-            padding:8px;
-            border-radius:12px
-        }
-
-        img{
-            width:64px;
-            height:64px;
-            object-fit:cover;
-            border-radius:8px
-        }
-
-        small{
-            display:block
-        }
-
-        .btn {
-            width: 100%;
-            height: 35px;
-            border-radius: 16px;
-            border: 0;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 120ms ease, box-shadow 180ms ease, background-color 180ms ease;
-        }
-
-        .btn:active { transform: translateY(1px); }
-
-        .btn-primary {
-            color: var(--md-sys-color-on-primary);
-            background: var(--md-sys-color-primary);
-            box-shadow: 0 8px 16px color-mix(in srgb, var(--md-sys-color-primary) 35%, transparent);
-        }
-
-        .btn-elevated {
-            min-width: 90px;
-            color: var(--md-sys-color-on-surface);
-            background: var(--md-sys-color-surface);
-            border: 1px solid var(--md-sys-color-outline-variant);
-            box-shadow: 0 6px 14px color-mix(in srgb, var(--md-sys-color-outline) 24%, transparent);
-        }
-
-        .btn:hover {
-            filter: brightness(1.04);
-        }
-
-        @media (min-width: 900px), (orientation: landscape) and (max-height: 650px) {
-            .form-card {
-                max-width: none;
-                align-self: stretch;
-                align-content: center;
+            try {
+                await promotionStore.create({
+                    id: "",
+                    title: `Promo por baja de precio: ${old.name}`,
+                    message: `Descuento del ${discountPercent}%`,
+                    imageUrl: old.photoUrl,
+                    oldPrice: old.price,
+                    currentPrice: Number(draftPrice),
+                    validFromEpochMillis: now,
+                    validUntilEpochMillis: now + 1000 * 60 * 60 * 24 * 30
+                });
+            } catch (e: any) {
+                logger.warn(`No se pudo crear la promoción automática: ${e?.message ?? "desconocido"}`);
             }
         }
-    </style>
+
+        try {
+            toastStore.info("Guardando cambios…");
+            await productStore.updatePrice(
+                {
+                    ...old,
+                    name: draftName.trim(),
+                    description: draftDescription.trim(),
+                    photoUrl: draftPhotoUrl.trim() || old.photoUrl,
+                    categoryId: draftCategoryId
+                },
+                Number(draftPrice)
+            );
+            toastStore.success("Producto actualizado.");
+            resetForm();
+        } catch (e: any) {
+            logger.error(e?.message ?? e, e?.stack);
+            toastStore.error(e instanceof Error ? e.message : "No se pudo guardar el producto.");
+        }
+    }
+
+    $: items = $productStore.items;
+    $: filtered =
+        query.trim().length === 0
+            ? items
+            : items.filter((p) => {
+                  const q = query.trim().toLowerCase();
+                  return (
+                      p.name.toLowerCase().includes(q) ||
+                      (p.description || "").toLowerCase().includes(q) ||
+                      (p.id || "").toLowerCase().includes(q)
+                  );
+              });
+
+    $: canSubmit =
+        draftName.trim().length > 0 && draftCategoryId.length > 0 && Number(draftPrice) > 0 && !imagePending;
+</script>
+
+<section class="mgmt-page" aria-label="Gestión de productos">
+    <header class="mgmt-header">
+        <div class="mgmt-toolbar">
+            <div>
+                <h1 class="mgmt-title">Productos</h1>
+                <p class="mgmt-subtitle">
+                    Si un precio baja, el sistema crea una promoción automática con el porcentaje de descuento.
+                </p>
+            </div>
+
+            <div class="mgmt-meta">
+                <span class="mgmt-chip">
+                    <Icon icon={BadgeDollarSign} size={18} ariaLabel="Total" />
+                    {filtered.length} / {items.length}
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <div class="mgmt-layout">
+        <section class="mgmt-card mgmt-form-card" aria-label="Formulario">
+            <h2 class="mgmt-card-title">{editId ? "Editar producto" : "Nuevo producto"}</h2>
+
+            <div class="mgmt-grid">
+                <label class="mgmt-field" style="grid-column:1/-1">
+                    <span>Nombre</span>
+                    <input class="mgmt-input" placeholder="Ej. EcoFlow Delta…" bind:value={draftName} />
+                </label>
+
+                <label class="mgmt-field" style="grid-column:1/-1">
+                    <span>Descripción</span>
+                    <textarea class="mgmt-input mgmt-area" placeholder="Opcional" bind:value={draftDescription}></textarea>
+                </label>
+
+                <label class="mgmt-field">
+                    <span>Precio</span>
+                    <input class="mgmt-input" type="number" bind:value={draftPrice} min="0" step="0.01" />
+                </label>
+
+                <label class="mgmt-field">
+                    <span>Categoría</span>
+                    <select class="mgmt-select" bind:value={draftCategoryId}>
+                        <option value="" disabled>Selecciona…</option>
+                        {#each $categoryStore.items as category (category.id)}
+                            <option value={category.id}>{category.name}</option>
+                        {/each}
+                    </select>
+                </label>
+
+                <div style="grid-column:1/-1">
+                    {#key imageKey}
+                        <ImagePicker
+                            label="Imagen del producto"
+                            bind:value={draftPhotoUrl}
+                            bind:pending={imagePending}
+                        />
+                    {/key}
+                </div>
+
+                <div class="mgmt-actions" style="grid-column:1/-1">
+                    {#if editId}
+                        <button class="mgmt-btn primary" on:click={save} disabled={!canSubmit}>
+                            <Icon icon={Save} size={18} ariaLabel="Guardar cambios" />
+                            Guardar
+                        </button>
+                        <button class="mgmt-btn ghost" on:click={resetForm}>
+                            <Icon icon={X} size={18} ariaLabel="Cancelar" />
+                            Cancelar
+                        </button>
+                    {:else}
+                        <button class="mgmt-btn primary" on:click={create} disabled={!canSubmit}>
+                            <Icon icon={Plus} size={18} ariaLabel="Crear producto" />
+                            Crear
+                        </button>
+                    {/if}
+                </div>
+            </div>
+        </section>
+
+        <section class="mgmt-card" aria-label="Listado">
+            <div class="mgmt-toolbar" style="margin-bottom:12px">
+                <h2 class="mgmt-card-title" style="margin:0">Listado</h2>
+
+                <label class="mgmt-field" style="min-width:min(420px,100%); margin:0">
+                    <span class="mgmt-muted" style="display:none">Buscar</span>
+                    <div style="display:flex; gap:10px; align-items:center">
+                        <Icon icon={Search} size={18} ariaLabel="Buscar" />
+                        <input
+                            class="mgmt-input"
+                            type="search"
+                            placeholder="Buscar productos..."
+                            aria-label="Buscar productos"
+                            bind:value={query}
+                        />
+                    </div>
+                </label>
+            </div>
+
+            <div class="mgmt-list">
+                {#if filtered.length === 0}
+                    <div class="mgmt-muted">No hay resultados.</div>
+                {/if}
+
+                {#each filtered as product (product.id)}
+                    <article class="mgmt-row" aria-label={product.name}>
+                        <div style="display:grid; grid-template-columns:58px 1fr; gap:12px; align-items:center">
+                            <img class="mgmt-avatar" src={product.photoUrl} alt="" aria-hidden="true" />
+
+                            <div class="mgmt-row-main">
+                                <div class="mgmt-row-title">{product.name}</div>
+                                <p class="mgmt-row-sub">
+                                    <CategoryName categoryId={product.categoryId} /> · ${product.price.toFixed(2)}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="mgmt-row-actions">
+                            <button class="mgmt-btn ghost" on:click={() => startEdit(product)}>
+                                <Icon icon={Pencil} size={18} ariaLabel="Editar" />
+                                Editar
+                            </button>
+                            <button class="mgmt-btn danger" on:click={() => productStore.removeById(product.id)}>
+                                <Icon icon={Trash2} size={18} ariaLabel="Eliminar" />
+                                Eliminar
+                            </button>
+                        </div>
+                    </article>
+                {/each}
+            </div>
+        </section>
+    </div>
+</section>

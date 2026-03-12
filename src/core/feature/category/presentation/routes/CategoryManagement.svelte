@@ -1,12 +1,20 @@
 <script lang="ts">
     import { onMount } from "svelte";
+    import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
+    import ImagePicker from "../../../../infrastructure/presentation/components/ImagePicker.svelte";
+    import { logger } from "../../../../infrastructure/presentation/util/logger.service";
+    import { toastStore } from "../../../../infrastructure/presentation/viewmodel/toast.store";
+    import type { Category } from "../../domain/entity/Category";
     import { categoryStore } from "../viewmodel/category.store";
-    import type {Category} from "../../domain/entity/Category";
+    import { Check, Pencil, Plus, Save, Search, Trash2, X } from "lucide-svelte";
 
     let name = "";
     let description = "";
     let photoUrl = "";
     let editId: string | null = null;
+    let query = "";
+    let imagePending = false;
+    let imageKey = 0;
 
     onMount(() => {
         categoryStore.syncAll().catch(() => {});
@@ -17,20 +25,27 @@
         name = "";
         description = "";
         photoUrl = "";
+        imageKey += 1;
     }
 
     async function createCategory() {
         if (!name.trim()) return;
 
-        await categoryStore.create({
-            id: `c-${Math.random().toString(36).slice(2, 8)}`,
-            name: name.trim(),
-            description: description.trim(),
-            photoUrl: photoUrl.trim() || null,
-            status: true
-        });
-
-        resetForm();
+        try {
+            toastStore.info("Creando categoría…");
+            await categoryStore.create({
+                id: `c-${Math.random().toString(36).slice(2, 8)}`,
+                name: name.trim(),
+                description: description.trim(),
+                photoUrl: photoUrl.trim() || null,
+                status: true
+            });
+            toastStore.success("Categoría creada.");
+            resetForm();
+        } catch (e: any) {
+            logger.error(e?.message ?? e, e?.stack);
+            toastStore.error(e instanceof Error ? e.message : "No se pudo crear la categoría.");
+        }
     }
 
     function startEdit(category: Category): void {
@@ -46,102 +61,152 @@
         const current = $categoryStore.items.find((item) => item.id === editId);
         if (!current) return;
 
-        await categoryStore.updateById(editId, {
-            ...current,
-            name: name.trim(),
-            description: description.trim(),
-            photoUrl: photoUrl.trim() || null
-        });
-
-        resetForm();
+        try {
+            toastStore.info("Guardando cambios…");
+            await categoryStore.updateById(editId, {
+                ...current,
+                name: name.trim(),
+                description: description.trim(),
+                photoUrl: photoUrl.trim() || null
+            });
+            toastStore.success("Categoría actualizada.");
+            resetForm();
+        } catch (e: any) {
+            logger.error(e?.message ?? e, e?.stack);
+            toastStore.error(e instanceof Error ? e.message : "No se pudo guardar la categoría.");
+        }
     }
+
+    $: items = $categoryStore.items;
+    $: filtered =
+        query.trim().length === 0
+            ? items
+            : items.filter((c) => {
+                  const q = query.trim().toLowerCase();
+                  return (
+                      c.name.toLowerCase().includes(q) ||
+                      (c.description || "").toLowerCase().includes(q) ||
+                      (c.id || "").toLowerCase().includes(q)
+                  );
+              });
+
+    $: canSubmit = name.trim().length > 0 && !imagePending;
 </script>
 
-<section class="card">
-    <h4 class="media-title">Gestión de categorías</h4>
-    <div class="form">
-        <input bind:value={name} placeholder="Nombre de categoría" />
-        <input bind:value={description} placeholder="Descripción" />
-        <input bind:value={photoUrl} placeholder="URL de imagen (opcional)" />
-
-        {#if editId}
-            <button class="btn btn-primary" on:click={saveCategory}>Guardar</button>
-            <button class="btn btn-elevated" on:click={resetForm}>Cancelar</button>
-        {:else}
-            <button class="btn btn-primary" on:click={createCategory}>Agregar</button>
-        {/if}
-    </div>
-    <!--{#each listCategoriasTest as category}-->
-    {#each $categoryStore.items as category}
-        <article>
-            <div class="details">
-                <strong>{category.name}</strong>
-                <p>{category.description || "Sin descripción"}</p>
+<section class="mgmt-page" aria-label="Gestión de categorías">
+    <header class="mgmt-header">
+        <div class="mgmt-toolbar">
+            <div>
+                <h1 class="mgmt-title">Categorías</h1>
+                <p class="mgmt-subtitle">Organiza tu catálogo. Crea, edita y elimina categorías en segundos.</p>
             </div>
 
-            <button class="btn btn-elevated" on:click={() => startEdit(category)}>Editar</button>
-            <button class="btn btn-elevated" on:click={() => categoryStore.removeById(category.id)}>Eliminar</button>
-        </article>
-    {/each}
+            <div class="mgmt-meta">
+                <span class="mgmt-chip">
+                    <Icon icon={Check} size={18} ariaLabel="Total" />
+                    {filtered.length} / {items.length}
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <div class="mgmt-layout">
+        <section class="mgmt-card mgmt-form-card" aria-label="Formulario">
+            <h2 class="mgmt-card-title">{editId ? "Editar categoría" : "Nueva categoría"}</h2>
+
+            <div class="mgmt-grid">
+                <label class="mgmt-field" style="grid-column:1/-1">
+                    <span>Nombre</span>
+                    <input class="mgmt-input" bind:value={name} placeholder="Ej. Baterías, Solar, Herramientas…" />
+                </label>
+
+                <label class="mgmt-field" style="grid-column:1/-1">
+                    <span>Descripción</span>
+                    <textarea class="mgmt-input mgmt-area" bind:value={description} placeholder="Opcional"></textarea>
+                </label>
+
+                <div style="grid-column:1/-1">
+                    {#key imageKey}
+                        <ImagePicker
+                            label="Imagen de la categoría"
+                            bind:value={photoUrl}
+                            bind:pending={imagePending}
+                        />
+                    {/key}
+                </div>
+
+                <div class="mgmt-actions" style="grid-column:1/-1">
+                    {#if editId}
+                        <button class="mgmt-btn primary" on:click={saveCategory} disabled={!canSubmit}>
+                            <Icon icon={Save} size={18} ariaLabel="Guardar" />
+                            Guardar
+                        </button>
+                        <button class="mgmt-btn ghost" on:click={resetForm}>
+                            <Icon icon={X} size={18} ariaLabel="Cancelar" />
+                            Cancelar
+                        </button>
+                    {:else}
+                        <button class="mgmt-btn primary" on:click={createCategory} disabled={!canSubmit}>
+                            <Icon icon={Plus} size={18} ariaLabel="Agregar" />
+                            Agregar
+                        </button>
+                    {/if}
+                </div>
+            </div>
+        </section>
+
+        <section class="mgmt-card" aria-label="Listado">
+            <div class="mgmt-toolbar" style="margin-bottom:12px">
+                <h2 class="mgmt-card-title" style="margin:0">Listado</h2>
+
+                <label class="mgmt-field" style="min-width:min(360px,100%); margin:0">
+                    <span class="mgmt-muted" style="display:none">Buscar</span>
+                    <div style="display:flex; gap:10px; align-items:center">
+                        <Icon icon={Search} size={18} ariaLabel="Buscar" />
+                        <input
+                            class="mgmt-input"
+                            type="search"
+                            placeholder="Buscar categorías..."
+                            aria-label="Buscar categorías"
+                            bind:value={query}
+                        />
+                    </div>
+                </label>
+            </div>
+
+            <div class="mgmt-list">
+                {#if filtered.length === 0}
+                    <div class="mgmt-muted">No hay resultados.</div>
+                {/if}
+
+                {#each filtered as category (category.id)}
+                    <article class="mgmt-row" aria-label={category.name}>
+                        <div style="display:grid; grid-template-columns:58px 1fr; gap:12px; align-items:center">
+                            {#if category.photoUrl}
+                                <img class="mgmt-avatar" src={category.photoUrl} alt="" aria-hidden="true" />
+                            {:else}
+                                <div class="mgmt-avatar" aria-hidden="true"></div>
+                            {/if}
+
+                            <div class="mgmt-row-main">
+                                <div class="mgmt-row-title">{category.name}</div>
+                                <p class="mgmt-row-sub">{category.description || "Sin descripción"}</p>
+                            </div>
+                        </div>
+
+                        <div class="mgmt-row-actions">
+                            <button class="mgmt-btn ghost" on:click={() => startEdit(category)}>
+                                <Icon icon={Pencil} size={18} ariaLabel="Editar" />
+                                Editar
+                            </button>
+                            <button class="mgmt-btn danger" on:click={() => categoryStore.removeById(category.id)}>
+                                <Icon icon={Trash2} size={18} ariaLabel="Eliminar" />
+                                Eliminar
+                            </button>
+                        </div>
+                    </article>
+                {/each}
+            </div>
+        </section>
+    </div>
 </section>
-<style>
-    h4 {
-        margin: 0;
-        font-size: clamp(2rem, 3.6vw, 2.4rem);
-        line-height: 1.12;
-    }
-
-    .card{
-        display:grid;
-        gap:10px
-    }
-
-    input {
-        border: 1px solid var(--md-sys-color-outline-variant);
-        border-radius: 12px;
-        padding: 0 12px;
-        font: inherit;
-        color: var(--md-sys-color-on-surface);
-        background: color-mix(in srgb, var(--md-sys-color-surface) 88%, var(--md-sys-color-surface-variant));
-    }
-
-    .btn {
-        height: 35px;
-        border-radius: 16px;
-        border: 0;
-        font-size: 1rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: transform 120ms ease, box-shadow 180ms ease, background-color 180ms ease;
-    }
-
-    .btn:active { transform: translateY(1px); }
-
-    .btn-primary {
-        color: var(--md-sys-color-on-primary);
-        background: var(--md-sys-color-primary);
-        box-shadow: 0 8px 16px color-mix(in srgb, var(--md-sys-color-primary) 35%, transparent);
-    }
-
-    .btn-elevated {
-        min-width: 90px;
-        color: var(--md-sys-color-on-surface);
-        background: var(--md-sys-color-surface);
-        border: 1px solid var(--md-sys-color-outline-variant);
-        box-shadow: 0 6px 14px color-mix(in srgb, var(--md-sys-color-outline) 24%, transparent);
-    }
-
-    .form,article{
-        display:flex;
-        gap:8px;
-        flex-wrap:wrap
-    }
-
-    article{
-        display:grid;
-        grid-template-columns:1fr 90px 90px;
-        border:1px solid var(--md-sys-color-outline-variant);
-        padding:8px;
-        border-radius:12px
-    }
-</style>

@@ -1,18 +1,22 @@
-import {infrastructureContainer} from "../../../../infrastructure/di/infrastructure.container";
-import type {SaleDTO} from "../dto/SaleDTO";
-import {type Databases, ID, Query} from "appwrite";
-import type {Models} from "appwrite"
-import type {ProductDTO} from "../../../product/data/dto/ProductDTO";
+import type { SaleDTO } from "../dto/SaleDTO";
+import { type Databases, ID, Query } from "appwrite";
+import type { Models } from "appwrite";
+import { ENV } from "../../../../infrastructure/env";
 
-const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID
-const COLLECTION_ID = "sales"
+const COLLECTION_ID = "sales";
 
 export class SaleNetRepository {
     constructor(private databases: Databases) {}
 
+    private get databaseId(): string {
+        const id = ENV.databaseId;
+        if (!id) throw new Error("Falta configurar VITE_APPWRITE_DATABASE_ID");
+        return id;
+    }
+
     async getAll(): Promise<SaleDTO[]> {
         const response = await this.databases.listDocuments<SaleDTO>(
-            DATABASE_ID,
+            this.databaseId,
             COLLECTION_ID
         )
 
@@ -23,7 +27,7 @@ export class SaleNetRepository {
         data: Omit<SaleDTO, keyof Models.Document>
     ): Promise<SaleDTO> {
         return await this.databases.createDocument<SaleDTO>(
-            DATABASE_ID,
+            this.databaseId,
             COLLECTION_ID,
             ID.unique(),
             data
@@ -32,7 +36,7 @@ export class SaleNetRepository {
 
     async getByUser(userId: string): Promise<SaleDTO[]> {
         const response = await this.databases.listDocuments<SaleDTO>(
-            DATABASE_ID,
+            this.databaseId,
             COLLECTION_ID,
             [Query.equal("userId", userId)]
         )

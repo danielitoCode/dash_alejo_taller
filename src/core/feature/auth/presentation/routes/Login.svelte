@@ -3,8 +3,10 @@
     import { authContainer } from "../../di/auth.container";
     import FrameModal from "../components/FrameModal.svelte";
     import { ENV } from "../../../../infrastructure/env";
+    import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
     import { parseGoogleIdToken, type GoogleIdTokenProfile } from "../util/google-id-token";
     import { registerStore } from "../viewmodel/register.store";
+    import { Chrome, LogIn, Link2, UserPlus } from "lucide-svelte";
 
     export let navController: NavController;
 
@@ -219,11 +221,13 @@
 
             <div class="actions">
                 <button class="btn primary" on:click={signIn} disabled={!canSubmit}>
+                    <Icon icon={LogIn} size={18} className="btn-ico" ariaLabel="Entrar" />
                     {#if loading}Entrando...{:else}Entrar{/if}
                 </button>
 
                 <button class="btn elevated" on:click={continueWithGoogle} disabled={loading}>
-                    <span>Google</span>
+                    <Icon icon={Chrome} size={18} className="btn-ico" ariaLabel="Google" />
+                    <span>Continuar con Google</span>
                     <img src="/icon/googleIcon.png" alt="Google icon" class="g-badge" />
                 </button>
             </div>
@@ -300,7 +304,9 @@
             {/if}
 
             <div class="link-actions">
-                <button class="link-btn ghost" type="button" on:click={() => (linkOpen = false)} disabled={loading}>Cancelar</button>
+                <button class="link-btn ghost" type="button" on:click={() => (linkOpen = false)} disabled={loading}>
+                    Cancelar
+                </button>
                 <button
                     class="link-btn ghost"
                     type="button"
@@ -310,9 +316,11 @@
                     }}
                     disabled={loading}
                 >
+                    <Icon icon={UserPlus} size={18} className="btn-ico" ariaLabel="Crear cuenta" />
                     Crear cuenta
                 </button>
                 <button class="link-btn primary" type="button" on:click={linkGoogleAccount} disabled={loading}>
+                    <Icon icon={Link2} size={18} className="btn-ico" ariaLabel="Vincular" />
                     {#if loading}Vinculando...{:else}Vincular{/if}
                 </button>
             </div>
@@ -448,6 +456,10 @@
         align-items: center;
         justify-content: center;
         gap: 10px;
+    }
+
+    .btn-ico {
+        opacity: 0.95;
     }
 
     .btn:disabled {

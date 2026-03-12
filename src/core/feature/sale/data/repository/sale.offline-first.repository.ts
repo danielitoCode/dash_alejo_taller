@@ -4,22 +4,7 @@ import {saleFromDTO, saleToDTO} from "../mapper/Mappers";
 import type {SaleRepository} from "../../domain/repository/SaleRepository";
 import {SaleNetRepository} from "./sale.net.repository";
 import {db} from "../../../../infrastructure/di/dexie.db";
-
-function toLocalSaleDTO(sale: Sale): SaleDTO {
-    const payload = saleToDTO(sale);
-    const now = new Date().toISOString();
-
-    return {
-        ...payload,
-        $id: payload.$id || crypto.randomUUID(),
-        $collectionId: "sales",
-        $databaseId: import.meta.env.VITE_APPWRITE_DATABASE_ID || "",
-        $createdAt: now,
-        $updatedAt: now,
-        $permissions: [],
-        $sequence: 0,
-    };
-}
+import { logger } from "../../../../infrastructure/presentation/util/logger.service";
 
 export class SaleOfflineFirstRepository implements SaleRepository {
     constructor(
@@ -41,10 +26,12 @@ export class SaleOfflineFirstRepository implements SaleRepository {
             const created = await this.net.create(saleToDTO(sale));
             await db.sales.put(created);
             return saleFromDTO(created);
-        } catch {
-            const local = toLocalSaleDTO(sale);
-            await db.sales.put(local);
-            return saleFromDTO(local);
+        } catch (error: any) {
+            logger.error(
+                `Error al crear venta en Appwrite: ${error?.message ?? "desconocido"}`,
+                error?.stack
+            );
+            throw error;
         }
     }
 
