@@ -269,6 +269,57 @@
     }}
 />
 
+{#if linkOpen && googleProfile}
+    <div class="link-overlay" on:click|self={() => (linkOpen = false)}>
+        <div class="link-card" role="dialog" aria-label="Vincular Google">
+            <header class="link-head">
+                <div class="link-title">
+                    <strong>Vincular Google</strong>
+                    <span>Ingresa tu contraseña actual una sola vez.</span>
+                </div>
+                <button class="link-x" type="button" aria-label="Cerrar" on:click={() => (linkOpen = false)} disabled={loading}>×</button>
+            </header>
+
+            <div class="link-user">
+                {#if googleProfile.picture}
+                    <img class="link-avatar" src={googleProfile.picture} alt="" aria-hidden="true" />
+                {/if}
+                <div>
+                    <div class="link-name">{googleProfile.name || "Cuenta de Google"}</div>
+                    <div class="link-email">{googleProfile.email}</div>
+                </div>
+            </div>
+
+            <label class="link-field">
+                <span>Contraseña actual</span>
+                <input type="password" bind:value={linkPassword} placeholder="Tu contraseña" autocomplete="current-password" />
+            </label>
+
+            {#if linkError}
+                <div class="link-error">{linkError}</div>
+            {/if}
+
+            <div class="link-actions">
+                <button class="link-btn ghost" type="button" on:click={() => (linkOpen = false)} disabled={loading}>Cancelar</button>
+                <button
+                    class="link-btn ghost"
+                    type="button"
+                    on:click={() => {
+                        linkOpen = false;
+                        registerFrameOpen = true;
+                    }}
+                    disabled={loading}
+                >
+                    Crear cuenta
+                </button>
+                <button class="link-btn primary" type="button" on:click={linkGoogleAccount} disabled={loading}>
+                    {#if loading}Vinculando...{:else}Vincular{/if}
+                </button>
+            </div>
+        </div>
+    </div>
+{/if}
+
 <style>
     .login-screen {
         min-height: 100dvh;
@@ -463,5 +514,146 @@
         to {
             opacity: 0.78;
         }
+    }
+
+    .link-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 1200;
+        display: grid;
+        place-items: center;
+        padding: 16px;
+        background: color-mix(in srgb, black 55%, transparent);
+    }
+
+    .link-card {
+        width: min(520px, 100%);
+        border-radius: 22px;
+        overflow: hidden;
+        background: color-mix(in srgb, var(--md-sys-color-surface) 90%, transparent);
+        border: 1px solid var(--md-sys-color-outline-variant);
+        box-shadow: 0 26px 60px color-mix(in srgb, black 35%, transparent);
+        backdrop-filter: blur(14px);
+        display: grid;
+        gap: 12px;
+        padding: 14px;
+        color: var(--md-sys-color-on-surface);
+    }
+
+    .link-head {
+        display: flex;
+        align-items: start;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+    .link-title {
+        display: grid;
+        gap: 2px;
+    }
+
+    .link-title span {
+        font-size: 0.9rem;
+        color: color-mix(in srgb, var(--md-sys-color-on-surface) 70%, transparent);
+    }
+
+    .link-x {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        border: 1px solid var(--md-sys-color-outline-variant);
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+        font-size: 1.2rem;
+        line-height: 1;
+    }
+
+    .link-user {
+        display: grid;
+        grid-template-columns: 44px 1fr;
+        gap: 12px;
+        align-items: center;
+        padding: 10px;
+        border-radius: 16px;
+        border: 1px solid var(--md-sys-color-outline-variant);
+        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 35%, transparent);
+    }
+
+    .link-avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 1px solid var(--md-sys-color-outline-variant);
+        background: color-mix(in srgb, var(--md-sys-color-surface) 70%, transparent);
+    }
+
+    .link-name {
+        font-weight: 750;
+        letter-spacing: -0.01em;
+    }
+
+    .link-email {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .link-field {
+        display: grid;
+        gap: 6px;
+    }
+
+    .link-field span {
+        font-size: 0.92rem;
+        color: var(--md-sys-color-on-surface-variant);
+    }
+
+    .link-field input {
+        width: 100%;
+        border: 1px solid var(--md-sys-color-outline-variant);
+        border-radius: 12px;
+        height: 44px;
+        padding: 0 12px;
+        font: inherit;
+        color: var(--md-sys-color-on-surface);
+        background: color-mix(in srgb, var(--md-sys-color-surface) 88%, var(--md-sys-color-surface-variant));
+    }
+
+    .link-error {
+        color: var(--md-sys-color-error);
+        font-size: 0.92rem;
+    }
+
+    .link-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 10px;
+    }
+
+    .link-btn {
+        height: 44px;
+        border-radius: 14px;
+        border: 1px solid var(--md-sys-color-outline-variant);
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+        font-size: 0.98rem;
+        font-weight: 700;
+    }
+
+    .link-btn.primary {
+        border: 0;
+        color: var(--md-sys-color-on-primary);
+        background: var(--md-sys-color-primary);
+        box-shadow: 0 10px 20px color-mix(in srgb, var(--md-sys-color-primary) 35%, transparent);
+    }
+
+    .link-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
     }
 </style>
