@@ -23,7 +23,7 @@
 
 <div class="logs-wrapper {expanded ? 'open' : 'closed'}">
 
-    <div class="header" on:click={toggle}>
+    <div class="header" role="button" tabindex="0" on:click={toggle} on:keydown={(e) => (e.key === "Enter" || e.key === " " ? toggle() : null)}>
         <div class="left">
             🖥 Logs
             {#if errorCount > 0}

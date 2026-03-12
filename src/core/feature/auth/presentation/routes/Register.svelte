@@ -302,7 +302,7 @@
 />
 
 {#if linkOpen && googleProfile}
-    <div class="link-overlay" on:click|self={() => (linkOpen = false)}>
+    <div class="link-overlay" role="button" tabindex="0" aria-label="Cerrar vinculación" on:click|self={() => (linkOpen = false)} on:keydown|self={(e) => (e.key === "Enter" || e.key === " " ? (linkOpen = false) : null)}>
         <div class="link-card" role="dialog" aria-label="Vincular Google">
             <header class="link-head">
                 <div class="link-title">
