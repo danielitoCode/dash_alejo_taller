@@ -5,4 +5,8 @@ export class OpenSessionCaseUse {
     async openCustomSession(email: string, pass: string): Promise<string> {
         return await this.sessionNetManager.createEmailSession(email, pass);
     }
+
+    async openGoogleSession(successUrl: string, failureUrl: string): Promise<void> {
+        await this.sessionNetManager.createOAuthSession("google", successUrl, failureUrl);
+    }
 }
