@@ -1,6 +1,10 @@
 <script lang="ts">
     import type { NavController } from "../../../../../lib/navigation/NavController";
     import { authContainer } from "../../di/auth.container";
+    import FrameModal from "../components/FrameModal.svelte";
+    import { ENV } from "../../../../infrastructure/env";
+    import { parseGoogleIdToken, type GoogleIdTokenProfile } from "../util/google-id-token";
+    import { registerStore } from "../viewmodel/register.store";
 
     export let navController: NavController;
 
@@ -29,31 +33,120 @@
                 email.trim(),
                 password
             );
+            const current = await authContainer.useCases.accounts.getCurrentUser();
+            if (current.role !== "admin") {
+                navController.navigate("unauthorized");
+                return;
+            }
             navController.navigate("home", { id: userId });
         } catch (e) {
-            error = e instanceof Error ? e.message : "No se pudo iniciar sesión";
+            error = e instanceof Error ? e.message : "No se pudo iniciar sesiÃ³n";
         } finally {
             loading = false;
         }
     }
 
-    function continueWithGoogle() {
-        error = "Inicio con Google no disponible en esta versión web.";
+    function getReturnUrl(): string {
+        return new URL(import.meta.env.BASE_URL, window.location.origin).toString();
+    }
+
+    let googleFrameOpen = false;
+    let registerFrameOpen = false;
+    let googleProfile: GoogleIdTokenProfile | null = null;
+
+    function getGoogleAuthSrc(): string {
+        const clientId = ENV.googleClientId;
+        if (!clientId) throw new Error("Falta configurar VITE_GOOGLE_CLIENT_ID");
+        const params = new URLSearchParams({
+            client_id: clientId,
+            parent_origin: window.location.origin
+        });
+        return `/google-auth.html#${params.toString()}`;
+    }
+
+    function getGoogleRegisterSrc(profile: GoogleIdTokenProfile): string {
+        const params = new URLSearchParams({
+            email: profile.email,
+            name: profile.name,
+            picture: profile.picture,
+            parent_origin: window.location.origin
+        });
+        return `/google-register.html#${params.toString()}`;
+    }
+
+    async function handleGoogleProfile(profile: GoogleIdTokenProfile) {
+        googleProfile = profile;
+
+        loading = true;
+        error = null;
+
+        try {
+            const userId = await authContainer.useCases.sessions.openSession.openCustomSession(profile.email, profile.sub);
+            const current = await authContainer.useCases.accounts.getCurrentUser();
+            if (current.role !== "admin") {
+                navController.navigate("unauthorized");
+                return;
+            }
+            navController.navigate("home", { id: userId });
+        } catch {
+            registerFrameOpen = true;
+        } finally {
+            loading = false;
+        }
+    }
+
+    async function continueWithGoogle() {
+        if (loading) return;
+        error = null;
+        try {
+            googleFrameOpen = true;
+        } catch (e) {
+            error = e instanceof Error ? e.message : "No se pudo iniciar sesión con Google";
+        }
     }
 
     function goToRegister() {
         navController.navigate("register");
     }
+
+    async function registerStoreFromGoogle(profile: GoogleIdTokenProfile) {
+        loading = true;
+        error = null;
+
+        try {
+            await registerStore.createAccount({
+                name: profile.name || profile.email.split("@")[0] || "Usuario",
+                email: profile.email,
+                password: profile.sub,
+                phone: "",
+                photo_url: profile.picture,
+                role: "viewer",
+                sub: profile.sub,
+                verification: true
+            });
+
+            const current = await authContainer.useCases.accounts.getCurrentUser();
+            if (current.role !== "admin") {
+                navController.navigate("unauthorized");
+                return;
+            }
+            navController.navigate("home", { id: current.id });
+        } catch (e) {
+            error = e instanceof Error ? e.message : "No se pudo crear la cuenta";
+        } finally {
+            loading = false;
+        }
+    }
 </script>
 
-<section class="login-screen" aria-label="Iniciar sesión">
+<section class="login-screen" aria-label="Iniciar sesiÃ³n">
     <div class="login-shell {contentVisible ? 'is-visible' : ''}">
         <section class="login-title">
             <div class="surface-icon" style={`--glow:${glowAlpha}`}>
                 <div class="loader-ring" aria-hidden="true"></div>
                 <img src="/alejoicon_clean.svg" alt="App icon" class="logo" />
             </div>
-            <h1>Iniciar sesión</h1>
+            <h1>Iniciar sesiÃ³n</h1>
             <p>Accede con tu cuenta para continuar.</p>
         </section>
 
@@ -64,8 +157,13 @@
             </label>
 
             <label class="field">
-                <span>Contraseña</span>
-                <input type="password" bind:value={password} placeholder="••••••••" autocomplete="current-password" />
+                <span>ContraseÃ±a</span>
+                <input
+                    type="password"
+                    bind:value={password}
+                    placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                    autocomplete="current-password"
+                />
             </label>
 
             {#if error}
@@ -79,16 +177,50 @@
 
                 <button class="btn elevated" on:click={continueWithGoogle} disabled={loading}>
                     <span>Google</span>
-                    <img src="/public/icon/googleIcon.png" alt="Google icon" class="g-badge"/>
+                    <img src="/icon/googleIcon.png" alt="Google icon" class="g-badge" />
                 </button>
             </div>
 
-            <button class="link-btn" on:click={goToRegister}>
-                ¿No tienes cuenta? Regístrate
-            </button>
+            <button class="link-btn" on:click={goToRegister}>Â¿No tienes cuenta? RegÃ­strate</button>
         </section>
     </div>
 </section>
+
+<FrameModal
+    open={googleFrameOpen}
+    title="Google"
+    ariaLabel="Autenticación con Google"
+    src={googleFrameOpen ? getGoogleAuthSrc() : ""}
+    on:close={() => (googleFrameOpen = false)}
+    on:frameMessage={(event) => {
+        const data = (event as CustomEvent<{ data: any }>).detail.data;
+        if (data?.type === 'google-cancel') googleFrameOpen = false;
+        if (data?.type === 'google-credential' && typeof data.credential === 'string') {
+            googleFrameOpen = false;
+            try {
+                handleGoogleProfile(parseGoogleIdToken(data.credential));
+            } catch (e) {
+                error = e instanceof Error ? e.message : 'Credencial inválida';
+            }
+        }
+    }}
+/>
+
+<FrameModal
+    open={registerFrameOpen}
+    title="Crear cuenta"
+    ariaLabel="Registro con Google"
+    src={registerFrameOpen && googleProfile ? getGoogleRegisterSrc(googleProfile) : ""}
+    on:close={() => (registerFrameOpen = false)}
+    on:frameMessage={(event) => {
+        const data = (event as CustomEvent<{ data: any }>).detail.data;
+        if (data?.type === 'google-register-cancel') registerFrameOpen = false;
+        if (data?.type === 'google-register-accept' && googleProfile) {
+            registerFrameOpen = false;
+            registerStoreFromGoogle(googleProfile);
+        }
+    }}
+/>
 
 <style>
     .login-screen {
@@ -98,8 +230,12 @@
         place-items: center;
         padding: 15px;
         background:
-                radial-gradient(circle at 50% 10%, color-mix(in srgb, var(--md-sys-color-primary) 24%, transparent), transparent 50%),
-                var(--md-sys-color-background);
+            radial-gradient(
+                circle at 50% 10%,
+                color-mix(in srgb, var(--md-sys-color-primary) 24%, transparent),
+                transparent 50%
+            ),
+            var(--md-sys-color-background);
     }
 
     .login-shell {
@@ -135,7 +271,8 @@
         position: absolute;
         inset: 0;
         border-radius: 28%;
-        border: 7px solid color-mix(in srgb, var(--md-sys-color-primary-container) calc(var(--glow) * 100%), transparent);
+        border: 7px solid
+            color-mix(in srgb, var(--md-sys-color-primary-container) calc(var(--glow) * 100%), transparent);
         animation: pulse 600ms ease-in-out infinite alternate;
     }
 
@@ -273,7 +410,11 @@
     }
 
     @keyframes pulse {
-        from { opacity: 0.12; }
-        to { opacity: 0.78; }
+        from {
+            opacity: 0.12;
+        }
+        to {
+            opacity: 0.78;
+        }
     }
 </style>

@@ -58,6 +58,14 @@
     }
 
     onMount(() => {
+        authContainer.useCases.accounts.getCurrentUser().then((u) => {
+            if (u.role !== "admin") {
+                navController.navigate("unauthorized");
+            }
+        }).catch(() => {
+            navController.navigate("login");
+        });
+
         productStore.syncAll().catch(() => { toastStore.error("Error al sincronizar datos"); });
         categoryStore.syncAll().catch(() => { toastStore.error("Error al sincronizar datos"); });
         promotionStore.syncAll().catch(() => { toastStore.error("Error al sincronizar datos"); });

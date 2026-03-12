@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { NavController } from "../../../../../lib/navigation/NavController";
     import { registerStore } from "../viewmodel/register.store";
+    import { authContainer } from "../../di/auth.container";
 
     export let navController: NavController;
 
@@ -54,6 +55,26 @@
         }
     }
 
+    function getReturnUrl(): string {
+        return new URL(import.meta.env.BASE_URL, window.location.origin).toString();
+    }
+
+    async function continueWithGoogle() {
+        if (loading) return;
+
+        loading = true;
+        error = null;
+        success = null;
+
+        try {
+            const returnUrl = getReturnUrl();
+            await authContainer.useCases.sessions.openSession.openGoogleSession(returnUrl, returnUrl);
+        } catch (e) {
+            error = e instanceof Error ? e.message : "No se pudo iniciar sesión con Google";
+            loading = false;
+        }
+    }
+
     function goToLogin() {
         navController.navigate("login");
     }
@@ -78,17 +99,27 @@
             </label>
 
             <label class="field">
-                <span>Contraseña</span>
-                <input type="password" bind:value={password} placeholder="Mínimo 6 caracteres" autocomplete="new-password" />
+                <span>ContraseÃ±a</span>
+                <input
+                    type="password"
+                    bind:value={password}
+                    placeholder="MÃ­nimo 6 caracteres"
+                    autocomplete="new-password"
+                />
             </label>
 
             <label class="field">
-                <span>Confirmar contraseña</span>
-                <input type="password" bind:value={confirmPassword} placeholder="Repite la contraseña" autocomplete="new-password" />
+                <span>Confirmar contraseÃ±a</span>
+                <input
+                    type="password"
+                    bind:value={confirmPassword}
+                    placeholder="Repite la contraseÃ±a"
+                    autocomplete="new-password"
+                />
             </label>
 
             {#if confirmPassword && !passwordsMatch}
-                <p class="warning">No coinciden las contraseñas</p>
+                <p class="warning">No coinciden las contraseÃ±as</p>
             {/if}
 
             {#if error}
@@ -103,9 +134,12 @@
                 {#if loading}Registrando...{:else}Registrarse{/if}
             </button>
 
-            <button class="link-btn" on:click={goToLogin}>
-                ¿Ya tienes cuenta? Inicia sesión
+            <button class="btn elevated" on:click={continueWithGoogle} disabled={loading}>
+                <span>Google</span>
+                <img src="/icon/googleIcon.png" alt="Google icon" class="g-badge" />
             </button>
+
+            <button class="link-btn" on:click={goToLogin}>Â¿Ya tienes cuenta? Inicia sesiÃ³n</button>
         </section>
     </div>
 </section>
@@ -118,8 +152,12 @@
         place-items: center;
         padding: 24px;
         background:
-                radial-gradient(circle at 50% 8%, color-mix(in srgb, var(--md-sys-color-secondary) 22%, transparent), transparent 52%),
-                var(--md-sys-color-background);
+            radial-gradient(
+                circle at 50% 8%,
+                color-mix(in srgb, var(--md-sys-color-secondary) 22%, transparent),
+                transparent 52%
+            ),
+            var(--md-sys-color-background);
     }
 
     .register-shell {
@@ -188,9 +226,18 @@
         background: color-mix(in srgb, var(--md-sys-color-surface) 88%, var(--md-sys-color-surface-variant));
     }
 
-    .warning { color: #d08900; font-size: 0.92rem; }
-    .error { color: var(--md-sys-color-error); font-size: 0.92rem; }
-    .success { color: var(--md-sys-color-primary); font-size: 0.92rem; }
+    .warning {
+        color: #d08900;
+        font-size: 0.92rem;
+    }
+    .error {
+        color: var(--md-sys-color-error);
+        font-size: 0.92rem;
+    }
+    .success {
+        color: var(--md-sys-color-primary);
+        font-size: 0.92rem;
+    }
 
     .btn {
         height: 52px;
@@ -199,6 +246,10 @@
         cursor: pointer;
         font-size: 1rem;
         font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
     }
 
     .btn:disabled {
@@ -209,6 +260,20 @@
     .primary {
         color: var(--md-sys-color-on-primary);
         background: var(--md-sys-color-primary);
+    }
+
+    .elevated {
+        color: var(--md-sys-color-on-surface);
+        background: var(--md-sys-color-surface);
+        border: 1px solid var(--md-sys-color-outline-variant);
+    }
+
+    .g-badge {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: inline-grid;
+        place-items: center;
     }
 
     .link-btn {

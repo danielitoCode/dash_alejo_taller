@@ -1,15 +1,20 @@
 <script lang="ts">
     import {onMount} from "svelte";
-    import {sessionStore} from "../viewmodel/session.store";
+    import {authContainer} from "../../di/auth.container";
     import alejoIcon from "/alejoicon_clean.svg";
 
     export let navController;
 
     onMount(async () => {
         try {
-            const user = await sessionStore.getCurrentUser();
-            navController.navigate("home", { id: user.$id });
-            // navController.navigate("home", { id: "user.$id" });
+            const user = await authContainer.useCases.accounts.getCurrentUser();
+
+            if (user.role !== "admin") {
+                navController.navigate("unauthorized");
+                return;
+            }
+
+            navController.navigate("home", { id: user.id });
         } catch {
             navController.navigate("welcome");
         }
