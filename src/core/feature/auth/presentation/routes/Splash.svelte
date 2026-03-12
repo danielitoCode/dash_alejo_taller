@@ -10,7 +10,7 @@
             const user = await authContainer.useCases.accounts.getCurrentUser();
 
             if (user.role !== "admin") {
-                navController.navigate("unauthorized");
+                navController.navigate("unauthorized", { message: "Tu cuenta existe, pero no tiene permisos de administrador." });
                 return;
             }
 

@@ -58,13 +58,18 @@
     }
 
     onMount(() => {
-        authContainer.useCases.accounts.getCurrentUser().then((u) => {
-            if (u.role !== "admin") {
-                navController.navigate("unauthorized");
-            }
-        }).catch(() => {
-            navController.navigate("login");
-        });
+        authContainer.useCases.accounts
+            .getCurrentUser()
+            .then((u) => {
+                if (u.role !== "admin") {
+                    navController.navigate("unauthorized", {
+                        message: "Tu cuenta no está autorizada para usar el panel de gestión."
+                    });
+                }
+            })
+            .catch(() => {
+                navController.navigate("login");
+            });
 
         productStore.syncAll().catch(() => { toastStore.error("Error al sincronizar datos"); });
         categoryStore.syncAll().catch(() => { toastStore.error("Error al sincronizar datos"); });

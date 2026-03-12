@@ -13,6 +13,7 @@ import {CloseSessionsCaseUSe} from "../domain/caseuse/CloseSessionsCaseUSe";
 import {GetCurrentUserCaseUse} from "../domain/caseuse/GetCurrentUserCaseUse";
 import {AdminNetManagerImpl} from "../data/repository/admin.repository";
 import {GetAllUsersCaseUse} from "../domain/caseuse/GetAllUsersCaseUse";
+import {LinkGoogleAccountCaseUse} from "../domain/caseuse/LinkGoogleAccountCaseUse";
 
 // Account instance
 const accounts = infrastructureContainer.appwrite.account
@@ -35,6 +36,7 @@ const opeSessionCaseUse = new OpenSessionCaseUse(sessionNetManager)
 const closeSessionCaseUSe = new CloseSessionsCaseUSe(sessionNetManager)
 const getCurrentUserCaseUse = new GetCurrentUserCaseUse(authNetRepository)
 const getAllUserCaseUse = new GetAllUsersCaseUse(adminNetRepository)
+const linkGoogleAccountCaseUse = new LinkGoogleAccountCaseUse(authNetRepository, sessionNetManager)
 
 export const authContainer = {
     repositories: {
@@ -53,6 +55,7 @@ export const authContainer = {
             updateRole: updateRoleCaseUse.execute.bind(updateRoleCaseUse),
             deleteUser: deleteUserCaseUse.execute.bind(deleteUserCaseUse),
             getAllUserCaseUse: getAllUserCaseUse.execute.bind(getAllUserCaseUse),
+            linkGoogleAccount: linkGoogleAccountCaseUse.execute.bind(linkGoogleAccountCaseUse),
         },
         sessions: {
             openSession: opeSessionCaseUse,

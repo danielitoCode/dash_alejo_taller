@@ -95,7 +95,7 @@
             const userId = await authContainer.useCases.sessions.openSession.openCustomSession(profile.email, profile.sub);
             const current = await authContainer.useCases.accounts.getCurrentUser();
             if (current.role !== "admin") {
-                navController.navigate("unauthorized");
+                navController.navigate("unauthorized", { message: "Tu cuenta existe, pero no tiene permisos de administrador." });
                 return;
             }
             navController.navigate("home", { id: userId });
@@ -125,12 +125,17 @@
             });
             const current = await authContainer.useCases.accounts.getCurrentUser();
             if (current.role !== "admin") {
-                navController.navigate("unauthorized");
+                navController.navigate("unauthorized", { message: "Cuenta creada, pero sin permisos para el panel de gestión." });
                 return;
             }
             navController.navigate("home", { id: current.id });
-        } catch (e) {
-            error = e instanceof Error ? e.message : "No se pudo crear la cuenta";
+        } catch (e: any) {
+            const code = typeof e?.code === "number" ? e.code : null;
+            if (code === 409) {
+                error = "Ya existe una cuenta con este correo. Inicia sesión con tu contraseña.";
+            } else {
+                error = e instanceof Error ? e.message : "No se pudo crear la cuenta";
+            }
         } finally {
             loading = false;
         }

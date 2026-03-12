@@ -9,9 +9,11 @@ export interface UserNetRepository {
 
     updateName(newName: string): Promise<void>
 
-    updatePassword(newPassword: string): Promise<void>
+    updatePassword(newPassword: string, oldPassword?: string): Promise<void>
 
     updatePhotoUrl(newPhotoUrl: string): Promise<void>
+
+    linkGoogle(sub: string, photoUrl: string, name: string): Promise<void>
 
     updatePhone(newPhone: string): Promise<void>
 

@@ -35,7 +35,7 @@
             );
             const current = await authContainer.useCases.accounts.getCurrentUser();
             if (current.role !== "admin") {
-                navController.navigate("unauthorized");
+                navController.navigate("unauthorized", { message: "Tu cuenta existe, pero no tiene permisos de administrador." });
                 return;
             }
             navController.navigate("home", { id: userId });
@@ -51,6 +51,9 @@
     let googleProfile: GoogleIdTokenProfile | null = null;
     let googleAuthSrc = "";
     let googleRegisterSrc = "";
+    let linkOpen = false;
+    let linkPassword = "";
+    let linkError: string | null = null;
 
     function getGoogleAuthSrc(): string {
         const clientId = ENV.googleClientId;
@@ -77,18 +80,56 @@
 
         loading = true;
         error = null;
+        linkError = null;
 
         try {
             const userId = await authContainer.useCases.sessions.openSession.openCustomSession(profile.email, profile.sub);
             const current = await authContainer.useCases.accounts.getCurrentUser();
             if (current.role !== "admin") {
-                navController.navigate("unauthorized");
+                navController.navigate("unauthorized", { message: "Tu cuenta existe, pero no tiene permisos de administrador." });
                 return;
             }
             navController.navigate("home", { id: userId });
         } catch {
             googleRegisterSrc = getGoogleRegisterSrc(profile);
-            registerFrameOpen = true;
+            linkOpen = true;
+        } finally {
+            loading = false;
+        }
+    }
+
+    async function linkGoogleAccount() {
+        if (!googleProfile) return;
+        if (!linkPassword.trim()) {
+            linkError = "Ingresa tu contraseña actual.";
+            return;
+        }
+
+        loading = true;
+        linkError = null;
+        error = null;
+
+        try {
+            const userId = await authContainer.useCases.accounts.linkGoogleAccount({
+                email: googleProfile.email,
+                currentPassword: linkPassword,
+                googleSub: googleProfile.sub,
+                name: googleProfile.name || googleProfile.email.split("@")[0] || "Usuario",
+                photoUrl: googleProfile.picture || ""
+            });
+
+            const current = await authContainer.useCases.accounts.getCurrentUser();
+            if (current.role !== "admin") {
+                navController.navigate("unauthorized", { message: "Tu cuenta existe, pero no tiene permisos de administrador." });
+                return;
+            }
+
+            linkOpen = false;
+            linkPassword = "";
+            navController.navigate("home", { id: userId });
+        } catch (e: any) {
+            const code = typeof e?.code === "number" ? e.code : null;
+            linkError = code === 401 ? "Contraseña incorrecta." : (e instanceof Error ? e.message : "No se pudo vincular la cuenta.");
         } finally {
             loading = false;
         }
@@ -127,12 +168,18 @@
 
             const current = await authContainer.useCases.accounts.getCurrentUser();
             if (current.role !== "admin") {
-                navController.navigate("unauthorized");
+                navController.navigate("unauthorized", { message: "Cuenta creada, pero sin permisos para el panel de gestión." });
                 return;
             }
             navController.navigate("home", { id: current.id });
-        } catch (e) {
-            error = e instanceof Error ? e.message : "No se pudo crear la cuenta";
+        } catch (e: any) {
+            const code = typeof e?.code === "number" ? e.code : null;
+            if (code === 409) {
+                error = "Ya existe una cuenta con este correo. Inicia sesión con tu contraseña.";
+                linkOpen = true;
+            } else {
+                error = e instanceof Error ? e.message : "No se pudo crear la cuenta";
+            }
         } finally {
             loading = false;
         }

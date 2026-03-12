@@ -57,14 +57,23 @@ export class UserNetRepositoryImpl implements UserNetRepository {
         await this.account.updateName(newName);
     }
 
-    async updatePassword(newPassword: string): Promise<void> {
-        await this.account.updatePassword(newPassword);
+    async updatePassword(newPassword: string, oldPassword?: string): Promise<void> {
+        await this.account.updatePassword(newPassword, oldPassword);
     }
 
     async updatePhotoUrl(newPhotoUrl: string): Promise<void> {
         let photoPreference = new Map<string,string>()
         photoPreference.set("photo_url", newPhotoUrl);
         await this.account.updatePrefs(photoPreference)
+    }
+
+    async linkGoogle(sub: string, photoUrl: string, name: string): Promise<void> {
+        const prefs = new Map<string, any>();
+        prefs.set("sub", sub);
+        prefs.set("photo_url", photoUrl);
+        prefs.set("name", name);
+        prefs.set("google_linked", true);
+        await this.account.updatePrefs(prefs);
     }
 
     async updatePhone(newPhone: string): Promise<void> {

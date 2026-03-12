@@ -2,11 +2,14 @@
     import { onMount } from "svelte";
     import type { NavController } from "../../../../../lib/navigation/NavController";
     import { authContainer } from "../../di/auth.container";
+    import type { NavBackStackEntry } from "../../../../../lib/navigation/NavBackStackEntry";
 
     export let navController: NavController;
+    export let navBackStackEntry: NavBackStackEntry<{ message?: string }> | undefined = undefined;
     export let message = "Tu usuario no está autorizado para acceder a la plataforma.";
 
     let seconds = 5;
+    $: finalMessage = navBackStackEntry?.args?.message ?? message;
 
     onMount(() => {
         authContainer.useCases.sessions.closeSession.execute().catch(() => {});
@@ -27,7 +30,7 @@
     <div class="card">
         <img src="/alejoicon_clean.svg" alt="Logo" class="logo" />
         <h1>Acceso restringido</h1>
-        <p>{message}</p>
+        <p>{finalMessage}</p>
         <div class="hint">
             <span>Volviendo al inicio de sesión en</span>
             <strong>{seconds}s</strong>

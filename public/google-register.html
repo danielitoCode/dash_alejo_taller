@@ -18,20 +18,48 @@
       }
       .card {
         width: min(420px, calc(100vw - 32px));
-        border-radius: 18px;
-        padding: 16px;
-        background: rgba(20, 20, 20, 0.55);
-        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 20px;
+        padding: 16px 16px 14px;
+        background: rgba(20, 20, 20, 0.62);
+        border: 1px solid rgba(255, 255, 255, 0.16);
         backdrop-filter: blur(12px);
         color: #fff;
         display: grid;
         gap: 12px;
+      }
+      .head {
+        display: grid;
+        grid-template-columns: 44px 1fr;
+        gap: 12px;
+        align-items: center;
+      }
+      .logo {
+        width: 44px;
+        height: 44px;
+        object-fit: contain;
+        opacity: 0.96;
+        filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.35));
+      }
+      h1 {
+        margin: 0;
+        font-size: 1.06rem;
+        letter-spacing: -0.01em;
+      }
+      p {
+        margin: 0;
+        opacity: 0.86;
+        font-size: 0.92rem;
+        line-height: 1.35;
       }
       .user {
         display: grid;
         grid-template-columns: 44px 1fr;
         gap: 12px;
         align-items: center;
+        padding: 10px;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(0, 0, 0, 0.18);
       }
       .avatar {
         width: 44px;
@@ -41,16 +69,16 @@
         background: rgba(255, 255, 255, 0.08);
         border: 1px solid rgba(255, 255, 255, 0.14);
       }
-      h1 {
-        margin: 0;
-        font-size: 1.05rem;
+      .name {
+        font-weight: 750;
         letter-spacing: -0.01em;
       }
-      p {
-        margin: 0;
-        opacity: 0.86;
-        font-size: 0.92rem;
-        line-height: 1.35;
+      .email {
+        opacity: 0.9;
+        font-size: 0.9rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       .actions {
         display: grid;
@@ -65,12 +93,12 @@
         background: rgba(0, 0, 0, 0.25);
         color: #fff;
         cursor: pointer;
-        font-weight: 600;
+        font-weight: 700;
       }
       .btn.primary {
-        background: rgba(129, 199, 132, 0.85);
+        background: rgba(129, 199, 132, 0.9);
         color: rgba(15, 47, 24, 1);
-        border-color: rgba(129, 199, 132, 0.5);
+        border-color: rgba(129, 199, 132, 0.55);
       }
       .btn:hover {
         filter: brightness(1.06);
@@ -79,14 +107,19 @@
   </head>
   <body>
     <div class="card" role="dialog" aria-label="Crear cuenta">
-      <h1>No encontramos tu cuenta</h1>
-      <p>¿Deseas crear una cuenta con este perfil de Google?</p>
+      <div class="head">
+        <img class="logo" src="/alejoicon_clean.svg" alt="" aria-hidden="true" />
+        <div>
+          <h1>Crear cuenta</h1>
+          <p>¿Deseas crear una cuenta con este perfil de Google?</p>
+        </div>
+      </div>
 
-      <div class="user">
+      <div class="user" aria-label="Perfil seleccionado">
         <img id="avatar" class="avatar" alt="" />
         <div>
-          <div id="name" style="font-weight: 700"></div>
-          <div id="email" style="opacity: 0.9; font-size: 0.9rem"></div>
+          <div id="name" class="name"></div>
+          <div id="email" class="email"></div>
         </div>
       </div>
 
@@ -112,6 +145,7 @@
 
       document.getElementById("name").textContent = name || "Cuenta de Google";
       document.getElementById("email").textContent = email;
+
       const avatarEl = document.getElementById("avatar");
       if (picture) avatarEl.src = picture;
       else avatarEl.remove();
