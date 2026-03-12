@@ -2,6 +2,9 @@
     import type { NavController } from "../../../../../lib/navigation/NavController";
     import { registerStore } from "../viewmodel/register.store";
     import { authContainer } from "../../di/auth.container";
+    import FrameModal from "../components/FrameModal.svelte";
+    import { ENV } from "../../../../infrastructure/env";
+    import { parseGoogleIdToken, type GoogleIdTokenProfile } from "../util/google-id-token";
 
     export let navController: NavController;
 
@@ -59,19 +62,89 @@
         return new URL(import.meta.env.BASE_URL, window.location.origin).toString();
     }
 
-    async function continueWithGoogle() {
-        if (loading) return;
+    let googleFrameOpen = false;
+    let registerFrameOpen = false;
+    let googleProfile: GoogleIdTokenProfile | null = null;
+
+    function getGoogleAuthSrc(): string {
+        const clientId = ENV.googleClientId;
+        if (!clientId) throw new Error("Falta configurar VITE_GOOGLE_CLIENT_ID");
+        const params = new URLSearchParams({
+            client_id: clientId,
+            parent_origin: window.location.origin
+        });
+        return `/google-auth.html#${params.toString()}`;
+    }
+
+    function getGoogleRegisterSrc(profile: GoogleIdTokenProfile): string {
+        const params = new URLSearchParams({
+            email: profile.email,
+            name: profile.name,
+            picture: profile.picture,
+            parent_origin: window.location.origin
+        });
+        return `/google-register.html#${params.toString()}`;
+    }
+
+    async function handleGoogleProfile(profile: GoogleIdTokenProfile) {
+        googleProfile = profile;
 
         loading = true;
         error = null;
         success = null;
 
         try {
-            const returnUrl = getReturnUrl();
-            await authContainer.useCases.sessions.openSession.openGoogleSession(returnUrl, returnUrl);
+            const userId = await authContainer.useCases.sessions.openSession.openCustomSession(profile.email, profile.sub);
+            const current = await authContainer.useCases.accounts.getCurrentUser();
+            if (current.role !== "admin") {
+                navController.navigate("unauthorized");
+                return;
+            }
+            navController.navigate("home", { id: userId });
+        } catch {
+            registerFrameOpen = true;
+        } finally {
+            loading = false;
+        }
+    }
+
+    async function registerStoreFromGoogle(profile: GoogleIdTokenProfile) {
+        loading = true;
+        error = null;
+        success = null;
+
+        try {
+            await registerStore.createAccount({
+                name: profile.name || profile.email.split("@")[0] || "Usuario",
+                email: profile.email,
+                password: profile.sub,
+                phone: "",
+                photo_url: profile.picture,
+                role: "viewer",
+                sub: profile.sub,
+                verification: true
+            });
+            const current = await authContainer.useCases.accounts.getCurrentUser();
+            if (current.role !== "admin") {
+                navController.navigate("unauthorized");
+                return;
+            }
+            navController.navigate("home", { id: current.id });
+        } catch (e) {
+            error = e instanceof Error ? e.message : "No se pudo crear la cuenta";
+        } finally {
+            loading = false;
+        }
+    }
+
+    async function continueWithGoogle() {
+        if (loading) return;
+        error = null;
+        success = null;
+        try {
+            googleFrameOpen = true;
         } catch (e) {
             error = e instanceof Error ? e.message : "No se pudo iniciar sesión con Google";
-            loading = false;
         }
     }
 
@@ -143,6 +216,42 @@
         </section>
     </div>
 </section>
+
+<FrameModal
+    open={googleFrameOpen}
+    title="Google"
+    ariaLabel="Autenticación con Google"
+    src={googleFrameOpen ? getGoogleAuthSrc() : ""}
+    on:close={() => (googleFrameOpen = false)}
+    on:frameMessage={(event) => {
+        const data = (event as CustomEvent<{ data: any }>).detail.data;
+        if (data?.type === 'google-cancel') googleFrameOpen = false;
+        if (data?.type === 'google-credential' && typeof data.credential === 'string') {
+            googleFrameOpen = false;
+            try {
+                handleGoogleProfile(parseGoogleIdToken(data.credential));
+            } catch (e) {
+                error = e instanceof Error ? e.message : 'Credencial inválida';
+            }
+        }
+    }}
+/>
+
+<FrameModal
+    open={registerFrameOpen}
+    title="Crear cuenta"
+    ariaLabel="Registro con Google"
+    src={registerFrameOpen && googleProfile ? getGoogleRegisterSrc(googleProfile) : ""}
+    on:close={() => (registerFrameOpen = false)}
+    on:frameMessage={(event) => {
+        const data = (event as CustomEvent<{ data: any }>).detail.data;
+        if (data?.type === 'google-register-cancel') registerFrameOpen = false;
+        if (data?.type === 'google-register-accept' && googleProfile) {
+            registerFrameOpen = false;
+            registerStoreFromGoogle(googleProfile);
+        }
+    }}
+/>
 
 <style>
     .register-screen {
