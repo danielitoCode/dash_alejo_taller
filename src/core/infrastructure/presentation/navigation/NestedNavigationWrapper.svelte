@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount } from "svelte";
+    import { onDestroy, onMount } from "svelte";
     import type { NavBackStackEntry } from "../../../../lib/navigation/NavBackStackEntry";
     import type { NavController } from "../../../../lib/navigation/NavController";
     import NavHost from "../../../../lib/navigation/NavHost.svelte";
@@ -14,17 +14,25 @@
     import { promotionStore } from "../../../feature/notification/presentation/viewmodel/promotion.store";
     import PromoManagement from "../../../feature/notification/presentation/routes/PromoManagement.svelte";
     import SaleManagement from "../../../feature/sale/presentation/routes/SaleManagement.svelte";
+    import { saleStore } from "../../../feature/sale/presentation/viewmodel/sale.store";
     import UserManagement from "../../../feature/auth/presentation/routes/UserManagement.svelte";
     import Icon from "../components/Icon.svelte";
+    import DashboardHome from "../routes/DashboardHome.svelte";
     import SettingsManagement from "../routes/SettingsManagement.svelte";
     import ReservationManagement from "../routes/ReservationManagement.svelte";
     import { toastStore } from "../viewmodel/toast.store";
-    import { category, product, promo, reservation, sales, settings, users } from "./nested.router";
+    import SupportInbox from "../../../feature/support/presentation/routes/SupportInbox.svelte";
+    import { supportInboxStore } from "../../../feature/support/presentation/viewmodel/support-inbox.store";
+    import { category, dashboard, product, promo, reservation, sales, settings, support, users } from "./nested.router";
+    import { subscribePulseRefresh } from "../../alset-pulse/pulse.realtime";
+    import { pulseRefreshTargets } from "../../alset-pulse/pulse.refresh-targets";
     import {
         BadgeDollarSign,
         CalendarCheck2,
+        Home,
         LogOut,
         Menu,
+        MessageSquareText,
         Megaphone,
         Package,
         Settings,
@@ -35,12 +43,14 @@
     export let navController: NavController;
     export let navBackStackEntry: NavBackStackEntry<{ id?: string }>;
 
-    const internalNavController = rememberNavController(product.path);
+    const internalNavController = rememberNavController(dashboard.path);
     const userId = navBackStackEntry?.args?.id ?? "usuario";
 
     const currentUser = sessionStore.getCurrentUser();
 
     const items = [
+        { label: "Principal", path: dashboard.path, icon: Home },
+        { label: "Mensajes", path: support.path, icon: MessageSquareText },
         { label: "Usuarios", path: users.path, icon: Users },
         { label: "Productos", path: product.path, icon: Package },
         { label: "Categorías", path: category.path, icon: Tags },
@@ -52,9 +62,16 @@
 
     const internalStackStore = internalNavController._getStackStore();
     $: internalStack = $internalStackStore;
-    $: currentPath = internalStack.at(-1)?.route ?? product.path;
+    $: currentPath = internalStack.at(-1)?.route ?? dashboard.path;
 
     let sidebarOpen = false;
+    let stopPulseRefresh: (() => void) | null = null;
+    let supportSyncTimer: number | null = null;
+    let salesSyncTimer: number | null = null;
+    let syncingSupport = false;
+    let syncingSales = false;
+    let queuedSupport = false;
+    let queuedSales = false;
 
     function go(path: string) {
         if (currentPath !== path) internalNavController.navigate(path);
@@ -92,7 +109,81 @@
         promotionStore.syncAll().catch(() => {
             toastStore.error("Error al sincronizar datos");
         });
+        saleStore.syncAll().catch(() => {
+            toastStore.error("Error al sincronizar ventas");
+        });
+
+        stopPulseRefresh = subscribePulseRefresh((eventName, payload) => {
+            const targets = pulseRefreshTargets(eventName, payload);
+            if (targets.length === 0) return;
+
+            if (targets.includes("support")) scheduleSupportSync();
+            if (targets.includes("sales")) scheduleSalesSync();
+        });
     });
+
+    onDestroy(() => {
+        if (supportSyncTimer) window.clearTimeout(supportSyncTimer);
+        if (salesSyncTimer) window.clearTimeout(salesSyncTimer);
+        supportSyncTimer = null;
+        salesSyncTimer = null;
+        stopPulseRefresh?.();
+        stopPulseRefresh = null;
+    });
+
+    function scheduleSupportSync() {
+        if (supportSyncTimer) window.clearTimeout(supportSyncTimer);
+        supportSyncTimer = window.setTimeout(() => {
+            supportSyncTimer = null;
+            syncSupportInbox();
+        }, 220);
+    }
+
+    function scheduleSalesSync() {
+        if (salesSyncTimer) window.clearTimeout(salesSyncTimer);
+        salesSyncTimer = window.setTimeout(() => {
+            salesSyncTimer = null;
+            syncSales();
+        }, 220);
+    }
+
+    async function syncSupportInbox() {
+        if (syncingSupport) {
+            queuedSupport = true;
+            return;
+        }
+        syncingSupport = true;
+        queuedSupport = false;
+        toastStore.info("Actualizando mensajes…", 1200);
+        try {
+            await supportInboxStore.syncAll();
+            toastStore.success("Mensajes actualizados", 1100);
+        } catch {
+            toastStore.error("No se pudieron actualizar los mensajes");
+        } finally {
+            syncingSupport = false;
+            if (queuedSupport) syncSupportInbox();
+        }
+    }
+
+    async function syncSales() {
+        if (syncingSales) {
+            queuedSales = true;
+            return;
+        }
+        syncingSales = true;
+        queuedSales = false;
+        toastStore.info("Actualizando ventas…", 1200);
+        try {
+            await saleStore.syncAll();
+            toastStore.success("Ventas actualizadas", 1100);
+        } catch {
+            toastStore.error("No se pudieron actualizar las ventas");
+        } finally {
+            syncingSales = false;
+            if (queuedSales) syncSales();
+        }
+    }
 </script>
 
 <section class="nested-shell">
@@ -150,6 +241,8 @@
         <NavHost
             navController={internalNavController}
             routes={[
+                composable(dashboard, () => DashboardHome),
+                composable(support, () => SupportInbox),
                 composable(users, () => UserManagement),
                 composable(product, () => ProductManagement),
                 composable(category, () => CategoryManagement),

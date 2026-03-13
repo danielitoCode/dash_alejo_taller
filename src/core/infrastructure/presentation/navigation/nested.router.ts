@@ -1,3 +1,5 @@
+export const dashboard = { path: "dashboard" };
+export const support = { path: "support" };
 export const users = { path: "users" };
 export const product = { path: "product" };
 export const category = { path: "category" };
