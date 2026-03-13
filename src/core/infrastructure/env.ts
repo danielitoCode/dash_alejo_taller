@@ -8,6 +8,8 @@ export const ENV = {
     pulseBaseUrl: import.meta.env.VITE_ALSET_PULSE_BASE_URL,
     pulseApiKey: import.meta.env.VITE_ALSET_PULSE_API_KEY,
     pulseSupportMessagesPath: import.meta.env.VITE_ALSET_PULSE_SUPPORT_MESSAGES_PATH,
+    pusherAppId: import.meta.env.VITE_PUSHER_APP_ID,
+    pusherSecrets: import.meta.env.VITE_PUSHER_SECRETS,
     pusherKey: import.meta.env.VITE_PUSHER_KEY,
     pusherCluster: import.meta.env.VITE_PUSHER_CLUSTER,
     pusherSupportChannel: import.meta.env.VITE_PUSHER_SUPPORT_CHANNEL,
