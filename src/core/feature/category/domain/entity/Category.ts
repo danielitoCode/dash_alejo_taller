@@ -3,5 +3,5 @@ export interface Category {
     name: string
     description: string
     photoUrl?: string | null
-    status: boolean
+    status: "active" | "inactive"
 }

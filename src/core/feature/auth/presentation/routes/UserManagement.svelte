@@ -2,6 +2,7 @@
     import { onMount } from "svelte";
     import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
     import { logger } from "../../../../infrastructure/presentation/util/logger.service";
+    import { toastStore } from "../../../../infrastructure/presentation/viewmodel/toast.store";
     import { userManagementStore, type BusinessRole } from "../viewmodel/user-management.store";
     import { KeyRound, Lock, Search, Unlock, UserPlus, Users } from "lucide-svelte";
 
@@ -13,17 +14,30 @@
 
     async function createUser() {
         if (!name.trim() || !email.trim() || password.length < 6) return;
-        await userManagementStore.createUser({ name: name.trim(), email: email.trim(), password, role });
-        name = "";
-        email = "";
-        password = "";
-        role = "viewer";
+        try {
+            toastStore.info("Creando usuario…");
+            await userManagementStore.createUser({ name: name.trim(), email: email.trim(), password, role });
+            toastStore.success("Usuario creado.");
+            name = "";
+            email = "";
+            password = "";
+            role = "viewer";
+        } catch (e: any) {
+            logger.error(e?.message ?? e, e?.stack);
+            toastStore.error(e instanceof Error ? e.message : "No se pudo crear el usuario.");
+        }
     }
 
     function handleRoleChange(userId: string, event: Event) {
         const select = event.currentTarget as HTMLSelectElement | null;
         if (!select) return;
-        userManagementStore.setRole(userId, select.value as BusinessRole);
+        userManagementStore
+            .setRole(userId, select.value as BusinessRole)
+            .then(() => toastStore.success("Rol actualizado."))
+            .catch((e) => {
+                logger.error(e?.message ?? e, e?.stack);
+                toastStore.error(e instanceof Error ? e.message : "No se pudo actualizar el rol.");
+            });
     }
 
     onMount(() => {

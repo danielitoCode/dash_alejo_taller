@@ -4,5 +4,5 @@ export interface CategoryDTO extends Models.Document {
     description: string
     name: string
     photo_url?: string | null
-    status: boolean
+    status: string
 }

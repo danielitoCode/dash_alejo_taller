@@ -61,6 +61,7 @@
     }
 
     function startEdit(product: Product): void {
+        imageKey += 1;
         editId = product.id;
         draftName = product.name;
         draftDescription = product.description;

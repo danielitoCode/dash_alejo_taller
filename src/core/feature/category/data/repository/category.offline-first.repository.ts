@@ -76,7 +76,7 @@ export class CategoryOfflineFirstRepository implements CategoryRepository {
                 name: category.name,
                 description: category.description,
                 photo_url: category.photoUrl ?? "",
-                status: true
+                status: category.status
             })
             await db.categories.put(created)
             return categoryFromDTO(created)

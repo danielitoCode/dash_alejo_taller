@@ -11,6 +11,7 @@
     let name = "";
     let description = "";
     let photoUrl = "";
+    let status: "active" | "inactive" = "active";
     let editId: string | null = null;
     let query = "";
     let imagePending = false;
@@ -25,6 +26,7 @@
         name = "";
         description = "";
         photoUrl = "";
+        status = "active";
         imageKey += 1;
     }
 
@@ -38,7 +40,7 @@
                 name: name.trim(),
                 description: description.trim(),
                 photoUrl: photoUrl.trim() || null,
-                status: true
+                status
             });
             toastStore.success("Categoría creada.");
             resetForm();
@@ -49,10 +51,12 @@
     }
 
     function startEdit(category: Category): void {
+        imageKey += 1;
         editId = category.id;
         name = category.name;
         description = category.description;
         photoUrl = category.photoUrl ?? "";
+        status = category.status;
     }
 
     async function saveCategory(): Promise<void> {
@@ -67,7 +71,8 @@
                 ...current,
                 name: name.trim(),
                 description: description.trim(),
-                photoUrl: photoUrl.trim() || null
+                photoUrl: photoUrl.trim() || null,
+                status
             });
             toastStore.success("Categoría actualizada.");
             resetForm();
@@ -123,6 +128,14 @@
                 <label class="mgmt-field" style="grid-column:1/-1">
                     <span>Descripción</span>
                     <textarea class="mgmt-input mgmt-area" bind:value={description} placeholder="Opcional"></textarea>
+                </label>
+
+                <label class="mgmt-field">
+                    <span>Estado</span>
+                    <select class="mgmt-select" bind:value={status}>
+                        <option value="active">active</option>
+                        <option value="inactive">inactive</option>
+                    </select>
                 </label>
 
                 <div style="grid-column:1/-1">
@@ -189,7 +202,7 @@
                             {/if}
 
                             <div class="mgmt-row-main">
-                                <div class="mgmt-row-title">{category.name}</div>
+                                <div class="mgmt-row-title">{category.name} <span class="mgmt-muted">· {category.status}</span></div>
                                 <p class="mgmt-row-sub">{category.description || "Sin descripción"}</p>
                             </div>
                         </div>

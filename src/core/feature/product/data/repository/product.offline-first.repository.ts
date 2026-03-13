@@ -40,7 +40,9 @@ export class ProductOfflineFirstRepository implements ProductRepository {
             await db.products.bulkPut(remote)
             return remote.map(productFromDTO)
         } catch {
-            const local = await db.products.where("categoryId").equals(categoryId).toArray()
+            const local = await db.products
+                .filter((it: any) => it?.category_id === categoryId)
+                .toArray()
             return local.map(productFromDTO)
         }
     }

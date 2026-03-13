@@ -9,7 +9,7 @@ export function categoryFromDTO(dto: CategoryDTO): Category {
         description: dto.description,
         name: dto.name,
         photoUrl: dto.photo_url ?? null,
-        status: dto.status
+        status: dto.status === "inactive" ? "inactive" : "active"
     };
 }
 

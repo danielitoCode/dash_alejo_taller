@@ -5,7 +5,7 @@ import type { CategoryWriteDTO } from "../mapper/Mappers";
 import { logger } from "../../../../infrastructure/presentation/util/logger.service";
 import { ENV } from "../../../../infrastructure/env";
 
-const COLLECTION_ID = "categories";
+const COLLECTION_ID = "category";
 
 export class CategoryNetRepository {
     constructor(private readonly databases: Databases) {}

@@ -45,7 +45,7 @@ class ProductNetRepository {
         const response = await this.databases.listDocuments<ProductDTO>(
             this.databaseId,
             COLLECTION_ID,
-            [Query.equal("categoryId", categoryId)]
+            [Query.equal("category_id", categoryId)]
         )
 
         return response.documents
