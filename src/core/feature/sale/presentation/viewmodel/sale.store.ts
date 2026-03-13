@@ -1,6 +1,7 @@
 import type {Sale} from "../../domain/entity/Sale";
 import {derived, writable} from "svelte/store";
 import {saleContainer} from "../../di/sale.container";
+import { logger } from "../../../../infrastructure/presentation/util/logger.service";
 
 interface SaleState {
     items: Sale[]
@@ -34,6 +35,23 @@ function createSaleStore() {
         }
     }
 
+    async function setVerified(id: string, verified: string): Promise<void> {
+        update((state) => ({ ...state, loading: true, error: null }));
+        try {
+            const updated = await saleContainer.useCases.updateVerified.execute(id, verified);
+            update((state) => ({
+                ...state,
+                items: state.items.map((s) => (s.id === id ? updated : s))
+            }));
+        } catch (error: any) {
+            logger.error(error?.message ?? error, error?.stack);
+            update((state) => ({ ...state, error: normalizeError(error) }));
+            throw error;
+        } finally {
+            update((state) => ({ ...state, loading: false }));
+        }
+    }
+
     function clearError(): void {
         update((state) => ({...state, error: null}))
     }
@@ -48,6 +66,7 @@ function createSaleStore() {
         subscribe,
         hasData,
         syncAll,
+        setVerified,
         clearError,
         reset
     }

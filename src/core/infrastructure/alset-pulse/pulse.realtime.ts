@@ -26,12 +26,6 @@ export function subscribeSupportInbox(handler: (eventName: string, payload: unkn
 }
 
 export function subscribePulseRefresh(handler: (eventName: string, payload: unknown) => void): PulseUnsubscribe {
-    const pusher = getPusher();
-    if (!pusher) return () => {};
-
-    const channelName = ENV.pusherSupportChannel || "support-inbox";
-    const channel = pusher.subscribe(channelName);
-
     const refreshEvents = [
         "refresh:all",
         "refresh:support",
@@ -41,7 +35,10 @@ export function subscribePulseRefresh(handler: (eventName: string, payload: unkn
         "sales:refresh"
     ];
 
-    return subscribePulseChannelInternal(pusher, channelName, channel, refreshEvents, handler);
+    return subscribePulseChannelAll((eventName, payload) => {
+        if (!refreshEvents.includes(String(eventName))) return;
+        handler(eventName, payload);
+    });
 }
 
 function subscribePulseChannelInternal(
@@ -55,6 +52,22 @@ function subscribePulseChannelInternal(
 
     return () => {
         for (const eventName of events) channel.unbind(eventName);
+        pusher.unsubscribe(channelName);
+    };
+}
+
+export function subscribePulseChannelAll(handler: (eventName: string, payload: unknown) => void): PulseUnsubscribe {
+    const pusher = getPusher();
+    if (!pusher) return () => {};
+
+    const channelName = ENV.pusherSupportChannel || "support-inbox";
+    const channel = pusher.subscribe(channelName);
+
+    const globalHandler = (eventName: string, payload: unknown) => handler(eventName, payload);
+    channel.bind_global(globalHandler);
+
+    return () => {
+        channel.unbind_global(globalHandler);
         pusher.unsubscribe(channelName);
     };
 }

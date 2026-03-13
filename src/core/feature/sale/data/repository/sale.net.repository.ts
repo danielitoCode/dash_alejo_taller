@@ -43,4 +43,13 @@ export class SaleNetRepository {
 
         return response.documents
     }
+
+    async updateVerified(id: string, verified: string): Promise<SaleDTO> {
+        return await this.databases.updateDocument<SaleDTO>(
+            this.databaseId,
+            COLLECTION_ID,
+            id,
+            { verified }
+        );
+    }
 }

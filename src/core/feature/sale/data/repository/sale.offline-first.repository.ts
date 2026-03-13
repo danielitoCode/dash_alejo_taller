@@ -45,4 +45,18 @@ export class SaleOfflineFirstRepository implements SaleRepository {
             return local.map(saleFromDTO);
         }
     }
+
+    async updateVerified(id: string, verified: string): Promise<Sale> {
+        try {
+            const updated = await this.net.updateVerified(id, verified);
+            await db.sales.put(updated);
+            return saleFromDTO(updated);
+        } catch (error: any) {
+            logger.error(
+                `Error al actualizar venta en Appwrite: ${error?.message ?? "desconocido"}`,
+                error?.stack
+            );
+            throw error;
+        }
+    }
 }

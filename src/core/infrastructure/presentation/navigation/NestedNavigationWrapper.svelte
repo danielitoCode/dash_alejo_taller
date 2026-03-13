@@ -21,11 +21,19 @@
     import SettingsManagement from "../routes/SettingsManagement.svelte";
     import ReservationManagement from "../routes/ReservationManagement.svelte";
     import { toastStore } from "../viewmodel/toast.store";
+    import { logger } from "../util/logger.service";
+    import RealtimeDock from "../components/RealtimeDock.svelte";
     import SupportInbox from "../../../feature/support/presentation/routes/SupportInbox.svelte";
     import { supportInboxStore } from "../../../feature/support/presentation/viewmodel/support-inbox.store";
     import { category, dashboard, product, promo, reservation, sales, settings, support, users } from "./nested.router";
-    import { subscribePulseRefresh } from "../../alset-pulse/pulse.realtime";
+    import { subscribePulseChannelAll } from "../../alset-pulse/pulse.realtime";
     import { pulseRefreshTargets } from "../../alset-pulse/pulse.refresh-targets";
+    import { ENV } from "../../env";
+    import SupportDetail from "../../../feature/support/presentation/routes/SupportDetail.svelte";
+    import SaleDetail from "../../../feature/sale/presentation/routes/SaleDetail.svelte";
+    import { supportDetail, salesDetail } from "./nested.router";
+    import { get } from "svelte/store";
+    import { BuyState } from "../../../feature/sale/domain/entity/enums";
     import {
         BadgeDollarSign,
         CalendarCheck2,
@@ -113,9 +121,41 @@
             toastStore.error("Error al sincronizar ventas");
         });
 
-        stopPulseRefresh = subscribePulseRefresh((eventName, payload) => {
-            const targets = pulseRefreshTargets(eventName, payload);
+        logger.info(
+            `[Pusher] init key=${ENV.pusherKey ? ENV.pusherKey.slice(0, 6) + "…" : "N/A"} cluster=${ENV.pusherCluster ?? "N/A"} channel=${ENV.pusherSupportChannel ?? "support-inbox"}`
+        );
+
+        stopPulseRefresh = subscribePulseChannelAll((eventName, payload) => {
+            try {
+                const summary =
+                    payload && typeof payload === "object"
+                        ? JSON.stringify(payload).slice(0, 800)
+                        : String(payload ?? "");
+                logger.info(`[Pusher] event=${eventName} payload=${summary}`);
+            } catch {
+                logger.info(`[Pusher] event=${eventName}`);
+            }
+
+            let targets: ("support" | "sales")[] = [];
+            try {
+                targets = pulseRefreshTargets(eventName, payload);
+            } catch (e: any) {
+                logger.error(`[Pusher] error parsing refresh targets: ${e?.message ?? e}`, e?.stack);
+                toastStore.error("Evento realtime inválido");
+                return;
+            }
+
+            logger.info(`[Pusher] targets=${targets.length ? targets.join(",") : "none"}`);
             if (targets.length === 0) return;
+
+            toastStore.info(
+                targets.length === 2
+                    ? "Evento realtime: sincronizando todo…"
+                    : targets[0] === "support"
+                      ? "Evento realtime: sincronizando mensajes…"
+                      : "Evento realtime: sincronizando ventas…",
+                1200
+            );
 
             if (targets.includes("support")) scheduleSupportSync();
             if (targets.includes("sales")) scheduleSalesSync();
@@ -148,6 +188,8 @@
     }
 
     async function syncSupportInbox() {
+        const beforeItems = get(supportInboxStore).items;
+        const beforePending = beforeItems.filter((m) => m.status === "nuevo").length;
         if (syncingSupport) {
             queuedSupport = true;
             return;
@@ -157,8 +199,12 @@
         toastStore.info("Actualizando mensajes…", 1200);
         try {
             await supportInboxStore.syncAll();
-            toastStore.success("Mensajes actualizados", 1100);
-        } catch {
+            const afterItems = get(supportInboxStore).items;
+            const afterPending = afterItems.filter((m) => m.status === "nuevo").length;
+            const delta = Math.max(0, afterPending - beforePending);
+            toastStore.success(delta > 0 ? `Nuevo mensaje (+${delta})` : "Mensajes actualizados", 1100);
+        } catch (e: any) {
+            logger.error(e?.message ?? e, e?.stack);
             toastStore.error("No se pudieron actualizar los mensajes");
         } finally {
             syncingSupport = false;
@@ -167,6 +213,8 @@
     }
 
     async function syncSales() {
+        const beforeItems = get(saleStore).items;
+        const beforePending = beforeItems.filter((s) => s.verified === BuyState.UNVERIFIED).length;
         if (syncingSales) {
             queuedSales = true;
             return;
@@ -176,8 +224,12 @@
         toastStore.info("Actualizando ventas…", 1200);
         try {
             await saleStore.syncAll();
-            toastStore.success("Ventas actualizadas", 1100);
-        } catch {
+            const afterItems = get(saleStore).items;
+            const afterPending = afterItems.filter((s) => s.verified === BuyState.UNVERIFIED).length;
+            const delta = Math.max(0, afterPending - beforePending);
+            toastStore.success(delta > 0 ? `Nueva venta (+${delta})` : "Ventas actualizadas", 1100);
+        } catch (e: any) {
+            logger.error(e?.message ?? e, e?.stack);
             toastStore.error("No se pudieron actualizar las ventas");
         } finally {
             syncingSales = false;
@@ -238,15 +290,19 @@
             <span class="ghost" aria-hidden="true">{userId}</span>
         </div>
 
+        <RealtimeDock navController={internalNavController} />
+
         <NavHost
             navController={internalNavController}
             routes={[
                 composable(dashboard, () => DashboardHome),
                 composable(support, () => SupportInbox),
+                composable(supportDetail, () => SupportDetail),
                 composable(users, () => UserManagement),
                 composable(product, () => ProductManagement),
                 composable(category, () => CategoryManagement),
                 composable(sales, () => SaleManagement),
+                composable(salesDetail, () => SaleDetail),
                 composable(promo, () => PromoManagement),
                 composable(settings, () => SettingsManagement),
                 composable(reservation, () => ReservationManagement)
