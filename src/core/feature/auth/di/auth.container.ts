@@ -14,6 +14,12 @@ import {GetCurrentUserCaseUse} from "../domain/caseuse/GetCurrentUserCaseUse";
 import {AdminNetManagerImpl} from "../data/repository/admin.repository";
 import {GetAllUsersCaseUse} from "../domain/caseuse/GetAllUsersCaseUse";
 import {LinkGoogleAccountCaseUse} from "../domain/caseuse/LinkGoogleAccountCaseUse";
+import { CreateManagedUserCaseUse } from "../domain/caseuse/CreateManagedUserCaseUse";
+import {
+    UpdateManagedUserLabelsCaseUse,
+    UpdateManagedUserPasswordCaseUse,
+    UpdateManagedUserStatusCaseUse
+} from "../domain/caseuse/UpdateManagedUserCaseUses";
 
 // Account instance
 const accounts = infrastructureContainer.appwrite.account
@@ -37,6 +43,10 @@ const closeSessionCaseUSe = new CloseSessionsCaseUSe(sessionNetManager)
 const getCurrentUserCaseUse = new GetCurrentUserCaseUse(authNetRepository)
 const getAllUserCaseUse = new GetAllUsersCaseUse(adminNetRepository)
 const linkGoogleAccountCaseUse = new LinkGoogleAccountCaseUse(authNetRepository, sessionNetManager)
+const createManagedUserCaseUse = new CreateManagedUserCaseUse(adminNetRepository)
+const updateManagedUserLabelsCaseUse = new UpdateManagedUserLabelsCaseUse(adminNetRepository)
+const updateManagedUserStatusCaseUse = new UpdateManagedUserStatusCaseUse(adminNetRepository)
+const updateManagedUserPasswordCaseUse = new UpdateManagedUserPasswordCaseUse(adminNetRepository)
 
 export const authContainer = {
     repositories: {
@@ -55,6 +65,10 @@ export const authContainer = {
             updateRole: updateRoleCaseUse.execute.bind(updateRoleCaseUse),
             deleteUser: deleteUserCaseUse.execute.bind(deleteUserCaseUse),
             getAllUserCaseUse: getAllUserCaseUse.execute.bind(getAllUserCaseUse),
+            adminCreateUser: createManagedUserCaseUse.execute.bind(createManagedUserCaseUse),
+            adminUpdateLabels: updateManagedUserLabelsCaseUse.execute.bind(updateManagedUserLabelsCaseUse),
+            adminUpdateStatus: updateManagedUserStatusCaseUse.execute.bind(updateManagedUserStatusCaseUse),
+            adminUpdatePassword: updateManagedUserPasswordCaseUse.execute.bind(updateManagedUserPasswordCaseUse),
             linkGoogleAccount: linkGoogleAccountCaseUse.execute.bind(linkGoogleAccountCaseUse),
         },
         sessions: {

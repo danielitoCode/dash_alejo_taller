@@ -3,7 +3,7 @@ import { type Databases, ID, Query } from "appwrite";
 import type { Models } from "appwrite";
 import { ENV } from "../../../../infrastructure/env";
 
-const COLLECTION_ID = "sales";
+const COLLECTION_ID = "sale";
 
 export class SaleNetRepository {
     constructor(private databases: Databases) {}

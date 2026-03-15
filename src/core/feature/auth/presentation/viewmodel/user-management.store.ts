@@ -1,8 +1,6 @@
 import { derived, writable } from "svelte/store";
 import { authContainer } from "../../di/auth.container";
-import type { UserDTO } from "../../data/dto/UserDTO";
-import type {User} from "../../domain/entity/User";
-import type {Role} from "../../domain/entity/Role";
+import type { User } from "../../domain/entity/User";
 
 export type BusinessRole = "owner" | "admin" | "sales" | "viewer";
 
@@ -13,6 +11,7 @@ export interface ManagedBusinessUser {
     photoUrl: string;
     role: BusinessRole;
     blocked: boolean;
+    verified: boolean;
     passwordResetRequested: boolean;
 }
 
@@ -45,7 +44,8 @@ function mapDomainUserToManagedUser(user: User): ManagedBusinessUser {
         email: user.email,
         photoUrl: user.photo_url || "",
         role: mapRole(user.role),
-        blocked: false,
+        blocked: user.status === false,
+        verified: Boolean(user.verification),
         passwordResetRequested: false,
     };
 }
@@ -56,7 +56,10 @@ function normalizeError(error: unknown): string {
 
 function createUserManagementStore() {
     const {subscribe, update} = writable<UserManagementState>(initialState);
+    let snapshot: UserManagementState = initialState;
+    subscribe((s) => (snapshot = s));
     let loadUsersInFlight: Promise<void> | null = null;
+    let lastSearch = "";
 
     async function runSaving<T>(task: () => Promise<T>): Promise<T> {
         update((state) => ({...state, saving: true, error: null}));
@@ -83,27 +86,20 @@ function createUserManagementStore() {
     }
 
     async function syncAll(): Promise<void> {
-        await loadUsers();
+        await loadUsers(lastSearch);
     }
 
-    async function loadUsers(): Promise<void> {
+    async function loadUsers(search?: string): Promise<void> {
         if (loadUsersInFlight) {
             return loadUsersInFlight;
         }
 
         loadUsersInFlight = runLoading(async () => {
-            const users: User[] = await authContainer.useCases.accounts.getAllUserCaseUse();
+            lastSearch = (search ?? "").trim();
+            const res = await authContainer.useCases.accounts.getAllUserCaseUse(lastSearch);
+            const users: User[] = res.users;
 
-            // Mapear User → ManagedUser para el store
-            const managedUsers: ManagedBusinessUser[] = users.map((u) => ({
-                id: u.id,
-                name: u.name,
-                email: u.email,
-                photoUrl: u.photo_url ?? "",
-                role: mapRole(u.role),
-                blocked: false,
-                passwordResetRequested: false
-            }));
+            const managedUsers: ManagedBusinessUser[] = users.map((u) => mapDomainUserToManagedUser(u));
 
             update((state) => ({ ...state, items: managedUsers }));
         }).finally(() => {
@@ -115,34 +111,64 @@ function createUserManagementStore() {
 
     async function createUser(payload: Pick<ManagedBusinessUser, "name" | "email" | "role"> & { password: string }): Promise<void> {
         await runSaving(async () => {
-            await authContainer.useCases.accounts.createAccount({
+            const labels =
+                payload.role === "owner"
+                    ? ["owner", "admin"]
+                    : payload.role === "admin"
+                      ? ["admin"]
+                      : payload.role === "sales"
+                        ? ["sales"]
+                        : ["viewer"];
+
+            await authContainer.useCases.accounts.adminCreateUser({
                 name: payload.name,
                 email: payload.email,
                 password: payload.password,
-                role: payload.role,
-                phone: "",
-                photo_url: "",
-                sub: "",
-                verification: false
+                labels
             });
 
-            await loadUsers();
+            await loadUsers(lastSearch);
         });
     }
 
     async function setRole(id: string, role: BusinessRole): Promise<void> {
         await runSaving(async () => {
-            await authContainer.useCases.accounts.updateRole(role);
+            const labels =
+                role === "owner"
+                    ? ["owner", "admin"]
+                    : role === "admin"
+                      ? ["admin"]
+                      : role === "sales"
+                        ? ["sales"]
+                        : ["viewer"];
+
+            await authContainer.useCases.accounts.adminUpdateLabels(id, labels);
             update((state) => ({ ...state, items: state.items.map((u) => (u.id === id ? { ...u, role } : u)) }));
         });
     }
 
-    function toggleBlocked(id: string): void {
-        update((state) => ({ ...state, items: state.items.map((u) => (u.id === id ? { ...u, blocked: !u.blocked } : u)) }));
+    async function toggleBlocked(id: string): Promise<void> {
+        const current = snapshot.items.find((u) => u.id === id);
+        if (!current) return;
+        const nextBlocked = !current.blocked;
+
+        await runSaving(async () => {
+            await authContainer.useCases.accounts.adminUpdateStatus(id, !nextBlocked);
+            update((state) => ({
+                ...state,
+                items: state.items.map((u) => (u.id === id ? { ...u, blocked: nextBlocked } : u))
+            }));
+        });
     }
 
-    function requestPasswordReset(id: string): void {
-        update((state) => ({ ...state, items: state.items.map((u) => (u.id === id ? { ...u, passwordResetRequested: true } : u)) }));
+    async function requestPasswordReset(id: string, newPassword: string): Promise<void> {
+        await runSaving(async () => {
+            await authContainer.useCases.accounts.adminUpdatePassword(id, newPassword);
+            update((state) => ({
+                ...state,
+                items: state.items.map((u) => (u.id === id ? { ...u, passwordResetRequested: true } : u))
+            }));
+        });
     }
 
     const hasUsers = derived({ subscribe }, ($state) => $state.items.length > 0);

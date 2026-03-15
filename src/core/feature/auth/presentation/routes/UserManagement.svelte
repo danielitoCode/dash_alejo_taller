@@ -4,13 +4,14 @@
     import { logger } from "../../../../infrastructure/presentation/util/logger.service";
     import { toastStore } from "../../../../infrastructure/presentation/viewmodel/toast.store";
     import { userManagementStore, type BusinessRole } from "../viewmodel/user-management.store";
-    import { KeyRound, Lock, Search, Unlock, UserPlus, Users } from "lucide-svelte";
+    import { BadgeCheck, KeyRound, Lock, Search, Unlock, UserPlus, Users } from "lucide-svelte";
 
     let name = "";
     let email = "";
     let password = "";
     let role: BusinessRole = "viewer";
     let query = "";
+    let searchTimer: number | null = null;
 
     async function createUser() {
         if (!name.trim() || !email.trim() || password.length < 6) return;
@@ -42,26 +43,47 @@
 
     onMount(() => {
         userManagementStore.syncAll().catch(() => {});
-        userManagementStore.loadUsers().catch(() => {
+        userManagementStore.loadUsers("").catch(() => {
             logger.error("Error cargando usuarios");
         });
     });
 
     $: items = $userManagementStore.items;
-    $: filtered =
-        query.trim().length === 0
-            ? items
-            : items.filter((u) => {
-                  const q = query.trim().toLowerCase();
-                  return (
-                      (u.name || "").toLowerCase().includes(q) ||
-                      (u.email || "").toLowerCase().includes(q) ||
-                      (u.role || "").toLowerCase().includes(q) ||
-                      (u.id || "").toLowerCase().includes(q)
-                  );
-              });
+    $: {
+        const q = query.trim();
+        if (searchTimer) window.clearTimeout(searchTimer);
+        searchTimer = window.setTimeout(() => {
+            userManagementStore.loadUsers(q).catch(() => {});
+        }, q.length === 0 ? 0 : 350);
+    }
+
+    $: filtered = items;
 
     $: canSubmit = name.trim().length >= 2 && email.trim().length >= 5 && password.length >= 6;
+
+    async function toggleBlocked(userId: string) {
+        try {
+            toastStore.info("Actualizando estado…", 1200);
+            await userManagementStore.toggleBlocked(userId);
+            toastStore.success("Estado actualizado.", 1200);
+        } catch (e: any) {
+            logger.error(e?.message ?? e, e?.stack);
+            toastStore.error(e instanceof Error ? e.message : "No se pudo actualizar el estado.");
+        }
+    }
+
+    async function resetPassword(userId: string) {
+        const newPassword = window.prompt("Nuevo password temporal (mínimo 6 caracteres):");
+        if (!newPassword || newPassword.trim().length < 6) return;
+        try {
+            toastStore.info("Actualizando password…", 1200);
+            await userManagementStore.requestPasswordReset(userId, newPassword.trim());
+            toastStore.success("Password actualizado.", 1400);
+        } catch (e: any) {
+            logger.error(e?.message ?? e, e?.stack);
+            toastStore.error(e instanceof Error ? e.message : "No se pudo actualizar el password.");
+        }
+    }
 </script>
 
 <section class="mgmt-page" aria-label="Gestión de usuarios">
@@ -172,7 +194,13 @@
                                         <span class="mgmt-muted" style="font-weight:700"> · bloqueado</span>
                                     {/if}
                                 </div>
-                                <p class="mgmt-row-sub">{user.email}</p>
+                <p class="mgmt-row-sub">{user.email}</p>
+                                <p class="mgmt-row-sub">
+                                    <span class="mgmt-chip" style="padding:4px 10px">
+                                        <Icon icon={BadgeCheck} size={16} ariaLabel="Verificación" />
+                                        {user.verified ? "verificado" : "sin verificar"}
+                                    </span>
+                                </p>
                             </div>
                         </div>
 
@@ -187,12 +215,12 @@
                                 </select>
                             </label>
 
-                            <button class="mgmt-btn ghost" on:click={() => userManagementStore.toggleBlocked(user.id)}>
+                            <button class="mgmt-btn ghost" on:click={() => toggleBlocked(user.id)}>
                                 <Icon icon={user.blocked ? Unlock : Lock} size={18} ariaLabel={user.blocked ? "Desbloquear" : "Bloquear"} />
                                 {user.blocked ? "Desbloquear" : "Bloquear"}
                             </button>
 
-                            <button class="mgmt-btn ghost" on:click={() => userManagementStore.requestPasswordReset(user.id)}>
+                            <button class="mgmt-btn ghost" on:click={() => resetPassword(user.id)}>
                                 <Icon icon={KeyRound} size={18} ariaLabel="Solicitar cambio de password" />
                                 Reset password
                             </button>

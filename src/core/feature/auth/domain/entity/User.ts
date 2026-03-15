@@ -8,4 +8,6 @@ export interface User {
     sub: string
     verification: boolean
     role: string | null
+    status?: boolean
+    labels?: string[]
 }
