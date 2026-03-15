@@ -20,6 +20,11 @@ import {
     UpdateManagedUserPasswordCaseUse,
     UpdateManagedUserStatusCaseUse
 } from "../domain/caseuse/UpdateManagedUserCaseUses";
+import { GoogleAuthNetRepositoryImpl } from "../data/repository/google-auth.repository";
+import { ExchangeGoogleCredentialCaseUse } from "../domain/caseuse/ExchangeGoogleCredentialCaseUse";
+import { PasswordResetNetRepositoryImpl } from "../data/repository/password-reset.repository";
+import { RequestPasswordResetCodeCaseUse } from "../domain/caseuse/RequestPasswordResetCodeCaseUse";
+import { ConfirmPasswordResetCodeCaseUse } from "../domain/caseuse/ConfirmPasswordResetCodeCaseUse";
 
 // Account instance
 const accounts = infrastructureContainer.appwrite.account
@@ -29,6 +34,8 @@ const functions = infrastructureContainer.appwrite.functions
 const authNetRepository = new UserNetRepositoryImpl(accounts)
 const sessionNetManager = new SessionNetManagerImpl(accounts)
 const adminNetRepository = new AdminNetManagerImpl(functions)
+const googleAuthNetRepository = new GoogleAuthNetRepositoryImpl(functions)
+const passwordResetNetRepository = new PasswordResetNetRepositoryImpl(functions)
 
 // Domain
 const createAccountCaseUse = new CreateAccountCaseUse(authNetRepository)
@@ -43,6 +50,9 @@ const closeSessionCaseUSe = new CloseSessionsCaseUSe(sessionNetManager)
 const getCurrentUserCaseUse = new GetCurrentUserCaseUse(authNetRepository)
 const getAllUserCaseUse = new GetAllUsersCaseUse(adminNetRepository)
 const linkGoogleAccountCaseUse = new LinkGoogleAccountCaseUse(authNetRepository, sessionNetManager)
+const exchangeGoogleCredentialCaseUse = new ExchangeGoogleCredentialCaseUse(googleAuthNetRepository)
+const requestPasswordResetCodeCaseUse = new RequestPasswordResetCodeCaseUse(passwordResetNetRepository)
+const confirmPasswordResetCodeCaseUse = new ConfirmPasswordResetCodeCaseUse(passwordResetNetRepository)
 const createManagedUserCaseUse = new CreateManagedUserCaseUse(adminNetRepository)
 const updateManagedUserLabelsCaseUse = new UpdateManagedUserLabelsCaseUse(adminNetRepository)
 const updateManagedUserStatusCaseUse = new UpdateManagedUserStatusCaseUse(adminNetRepository)
@@ -53,6 +63,8 @@ export const authContainer = {
         accounts: authNetRepository,
         sessions: sessionNetManager,
         adminNetRepository: adminNetRepository,
+        googleAuthNetRepository,
+        passwordResetNetRepository
     },
     useCases: {
         accounts: {
@@ -70,6 +82,9 @@ export const authContainer = {
             adminUpdateStatus: updateManagedUserStatusCaseUse.execute.bind(updateManagedUserStatusCaseUse),
             adminUpdatePassword: updateManagedUserPasswordCaseUse.execute.bind(updateManagedUserPasswordCaseUse),
             linkGoogleAccount: linkGoogleAccountCaseUse.execute.bind(linkGoogleAccountCaseUse),
+            exchangeGoogleCredential: exchangeGoogleCredentialCaseUse.execute.bind(exchangeGoogleCredentialCaseUse),
+            requestPasswordResetCode: requestPasswordResetCodeCaseUse.execute.bind(requestPasswordResetCodeCaseUse),
+            confirmPasswordResetCode: confirmPasswordResetCodeCaseUse.execute.bind(confirmPasswordResetCodeCaseUse),
         },
         sessions: {
             openSession: opeSessionCaseUse,

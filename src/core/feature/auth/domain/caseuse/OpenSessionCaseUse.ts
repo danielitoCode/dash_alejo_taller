@@ -6,6 +6,10 @@ export class OpenSessionCaseUse {
         return await this.sessionNetManager.createEmailSession(email, pass);
     }
 
+    async openTokenSession(userId: string, secret: string): Promise<string> {
+        return await this.sessionNetManager.createTokenSession(userId, secret);
+    }
+
     async openGoogleSession(successUrl: string, failureUrl: string): Promise<void> {
         await this.sessionNetManager.createOAuthSession("google", successUrl, failureUrl);
     }

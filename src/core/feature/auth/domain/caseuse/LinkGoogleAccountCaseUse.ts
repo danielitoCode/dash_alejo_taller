@@ -17,9 +17,7 @@ export class LinkGoogleAccountCaseUse {
 
     async execute(input: LinkGoogleAccountInput): Promise<string> {
         const userId = await this.sessionNetManager.createEmailSession(input.email, input.currentPassword);
-        await this.userRepo.updatePassword(input.googleSub, input.currentPassword);
         await this.userRepo.linkGoogle(input.googleSub, input.photoUrl, input.name);
         return userId;
     }
 }
-

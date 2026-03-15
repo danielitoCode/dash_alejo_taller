@@ -5,6 +5,8 @@ export const ENV = {
     adminFunctionUsers: import.meta.env.VITE_APPWRITE_USERS_FUNCTION,
     storageBucketId: import.meta.env.VITE_APPWRITE_STORAGE_BUCKET_ID,
     googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+    googleAuthUrl: import.meta.env.VITE_GOOGLE_AUTH_URL,
+    passwordResetUrl: import.meta.env.VITE_PASSWORD_RESET_URL,
     pulseBaseUrl: import.meta.env.VITE_ALSET_PULSE_BASE_URL,
     pulseApiKey: import.meta.env.VITE_ALSET_PULSE_API_KEY,
     pulseSupportMessagesPath: import.meta.env.VITE_ALSET_PULSE_SUPPORT_MESSAGES_PATH,

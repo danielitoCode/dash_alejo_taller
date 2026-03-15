@@ -9,6 +9,11 @@ export class SessionNetManagerImpl implements SessionNetManager{
         return response.userId
     }
 
+    async createTokenSession(userId: string, secret: string): Promise<string> {
+        const session = await (this.account as any).createSession(userId, secret);
+        return session?.userId ?? userId;
+    }
+
     async createOAuthSession(provider: "google", successUrl: string, failureUrl: string): Promise<void> {
         const providerMap = {
             google: OAuthProvider.Google
