@@ -9,7 +9,7 @@
 
 ## 1) Cloudflare Worker: `google_auth`
 
-Código: `workers/google_auth`
+Código (proyecto independiente): `E:\Proyectos\Backend\NodeJS\Workers\google_auth`
 
 ### Variables (Cloudflare → Settings → Variables)
 
@@ -22,8 +22,8 @@ Código: `workers/google_auth`
 ### Deploy
 
 ```bash
-cd workers/google_auth
-npm i
+cd E:\Proyectos\Backend\NodeJS\Workers\google_auth
+"C:\Program Files\nodejs\npm.cmd" install
 npx wrangler deploy
 ```
 
@@ -66,4 +66,3 @@ Variables requeridas:
 Notas:
 - `VITE_GOOGLE_AUTH_URL` debe apuntar al Worker (POST JSON).
 - `VITE_PASSWORD_RESET_URL` debe apuntar al servicio Render (POST `/password-reset/*`).
-

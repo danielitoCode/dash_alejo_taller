@@ -34,8 +34,8 @@ const functions = infrastructureContainer.appwrite.functions
 const authNetRepository = new UserNetRepositoryImpl(accounts)
 const sessionNetManager = new SessionNetManagerImpl(accounts)
 const adminNetRepository = new AdminNetManagerImpl(functions)
-const googleAuthNetRepository = new GoogleAuthNetRepositoryImpl(functions)
-const passwordResetNetRepository = new PasswordResetNetRepositoryImpl(functions)
+const googleAuthNetRepository = new GoogleAuthNetRepositoryImpl()
+const passwordResetNetRepository = new PasswordResetNetRepositoryImpl()
 
 // Domain
 const createAccountCaseUse = new CreateAccountCaseUse(authNetRepository)
