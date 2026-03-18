@@ -1,0 +1,6 @@
+name = "alset-infra-status"
+main = "src/index.ts"
+compatibility_date = "2026-03-18"
+
+# No pongas secretos aquí; usa Cloudflare Dashboard (Variables/Secrets).
+

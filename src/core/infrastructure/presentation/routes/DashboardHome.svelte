@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
     import { onMount } from "svelte";
     import Icon from "../components/Icon.svelte";
     import { categoryStore } from "../../../feature/category/presentation/viewmodel/category.store";
@@ -7,6 +7,7 @@
     import { saleStore } from "../../../feature/sale/presentation/viewmodel/sale.store";
     import { toastStore } from "../viewmodel/toast.store";
     import { logger } from "../util/logger.service";
+    import InfraStatusPanel from "../components/InfraStatusPanel.svelte";
     import {
         BarChart3,
         BadgeDollarSign,
@@ -46,7 +47,7 @@
     }
 
     onMount(() => {
-        toastStore.info("Actualizando métricas…", 1600);
+        toastStore.info("Actualizando mÃ©tricasâ€¦", 1600);
         Promise.all([
             productStore.syncAll(),
             categoryStore.syncAll(),
@@ -54,7 +55,7 @@
             saleStore.syncAll()
         ]).catch((e) => {
             logger.error(e?.message ?? e, e?.stack);
-            toastStore.error("No se pudieron cargar algunas métricas.");
+            toastStore.error("No se pudieron cargar algunas mÃ©tricas.");
         });
     });
 
@@ -150,7 +151,7 @@
         <div class="mgmt-toolbar">
             <div>
                 <h1 class="mgmt-title">Principal</h1>
-                <p class="mgmt-subtitle">Métricas rápidas y analítica del negocio basada en los datos del sistema.</p>
+                <p class="mgmt-subtitle">MÃ©tricas rÃ¡pidas y analÃ­tica del negocio basada en los datos del sistema.</p>
             </div>
 
             <div class="mgmt-meta">
@@ -168,17 +169,17 @@
                 <Icon icon={BadgeDollarSign} size={18} ariaLabel="Ingresos" />
             </div>
             <div class="kpi-main">
-                <div class="kpi-label">Ingresos (30 días)</div>
+                <div class="kpi-label">Ingresos (30 dÃ­as)</div>
                 <div class="kpi-value">${money.format(totalRevenue30)}</div>
             </div>
         </article>
 
         <article class="mgmt-card kpi">
             <div class="kpi-ico">
-                <Icon icon={ShoppingCart} size={18} ariaLabel="Órdenes" />
+                <Icon icon={ShoppingCart} size={18} ariaLabel="Ã“rdenes" />
             </div>
             <div class="kpi-main">
-                <div class="kpi-label">Órdenes (30 días)</div>
+                <div class="kpi-label">Ã“rdenes (30 dÃ­as)</div>
                 <div class="kpi-value">{totalOrders30}</div>
             </div>
         </article>
@@ -215,10 +216,10 @@
 
         <article class="mgmt-card kpi">
             <div class="kpi-ico">
-                <Icon icon={Tags} size={18} ariaLabel="Categorías" />
+                <Icon icon={Tags} size={18} ariaLabel="CategorÃ­as" />
             </div>
             <div class="kpi-main">
-                <div class="kpi-label">Categorías</div>
+                <div class="kpi-label">CategorÃ­as</div>
                 <div class="kpi-value">{categories.length}</div>
             </div>
         </article>
@@ -234,18 +235,18 @@
         </article>
     </section>
 
-    <section class="dash-grid" aria-label="Analítica">
-        <section class="mgmt-card chart-card" aria-label="Ventas por día">
+    <section class="dash-grid" aria-label="AnalÃ­tica">
+        <section class="mgmt-card chart-card" aria-label="Ventas por dÃ­a">
             <div class="chart-head">
-                <h2 class="mgmt-card-title" style="margin:0">Ventas · últimos 14 días</h2>
+                <h2 class="mgmt-card-title" style="margin:0">Ventas Â· Ãºltimos 14 dÃ­as</h2>
                 <span class="mgmt-chip">
                     <Icon icon={CalendarDays} size={18} ariaLabel="Rango" />
-                    14 días
+                    14 dÃ­as
                 </span>
             </div>
 
             <div class="chart">
-                <svg viewBox="0 0 700 180" preserveAspectRatio="none" aria-label="Gráfica de barras">
+                <svg viewBox="0 0 700 180" preserveAspectRatio="none" aria-label="GrÃ¡fica de barras">
                     {#each dailySeries as p, idx (p.day)}
                         {@const barW = 700 / dailySeries.length}
                         {@const x = idx * barW}
@@ -275,7 +276,7 @@
 
         <section class="mgmt-card" aria-label="Top productos">
             <div class="chart-head">
-                <h2 class="mgmt-card-title" style="margin:0">Top productos (30 días)</h2>
+                <h2 class="mgmt-card-title" style="margin:0">Top productos (30 dÃ­as)</h2>
                 <span class="mgmt-chip">
                     <Icon icon={Boxes} size={18} ariaLabel="Top" />
                     Top 5
@@ -284,7 +285,7 @@
 
             <div class="mgmt-list" style="margin-top:12px">
                 {#if topProducts.length === 0}
-                    <div class="mgmt-muted">Aún no hay suficientes ventas para mostrar un ranking.</div>
+                    <div class="mgmt-muted">AÃºn no hay suficientes ventas para mostrar un ranking.</div>
                 {/if}
                 {#each topProducts as p (p.id)}
                     <article class="mgmt-row">
@@ -296,7 +297,7 @@
                             {/if}
                             <div class="mgmt-row-main">
                                 <div class="mgmt-row-title">{p.name}</div>
-                                <p class="mgmt-row-sub">{p.units} uds · ${money.format(p.revenue)}</p>
+                                <p class="mgmt-row-sub">{p.units} uds Â· ${money.format(p.revenue)}</p>
                             </div>
                         </div>
                     </article>
@@ -304,18 +305,18 @@
             </div>
         </section>
 
-        <section class="mgmt-card" aria-label="Distribución por categoría">
+        <section class="mgmt-card" aria-label="DistribuciÃ³n por categorÃ­a">
             <div class="chart-head">
-                <h2 class="mgmt-card-title" style="margin:0">Productos por categoría</h2>
+                <h2 class="mgmt-card-title" style="margin:0">Productos por categorÃ­a</h2>
                 <span class="mgmt-chip">
-                    <Icon icon={BarChart3} size={18} ariaLabel="Distribución" />
+                    <Icon icon={BarChart3} size={18} ariaLabel="DistribuciÃ³n" />
                     Top {productsByCategory.length}
                 </span>
             </div>
 
             <div class="mgmt-list" style="margin-top:12px">
                 {#if productsByCategory.length === 0}
-                    <div class="mgmt-muted">Aún no hay productos cargados.</div>
+                    <div class="mgmt-muted">AÃºn no hay productos cargados.</div>
                 {/if}
                 {#each productsByCategory as c (c.categoryId)}
                     <article class="mgmt-row">
@@ -331,6 +332,8 @@
             </div>
         </section>
     </section>
+
+    <InfraStatusPanel />
 </section>
 
 <style>
@@ -458,4 +461,7 @@
         border-radius: 999px;
     }
 </style>
+
+
+
 

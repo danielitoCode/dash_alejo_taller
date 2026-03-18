@@ -31,6 +31,27 @@ Copia la URL resultante y úsala en el frontend como `VITE_GOOGLE_AUTH_URL`.
 
 ---
 
+## 1.1) Cloudflare Worker: `infra_status` (opcional, recomendado)
+
+Código: `E:\Proyectos\Frondend\WEB\Svelve\dash_alejo_taller\workers\infra_status`
+
+Este Worker expone un endpoint **sin secretos en el frontend** para mostrar en el Dashboard el estado de:
+- Appwrite
+- Render
+- Cloudflare
+
+Deploy (si usas Wrangler):
+
+```bash
+cd E:\Proyectos\Frondend\WEB\Svelve\dash_alejo_taller\workers\infra_status
+npx wrangler deploy
+```
+
+En el frontend:
+- `VITE_INFRA_STATUS_URL=https://<tu-worker>/`
+
+---
+
 ## 2) Render Web Service: `password_reset`
 
 Código: `services/password_reset_render`
