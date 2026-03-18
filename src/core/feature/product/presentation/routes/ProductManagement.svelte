@@ -2,6 +2,8 @@
     import { onMount } from "svelte";
     import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
     import ImagePicker from "../../../../infrastructure/presentation/components/ImagePicker.svelte";
+    import LoadingSpinner from "../../../../infrastructure/presentation/components/LoadingSpinner.svelte";
+    import SkeletonList from "../../../../infrastructure/presentation/components/SkeletonList.svelte";
     import { logger } from "../../../../infrastructure/presentation/util/logger.service";
     import { toastStore } from "../../../../infrastructure/presentation/viewmodel/toast.store";
     import type { Product } from "../../domain/entity/Product";
@@ -130,6 +132,9 @@
 
     $: canSubmit =
         draftName.trim().length > 0 && draftCategoryId.length > 0 && Number(draftPrice) > 0 && !imagePending;
+
+    $: isRefreshing = $productStore.loading && items.length > 0;
+    $: isInitialLoading = $productStore.loading && items.length === 0;
 </script>
 
 <section class="mgmt-page" aria-label="Gestión de productos">
@@ -147,6 +152,12 @@
                     <Icon icon={BadgeDollarSign} size={18} ariaLabel="Total" />
                     {filtered.length} / {items.length}
                 </span>
+                {#if isRefreshing}
+                    <span class="mgmt-chip" aria-label="Sincronizando">
+                        <LoadingSpinner size={16} label="Sincronizando" subtle />
+                        Sincronizandoâ€¦
+                    </span>
+                {/if}
             </div>
         </div>
     </header>
@@ -231,7 +242,9 @@
             </div>
 
             <div class="mgmt-list">
-                {#if filtered.length === 0}
+                {#if isInitialLoading}
+                    <SkeletonList rows={7} />
+                {:else if filtered.length === 0}
                     <div class="mgmt-muted">No hay resultados.</div>
                 {/if}
 

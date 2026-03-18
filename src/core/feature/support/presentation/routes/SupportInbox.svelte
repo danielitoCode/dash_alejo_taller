@@ -2,6 +2,8 @@
     import { onMount } from "svelte";
     import type { NavController } from "../../../../../lib/navigation/NavController";
     import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
+    import LoadingSpinner from "../../../../infrastructure/presentation/components/LoadingSpinner.svelte";
+    import SkeletonList from "../../../../infrastructure/presentation/components/SkeletonList.svelte";
     import { supportInboxStore } from "../viewmodel/support-inbox.store";
     import type { SupportReason, SupportStatus } from "../../domain/entity/SupportMessage";
     import { supportDetail } from "../../../../infrastructure/presentation/navigation/nested.router";
@@ -35,6 +37,9 @@
             );
         })
         .sort((a, b) => b.createdAtIso.localeCompare(a.createdAtIso));
+
+    $: isRefreshing = $supportInboxStore.loading && items.length > 0;
+    $: isInitialLoading = $supportInboxStore.loading && items.length === 0;
 
     function openDetail(id: string) {
         navController.navigate(supportDetail.path, { id });
@@ -87,6 +92,12 @@
                     <Icon icon={Wrench} size={18} ariaLabel="En proceso" />
                     {counts.enProceso} en proceso
                 </span>
+                {#if isRefreshing}
+                    <span class="mgmt-chip" aria-label="Sincronizando">
+                        <LoadingSpinner size={16} label="Sincronizando" subtle />
+                        Sincronizandoâ€¦
+                    </span>
+                {/if}
             </div>
         </header>
 
@@ -148,7 +159,9 @@
                 </div>
 
                 <div class="mgmt-list">
-                    {#if filtered.length === 0}
+                    {#if isInitialLoading}
+                        <SkeletonList rows={9} showAvatar={false} showActions={false} lines={2} compact />
+                    {:else if filtered.length === 0}
                         <div class="empty">
                             <div class="empty-ico">
                                 <Icon icon={Mail} size={22} ariaLabel="Sin mensajes" />

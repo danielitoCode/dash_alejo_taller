@@ -6,6 +6,8 @@
     import { saleStore } from "../viewmodel/sale.store";
     import { BuyState } from "../../domain/entity/enums";
     import { salesDetail } from "../../../../infrastructure/presentation/navigation/nested.router";
+    import LoadingSpinner from "../../../../infrastructure/presentation/components/LoadingSpinner.svelte";
+    import SkeletonTiles from "../../../../infrastructure/presentation/components/SkeletonTiles.svelte";
     import { BadgeDollarSign, ChevronRight, Inbox } from "lucide-svelte";
 
     export let navController: NavController;
@@ -20,6 +22,8 @@
 
     $: items = $saleStore.items.slice().sort((a, b) => String(b.date ?? "").localeCompare(String(a.date ?? "")));
     $: pending = items.filter((s) => s.verified === BuyState.UNVERIFIED).length;
+    $: isRefreshing = $saleStore.loading && items.length > 0;
+    $: isInitialLoading = $saleStore.loading && items.length === 0;
 </script>
 
 <section class="mgmt-screen">
@@ -38,11 +42,19 @@
                     <Icon icon={Inbox} size={18} ariaLabel="Pendientes" />
                     {pending} pendientes
                 </span>
+                {#if isRefreshing}
+                    <span class="mgmt-chip" aria-label="Sincronizando">
+                        <LoadingSpinner size={16} label="Sincronizando" subtle />
+                        Sincronizandoâ€¦
+                    </span>
+                {/if}
             </div>
         </header>
 
         <section class="mgmt-card">
-            {#if items.length === 0}
+            {#if isInitialLoading}
+                <SkeletonTiles count={6} columns={2} />
+            {:else if items.length === 0}
                 <p class="mgmt-muted">No hay ventas registradas.</p>
             {:else}
                 <div class="sales-grid">
@@ -175,4 +187,3 @@
         }
     }
 </style>
-

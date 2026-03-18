@@ -1,6 +1,8 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
+    import LoadingSpinner from "../../../../infrastructure/presentation/components/LoadingSpinner.svelte";
+    import SkeletonList from "../../../../infrastructure/presentation/components/SkeletonList.svelte";
     import { promotionStore } from "../viewmodel/promotion.store";
     import { productStore } from "../../../product/presentation/viewmodel/product.store";
     import { BadgePercent, Search, Trash2 } from "lucide-svelte";
@@ -28,6 +30,9 @@
                       (p.id || "").toLowerCase().includes(q)
                   );
               });
+
+    $: isRefreshing = $promotionStore.loading && items.length > 0;
+    $: isInitialLoading = $promotionStore.loading && items.length === 0;
 </script>
 
 <section class="mgmt-page" aria-label="Gestión de promociones">
@@ -45,6 +50,12 @@
                     <Icon icon={BadgePercent} size={18} ariaLabel="Total" />
                     {filtered.length} / {items.length}
                 </span>
+                {#if isRefreshing}
+                    <span class="mgmt-chip" aria-label="Sincronizando">
+                        <LoadingSpinner size={16} label="Sincronizando" subtle />
+                        Sincronizandoâ€¦
+                    </span>
+                {/if}
             </div>
         </div>
     </header>
@@ -69,7 +80,9 @@
         </div>
 
         <div class="mgmt-list">
-            {#if items.length === 0}
+            {#if isInitialLoading}
+                <SkeletonList rows={8} showAvatar={false} />
+            {:else if items.length === 0}
                 <div class="mgmt-muted">No hay promociones creadas.</div>
             {/if}
 
