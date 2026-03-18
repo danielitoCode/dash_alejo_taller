@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "password_reset_render",
   "version": "1.0.0",
   "private": true,
@@ -7,10 +7,12 @@
   "scripts": {
     "start": "node src/server.js"
   },
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "express": "^4.21.2",
     "node-appwrite": "^13.0.0",
     "nodemailer": "^6.9.13"
   }
 }
-
