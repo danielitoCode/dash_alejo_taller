@@ -24,6 +24,7 @@
     <img src={alejoIcon} class="app-icon" alt="App icon" />
 </div>
 
+
 <style>
     .splash-screen {
         width: 100%;

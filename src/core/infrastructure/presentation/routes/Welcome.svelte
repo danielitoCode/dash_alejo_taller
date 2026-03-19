@@ -60,57 +60,61 @@
 
 <Screen ariaLabel="Welcome" scrollable={false}>
     <section class="landing-screen" aria-label="Landing">
-        <div class="content-shell">
-            <section class="landing-left" aria-label="Acciones">
-                <section class="landing-title" aria-label="Bienvenida">
-                    <img src="/alejoicon_clean.svg" alt="Logo" class="brand-mark" />
-                    <h1>Bienvenido</h1>
-                    <p>Inicia sesión o crea tu cuenta para continuar.</p>
+            <div class="content-shell">
+                <section class="landing-left" aria-label="Acciones">
+                    <section class="landing-title" aria-label="Bienvenida">
+                        <img src="/alejoicon_clean.svg" alt="Logo" class="brand-mark" />
+                        <h1>Bienvenido</h1>
+                        <p>Inicia sesión o crea tu cuenta para continuar.</p>
+                    </section>
+
+                    <section class="landing-buttons" aria-label="Navegación">
+                        <button class="btn btn-primary" on:click={signIn}>
+                            <Icon icon={LogIn} size={18} className="btn-ico" ariaLabel="Iniciar sesión" />
+                            Iniciar sesión
+                        </button>
+                        <button class="btn btn-elevated" on:click={signUp}>
+                            <Icon icon={UserPlus} size={18} className="btn-ico" ariaLabel="Crear cuenta" />
+                            Crear cuenta
+                        </button>
+                    </section>
                 </section>
 
-                <section class="landing-buttons" aria-label="Navegación">
-                    <button class="btn btn-primary" on:click={signIn}>
-                        <Icon icon={LogIn} size={18} className="btn-ico" ariaLabel="Iniciar sesión" />
-                        Iniciar sesión
-                    </button>
-                    <button class="btn btn-elevated" on:click={signUp}>
-                        <Icon icon={UserPlus} size={18} className="btn-ico" ariaLabel="Crear cuenta" />
-                        Crear cuenta
-                    </button>
-                </section>
-            </section>
-
-            <section class="auto-scroll" aria-label="Galería automática">
-                {#each rows as row}
-                    <div class="row-mask">
-                        <div
-                            class="row-track {row.reverse ? 'reverse' : ''}"
-                            style={`--duration:${Math.max(18, 220 / row.speed)}s`}
-                        >
-                            {#each row.items as item, idx (`${row.id}-${item.id}-${idx}`)}
-                                <article class="media-card" aria-label={item.title}>
-                                    <img
-                                        class="media-image"
-                                        src={item.imageUrl}
-                                        alt={item.title}
-                                        loading="lazy"
-                                        decoding="async"
-                                    />
-                                    <div class="media-overlay">
-                                        <span class="media-title">{item.title}</span>
-                                        <span class="media-subtitle">{item.subtitle}</span>
-                                    </div>
-                                </article>
-                            {/each}
+                <section class="auto-scroll" aria-label="Galería automática">
+                    {#each rows as row}
+                        <div class="row-mask">
+                            <div
+                                    class="row-track {row.reverse ? 'reverse' : ''}"
+                                    style={`--duration:${Math.max(18, 220 / row.speed)}s`}
+                            >
+                                {#each row.items as item, idx (`${row.id}-${item.id}-${idx}`)}
+                                    <article class="media-card" aria-label={item.title}>
+                                        <img
+                                                class="media-image"
+                                                src={item.imageUrl}
+                                                alt={item.title}
+                                                loading="lazy"
+                                                decoding="async"
+                                        />
+                                        <div class="media-overlay">
+                                            <span class="media-title">{item.title}</span>
+                                            <span class="media-subtitle">{item.subtitle}</span>
+                                        </div>
+                                    </article>
+                                {/each}
+                            </div>
                         </div>
-                    </div>
-                {/each}
-            </section>
-        </div>
-    </section>
+                    {/each}
+                </section>
+            </div>
+        </section>
 </Screen>
 
 <style>
+    .maketer {
+        display: grid;
+        grid-template-columns: 1fr auto;
+    }
     .landing-screen {
         width: 100%;
         height: 100%;
