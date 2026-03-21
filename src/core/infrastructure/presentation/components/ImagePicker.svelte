@@ -3,8 +3,8 @@
     import FrameModal from "../../../feature/auth/presentation/components/FrameModal.svelte";
     import { toastStore } from "../viewmodel/toast.store";
     import Icon from "./Icon.svelte";
-    import { compressImageFile } from "../../storage/image-compress";
-    import { uploadImageToStorage } from "../../storage/image-upload";
+    import { compressImageFile } from "../storage/image-compress";
+    import { uploadImageToStorage } from "../storage/image-upload";
     import { ChevronDown, CloudUpload, Globe, Image as ImageIcon, Upload, X } from "lucide-svelte";
 
     export let label = "Imagen";

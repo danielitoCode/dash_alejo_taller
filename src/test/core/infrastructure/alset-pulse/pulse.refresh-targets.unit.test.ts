@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pulseRefreshTargets } from "../../../../core/infrastructure/alset-pulse/pulse.refresh-targets";
+import { pulseRefreshTargets } from "../../../../core/infrastructure/data/alset-pulse/pulse.refresh-targets";
 
 describe("pulseRefreshTargets", () => {
     it("deduce ambos targets desde el nombre del evento", () => {

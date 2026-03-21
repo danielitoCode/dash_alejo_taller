@@ -1,4 +1,4 @@
-import { ENV } from "../env";
+import { ENV } from "../../env";
 
 type PulseFetchOptions = {
     method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";

@@ -1,6 +1,6 @@
 import { ID } from "appwrite";
-import { storage } from "../di/appwrite.config";
-import { ENV } from "../env";
+import { storage } from "../../di/appwrite.config";
+import { ENV } from "../../env";
 
 function toUrlString(value: unknown): string {
     if (typeof value === "string") return value;

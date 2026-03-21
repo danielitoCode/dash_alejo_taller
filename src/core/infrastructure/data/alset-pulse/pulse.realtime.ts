@@ -1,5 +1,5 @@
 import Pusher, { type Channel } from "pusher-js";
-import { ENV } from "../env";
+import { ENV } from "../../env";
 
 export type PulseUnsubscribe = () => void;
 

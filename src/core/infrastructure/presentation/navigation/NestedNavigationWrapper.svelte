@@ -27,8 +27,8 @@
     import SupportInbox from "../../../feature/support/presentation/routes/SupportInbox.svelte";
     import { supportInboxStore } from "../../../feature/support/presentation/viewmodel/support-inbox.store";
     import { category, dashboard, product, promo, reservation, sales, settings, support, users } from "./nested.router";
-    import { subscribePulseChannelAll } from "../../alset-pulse/pulse.realtime";
-    import { pulseRefreshTargets } from "../../alset-pulse/pulse.refresh-targets";
+    import { subscribePulseChannelAll } from "../../data/alset-pulse/pulse.realtime";
+    import { pulseRefreshTargets } from "../../data/alset-pulse/pulse.refresh-targets";
     import { ENV } from "../../env";
     import SupportDetail from "../../../feature/support/presentation/routes/SupportDetail.svelte";
     import SaleDetail from "../../../feature/sale/presentation/routes/SaleDetail.svelte";
