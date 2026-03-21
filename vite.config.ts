@@ -12,4 +12,12 @@ export default defineConfig({
   // Ensures `.env` is loaded from the project root even if the IDE runs Vite with a different CWD.
   envDir: rootDir,
   plugins: [svelte()],
+  test: {
+      environment: 'jsdom'
+  },
+  resolve: process.env.VITEST
+      ? {
+        conditions: ['browser']
+      }
+      : undefined
 })

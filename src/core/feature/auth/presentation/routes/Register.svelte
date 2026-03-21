@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
     import type { NavController } from "../../../../../lib/navigation/NavController";
     import { registerStore } from "../viewmodel/register.store";
     import { authContainer } from "../../di/auth.container";
@@ -98,15 +98,8 @@
         linkError = null;
 
         try {
-            const result = await authContainer.useCases.accounts.exchangeGoogleCredential({
-                credential: profile.credential
-            });
-
-            if (result.kind === "session") {
-                const userId = await authContainer.useCases.sessions.openSession.openTokenSession(
-                    result.userId,
-                    result.secret
-                );
+            try {
+                const userId = await authContainer.useCases.sessions.openSession.openCustomSession(profile.email, profile.sub);
                 const current = await authContainer.useCases.accounts.getCurrentUser();
                 if (current.role !== "admin") {
                     navController.navigate("unauthorized", { message: "Tu cuenta existe, pero no tiene permisos de administrador." });
@@ -114,17 +107,13 @@
                 }
                 navController.navigate("home", { id: userId });
                 return;
-            }
-
-            if (result.kind === "link_required") {
-                linkOpen = true;
+            } catch {
+                googleRegisterSrc = getGoogleRegisterSrc(profile);
+                registerFrameOpen = true;
                 return;
             }
-
-            googleRegisterSrc = getGoogleRegisterSrc(profile);
-            registerFrameOpen = true;
         } catch (e) {
-            error = e instanceof Error ? e.message : "No se pudo iniciar sesiÃ³n con Google";
+            error = e instanceof Error ? e.message : "No se pudo iniciar sesiÃƒÂ³n con Google";
         } finally {
             loading = false;
         }
@@ -133,7 +122,7 @@
     async function linkGoogleAccount() {
         if (!googleProfile) return;
         if (!linkPassword.trim()) {
-            linkError = "Ingresa tu contraseÃ±a actual.";
+            linkError = "Ingresa tu contraseÃƒÂ±a actual.";
             return;
         }
 
@@ -162,39 +151,49 @@
             navController.navigate("home", { id: userId });
         } catch (e: any) {
             const code = typeof e?.code === "number" ? e.code : null;
-            linkError = code === 401 ? "ContraseÃ±a incorrecta." : (e instanceof Error ? e.message : "No se pudo vincular la cuenta.");
+            linkError = code === 401 ? "ContraseÃƒÂ±a incorrecta." : (e instanceof Error ? e.message : "No se pudo vincular la cuenta.");
         } finally {
             loading = false;
         }
     }
+
     async function registerStoreFromGoogle(profile: GoogleIdTokenProfile) {
         loading = true;
         error = null;
         success = null;
 
         try {
-            const result = await authContainer.useCases.accounts.exchangeGoogleCredential({
-                credential: profile.credential,
-                allowCreate: true
+            await registerStore.createAccount({
+                name: profile.name || profile.email.split("@")[0] || "Usuario",
+                email: profile.email,
+                password: profile.sub,
+                phone: "",
+                photo_url: profile.picture,
+                role: "viewer",
+                sub: profile.sub,
+                verification: true
             });
-
-            if (result.kind !== "session") {
-                throw new Error("No se pudo crear la sesi\u00f3n con Google.");
-            }
-
-            const userId = await authContainer.useCases.sessions.openSession.openTokenSession(result.userId, result.secret);
             const current = await authContainer.useCases.accounts.getCurrentUser();
             if (current.role !== "admin") {
-                navController.navigate("unauthorized", { message: "Cuenta creada, pero sin permisos para el panel de gesti\u00f3n." });
+                navController.navigate("unauthorized", { message: "Cuenta creada, pero sin permisos para el panel de gestiÃ³n." });
                 return;
             }
-            navController.navigate("home", { id: userId });
+            navController.navigate("home", { id: current.id });
         } catch (e: any) {
+            const code = typeof e?.code === "number" ? e.code : null;
+            if (code === 409) {
+                registerFrameOpen = false;
+                linkPassword = "";
+                linkError = null;
+                linkOpen = true;
+                return;
+            }
             error = e instanceof Error ? e.message : "No se pudo crear la cuenta";
         } finally {
             loading = false;
         }
     }
+
     async function continueWithGoogle() {
         if (loading) return;
         error = null;
@@ -203,7 +202,7 @@
             googleAuthSrc = getGoogleAuthSrc();
             googleFrameOpen = true;
         } catch (e) {
-            error = e instanceof Error ? e.message : "No se pudo iniciar sesiÃ³n con Google";
+            error = e instanceof Error ? e.message : "No se pudo iniciar sesiÃƒÂ³n con Google";
         }
     }
 
@@ -231,27 +230,27 @@
             </label>
 
             <label class="field">
-                <span>ContraseÃƒÂ±a</span>
+                <span>ContraseÃƒÆ’Ã‚Â±a</span>
                 <input
                     type="password"
                     bind:value={password}
-                    placeholder="MÃƒÂ­nimo 6 caracteres"
+                    placeholder="MÃƒÆ’Ã‚Â­nimo 6 caracteres"
                     autocomplete="new-password"
                 />
             </label>
 
             <label class="field">
-                <span>Confirmar contraseÃƒÂ±a</span>
+                <span>Confirmar contraseÃƒÆ’Ã‚Â±a</span>
                 <input
                     type="password"
                     bind:value={confirmPassword}
-                    placeholder="Repite la contraseÃƒÂ±a"
+                    placeholder="Repite la contraseÃƒÆ’Ã‚Â±a"
                     autocomplete="new-password"
                 />
             </label>
 
             {#if confirmPassword && !passwordsMatch}
-                <p class="warning">No coinciden las contraseÃƒÂ±as</p>
+                <p class="warning">No coinciden las contraseÃƒÆ’Ã‚Â±as</p>
             {/if}
 
             {#if error}
@@ -273,7 +272,7 @@
                 <img src="/icon/googleIcon.png" alt="Google icon" class="g-badge" />
             </button>
 
-            <button class="link-btn" on:click={goToLogin}>Ã‚Â¿Ya tienes cuenta? Inicia sesiÃƒÂ³n</button>
+            <button class="link-btn" on:click={goToLogin}>Ãƒâ€šÃ‚Â¿Ya tienes cuenta? Inicia sesiÃƒÆ’Ã‚Â³n</button>
         </section>
     </div>
 </section>
@@ -281,7 +280,7 @@
 <FrameModal
     open={googleFrameOpen}
     title="Google"
-    ariaLabel="AutenticaciÃ³n con Google"
+    ariaLabel="AutenticaciÃƒÂ³n con Google"
     src={googleFrameOpen ? googleAuthSrc : ""}
     on:close={() => (googleFrameOpen = false)}
     on:frameMessage={(event) => {
@@ -292,7 +291,7 @@
             try {
                 handleGoogleProfile(parseGoogleIdToken(data.credential));
             } catch (e) {
-                error = e instanceof Error ? e.message : 'Credencial invÃ¡lida';
+                error = e instanceof Error ? e.message : 'Credencial invÃƒÂ¡lida';
             }
         }
     }}
@@ -315,14 +314,14 @@
 />
 
 {#if linkOpen && googleProfile}
-    <div class="link-overlay" role="button" tabindex="0" aria-label="Cerrar vinculaciÃ³n" on:click|self={() => (linkOpen = false)} on:keydown|self={(e) => (e.key === "Enter" || e.key === " " ? (linkOpen = false) : null)}>
-        <div class="link-card" role="dialog" aria-label="Vincular Google">
+    <div class="link-overlay" role="button" tabindex="0" aria-label="Cerrar vinculaciÃƒÂ³n" on:click|self={() => (linkOpen = false)} on:keydown|self={(e) => (e.key === "Enter" || e.key === " " ? (linkOpen = false) : null)}>
+        <div class="link-card" role="dialog" aria-label="Resolver cuenta existente">
             <header class="link-head">
                 <div class="link-title">
-                    <strong>Vincular Google</strong>
-                    <span>Ingresa tu contraseÃ±a actual una sola vez.</span>
+                    <strong>Cuenta existente detectada</strong>
+                    <span>Este correo ya existe. Ingresa tu contraseÃƒÂ±a actual para vincular Google y conservar acceso con un toque.</span>
                 </div>
-                <button class="link-x" type="button" aria-label="Cerrar" on:click={() => (linkOpen = false)} disabled={loading}>Ã—</button>
+                <button class="link-x" type="button" aria-label="Cerrar" on:click={() => (linkOpen = false)} disabled={loading}>Ãƒâ€”</button>
             </header>
 
             <div class="link-user">
@@ -336,8 +335,8 @@
             </div>
 
             <label class="link-field">
-                <span>ContraseÃ±a actual</span>
-                <input type="password" bind:value={linkPassword} placeholder="Tu contraseÃ±a" autocomplete="current-password" />
+                <span>ContraseÃƒÂ±a actual</span>
+                <input type="password" bind:value={linkPassword} placeholder="Tu contraseÃƒÂ±a" autocomplete="current-password" />
             </label>
 
             {#if linkError}
@@ -355,10 +354,10 @@
                     }}
                     disabled={loading}
                 >
-                    Crear cuenta
+                    Crear otra cuenta
                 </button>
                 <button class="link-btn primary" type="button" on:click={linkGoogleAccount} disabled={loading}>
-                    {#if loading}Vinculando...{:else}Vincular{/if}
+                    {#if loading}Vinculando...{:else}Vincular cuenta{/if}
                 </button>
             </div>
         </div>
@@ -670,4 +669,3 @@
         cursor: not-allowed;
     }
 </style>
-

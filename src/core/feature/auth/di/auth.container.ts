@@ -26,18 +26,24 @@ import { PasswordResetNetRepositoryImpl } from "../data/repository/password-rese
 import { RequestPasswordResetCodeCaseUse } from "../domain/caseuse/RequestPasswordResetCodeCaseUse";
 import { ConfirmPasswordResetCodeCaseUse } from "../domain/caseuse/ConfirmPasswordResetCodeCaseUse";
 
-// Account instance
+// Infraestructura Appwrite activa para el flujo MVP.
 const accounts = infrastructureContainer.appwrite.account
 const functions = infrastructureContainer.appwrite.functions
 
-// Data
+// Repositorios activos del MVP.
 const authNetRepository = new UserNetRepositoryImpl(accounts)
 const sessionNetManager = new SessionNetManagerImpl(accounts)
 const adminNetRepository = new AdminNetManagerImpl(functions)
+
+// Infraestructura futura:
+// este repositorio HTTP permite volver a un flujo server-assisted para Google
+// sin tocar la API pública del contenedor. Hoy el login/registro MVP no lo usa.
 const googleAuthNetRepository = new GoogleAuthNetRepositoryImpl()
+
+// Servicio activo para reset de contraseña externo.
 const passwordResetNetRepository = new PasswordResetNetRepositoryImpl()
 
-// Domain
+// Casos de uso del dominio.
 const createAccountCaseUse = new CreateAccountCaseUse(authNetRepository)
 const updateNameCaseUse = new UpdateNameCaseUse(authNetRepository)
 const updatePasswordCaseUse = new UpdatePasswordCaseUse(authNetRepository)

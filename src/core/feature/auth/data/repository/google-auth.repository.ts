@@ -8,11 +8,19 @@ type GoogleAuthHttpResponse =
 export class GoogleAuthNetRepositoryImpl implements GoogleAuthNetRepository {
     private get baseUrl(): string {
         const url = (ENV.googleAuthUrl || "").trim();
-        if (!url) throw new Error("Falta configurar VITE_GOOGLE_AUTH_URL");
+        if (!url) {
+            throw new Error(
+                "VITE_GOOGLE_AUTH_URL no está configurada. El flujo MVP actual usa Google -> credencial -> sub -> login/registro directo en Appwrite."
+            );
+        }
         return url.replace(/\/$/, "");
     }
 
     async exchangeCredential(params: { credential: string; allowCreate?: boolean }): Promise<GoogleAuthExchangeResult> {
+        // Uso futuro:
+        // este endpoint permite delegar la validación de Google a un backend/Worker
+        // y devolver una sesión Appwrite o una decisión de vínculo/registro.
+        // Se mantiene aquí para no romper el contrato del dominio cuando se reactive.
         const res = await fetch(this.baseUrl, {
             method: "POST",
             headers: { "content-type": "application/json" },
@@ -40,4 +48,3 @@ export class GoogleAuthNetRepositoryImpl implements GoogleAuthNetRepository {
         return payload as GoogleAuthExchangeResult;
     }
 }
-
