@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -13,7 +13,34 @@ export default defineConfig({
   envDir: rootDir,
   plugins: [svelte()],
   test: {
-      environment: 'jsdom'
+      globals: true,
+      environment: "jsdom",
+      setupFiles: ["./src/test/setup/vitest.setup.ts"],
+      exclude: ["node_modules", "dist", ".svelte-kit", "services", "workers"],
+      projects: [
+          {
+              extends: true,
+              test: {
+                  name: "unit",
+                  include: ["src/**/*.test.ts"],
+                  exclude: ["src/**/*.component.test.ts", "src/**/*.integration.test.ts"]
+              }
+          },
+          {
+              extends: true,
+              test: {
+                  name: "integration",
+                  include: ["src/**/*.integration.test.ts"]
+              }
+          },
+          {
+              extends: true,
+              test: {
+                  name: "component",
+                  include: ["src/**/*.component.test.ts"]
+              }
+          }
+      ]
   },
   resolve: process.env.VITEST
       ? {
