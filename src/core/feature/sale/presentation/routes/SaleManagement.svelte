@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
     import { onMount } from "svelte";
     import type { NavController } from "../../../../../lib/navigation/NavController";
     import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
@@ -45,7 +45,7 @@
                 {#if isRefreshing}
                     <span class="mgmt-chip" aria-label="Sincronizando">
                         <LoadingSpinner size={16} label="Sincronizando" subtle />
-                        Sincronizando�
+                        Sincronizando...
                     </span>
                 {/if}
             </div>
@@ -187,4 +187,6 @@
         }
     }
 </style>
+
+
 

@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
     import type { NavController } from "../../../../../lib/navigation/NavController";
     import { registerStore } from "../viewmodel/register.store";
     import { authContainer } from "../../di/auth.container";
@@ -113,7 +113,7 @@
                 return;
             }
         } catch (e) {
-            error = e instanceof Error ? e.message : "No se pudo iniciar sesi�n con Google";
+            error = e instanceof Error ? e.message : "No se pudo iniciar sesión con Google";
         } finally {
             loading = false;
         }
@@ -122,7 +122,7 @@
     async function linkGoogleAccount() {
         if (!googleProfile) return;
         if (!linkPassword.trim()) {
-            linkError = "Ingresa tu contrase�a actual.";
+            linkError = "Ingresa tu contraseña actual.";
             return;
         }
 
@@ -151,7 +151,7 @@
             navController.navigate("home", { id: userId });
         } catch (e: any) {
             const code = typeof e?.code === "number" ? e.code : null;
-            linkError = code === 401 ? "Contrase�a incorrecta." : (e instanceof Error ? e.message : "No se pudo vincular la cuenta.");
+            linkError = code === 401 ? "Contraseña incorrecta." : (e instanceof Error ? e.message : "No se pudo vincular la cuenta.");
         } finally {
             loading = false;
         }
@@ -175,7 +175,7 @@
             });
             const current = await authContainer.useCases.accounts.getCurrentUser();
             if (current.role !== "admin") {
-                navController.navigate("unauthorized", { message: "Cuenta creada, pero sin permisos para el panel de gesti?n." });
+                navController.navigate("unauthorized", { message: "Cuenta creada, pero sin permisos para el panel de gestión." });
                 return;
             }
             navController.navigate("home", { id: current.id });
@@ -202,7 +202,7 @@
             googleAuthSrc = getGoogleAuthSrc();
             googleFrameOpen = true;
         } catch (e) {
-            error = e instanceof Error ? e.message : "No se pudo iniciar sesi�n con Google";
+            error = e instanceof Error ? e.message : "No se pudo iniciar sesión con Google";
         }
     }
 
@@ -280,7 +280,7 @@
 <FrameModal
     open={googleFrameOpen}
     title="Google"
-    ariaLabel="Autenticaci�n con Google"
+    ariaLabel="Autenticación con Google"
     src={googleFrameOpen ? googleAuthSrc : ""}
     on:close={() => (googleFrameOpen = false)}
     on:frameMessage={(event) => {
@@ -291,7 +291,7 @@
             try {
                 handleGoogleProfile(parseGoogleIdToken(data.credential));
             } catch (e) {
-                error = e instanceof Error ? e.message : 'Credencial inv�lida';
+                error = e instanceof Error ? e.message : 'Credencial inválida';
             }
         }
     }}
@@ -314,14 +314,14 @@
 />
 
 {#if linkOpen && googleProfile}
-    <div class="link-overlay" role="button" tabindex="0" aria-label="Cerrar vinculaci�n" on:click|self={() => (linkOpen = false)} on:keydown|self={(e) => (e.key === "Enter" || e.key === " " ? (linkOpen = false) : null)}>
+    <div class="link-overlay" role="button" tabindex="0" aria-label="Cerrar vinculación" on:click|self={() => (linkOpen = false)} on:keydown|self={(e) => (e.key === "Enter" || e.key === " " ? (linkOpen = false) : null)}>
         <div class="link-card" role="dialog" aria-label="Resolver cuenta existente">
             <header class="link-head">
                 <div class="link-title">
                     <strong>Cuenta existente detectada</strong>
-                    <span>Este correo ya existe. Ingresa tu contrase�a actual para vincular Google y conservar acceso con un toque.</span>
+                    <span>Este correo ya existe. Ingresa tu contraseña actual para vincular Google y conservar acceso con un toque.</span>
                 </div>
-                <button class="link-x" type="button" aria-label="Cerrar" on:click={() => (linkOpen = false)} disabled={loading}>�</button>
+                <button class="link-x" type="button" aria-label="Cerrar" on:click={() => (linkOpen = false)} disabled={loading}>&times;</button>
             </header>
 
             <div class="link-user">
@@ -335,8 +335,8 @@
             </div>
 
             <label class="link-field">
-                <span>Contrase�a actual</span>
-                <input type="password" bind:value={linkPassword} placeholder="Tu contrase�a" autocomplete="current-password" />
+                            <span>Contraseña actual</span>
+                <input type="password" bind:value={linkPassword} placeholder="Tu contraseña" autocomplete="current-password" />
             </label>
 
             {#if linkError}
@@ -669,3 +669,7 @@
         cursor: not-allowed;
     }
 </style>
+
+
+
+

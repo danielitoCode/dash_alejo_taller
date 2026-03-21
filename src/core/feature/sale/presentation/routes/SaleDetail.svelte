@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
     import { onMount } from "svelte";
     import type { NavBackStackEntry } from "../../../../../lib/navigation/NavBackStackEntry";
     import type { NavController } from "../../../../../lib/navigation/NavController";
@@ -36,7 +36,7 @@
 
     async function confirmSale(s: Sale) {
         if (s.verified !== BuyState.UNVERIFIED) return;
-        toastStore.info("Confirmando venta…", 1200);
+        toastStore.info("Confirmando venta...", 1200);
         try {
             await saleStore.setVerified(s.id, BuyState.VERIFIED);
             toastStore.success("Venta confirmada", 1400);
@@ -67,7 +67,7 @@
         </div>
     {:else if loading}
         <div class="mgmt-card">
-            <p class="mgmt-muted">Cargando…</p>
+            <p class="mgmt-muted">Cargando...</p>
         </div>
     {:else if !sale}
         <div class="mgmt-card">
@@ -288,4 +288,6 @@
         }
     }
 </style>
+
+
 

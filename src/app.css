@@ -1,4 +1,4 @@
-*,
+﻿*,
 *::before,
 *::after {
     box-sizing: border-box;
@@ -93,34 +93,55 @@ body {
     margin: 0;
 }
 
-/* Management pages (Productos / Categorías / Usuarios / Promos) */
-.mgmt-page {
-    width: min(1200px, 100%);
+/* Management pages (Productos / CategorÃ­as / Usuarios / Promos) */
+.mgmt-page,
+.mgmt-container {
+    --mgmt-max-width: 1220px;
+    --mgmt-page-gap: 18px;
+    --mgmt-header-gap: 8px;
+    --mgmt-header-min-height: 74px;
+    --mgmt-card-padding: 18px;
+    width: min(var(--mgmt-max-width), 100%);
     margin: 0 auto;
-    padding: 0;
+    padding: 8px 0 24px;
     display: grid;
-    gap: 14px;
+    gap: var(--mgmt-page-gap);
+    align-content: start;
 }
 
-.mgmt-header {
+.mgmt-header,
+.mgmt-page-head {
     display: grid;
-    gap: 6px;
+    gap: var(--mgmt-header-gap);
+    align-content: start;
+    min-height: var(--mgmt-header-min-height);
 }
 
-.mgmt-title {
+.mgmt-page-title {
+    display: grid;
+    gap: 10px;
+    align-items: start;
+}
+
+.mgmt-title,
+.mgmt-h1 {
     margin: 0;
-    font-size: clamp(1.55rem, 2.6vw, 2.05rem);
-    line-height: 1.12;
+    font-size: clamp(1.72rem, 2.8vw, 2.24rem);
+    line-height: 1.08;
     letter-spacing: -0.02em;
+    font-weight: 900;
 }
 
-.mgmt-subtitle {
+.mgmt-subtitle,
+.mgmt-page-head .mgmt-muted {
     margin: 0;
     color: color-mix(in srgb, var(--md-sys-color-on-background) 78%, transparent);
     max-width: 68ch;
+    font-size: 0.98rem;
 }
 
-.mgmt-toolbar {
+.mgmt-toolbar,
+.mgmt-chip-row {
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
@@ -150,7 +171,8 @@ body {
 
 .mgmt-layout {
     display: grid;
-    gap: 14px;
+    gap: 16px;
+    align-items: start;
 }
 
 .mgmt-card {
@@ -158,13 +180,14 @@ body {
     border: 1px solid var(--md-sys-color-outline-variant);
     border-radius: 20px;
     box-shadow: 0 10px 24px color-mix(in srgb, var(--md-sys-color-outline) 16%, transparent);
-    padding: 14px;
+    padding: var(--mgmt-card-padding);
 }
 
 .mgmt-card-title {
-    margin: 0 0 10px 0;
-    font-size: 1.05rem;
+    margin: 0 0 12px 0;
+    font-size: 1.08rem;
     letter-spacing: -0.01em;
+    font-weight: 850;
 }
 
 .mgmt-field {
@@ -327,8 +350,9 @@ body {
 }
 
 @media (min-width: 980px) {
-    .mgmt-page {
-        gap: 16px;
+    .mgmt-page,
+    .mgmt-container {
+        gap: 20px;
     }
 
     .mgmt-layout {
@@ -338,20 +362,41 @@ body {
 
     .mgmt-form-card {
         position: sticky;
-        top: 14px;
+        top: 20px;
     }
 }
 
 @media (min-width: 720px) {
+    .mgmt-page-title {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
     .mgmt-row {
         grid-template-columns: 1fr auto;
         gap: 12px;
     }
 }
 
+@media (max-width: 719px) {
+    .mgmt-page,
+    .mgmt-container {
+        padding-top: 4px;
+        gap: 16px;
+    }
+
+    .mgmt-card {
+        border-radius: 18px;
+        padding: 16px;
+    }
+
+    .mgmt-page-title {
+        gap: 8px;
+    }
+}
 .mgmt-input:focus-visible,
 .mgmt-select:focus-visible,
 .mgmt-btn:focus-visible {
     outline: 3px solid color-mix(in srgb, var(--md-sys-color-primary) 45%, transparent);
     outline-offset: 2px;
 }
+

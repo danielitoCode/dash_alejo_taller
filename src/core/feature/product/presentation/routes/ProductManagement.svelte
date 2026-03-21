@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
     import { onMount } from "svelte";
     import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
     import ImagePicker from "../../../../infrastructure/presentation/components/ImagePicker.svelte";
@@ -52,7 +52,7 @@
         };
 
         try {
-            toastStore.info("Creando producto?");
+            toastStore.info("Creando producto...");
             await productStore.create(data);
             toastStore.success("Producto creado.");
             resetForm();
@@ -93,12 +93,12 @@
                     validUntilEpochMillis: now + 1000 * 60 * 60 * 24 * 30
                 });
             } catch (e: any) {
-                logger.warn(`No se pudo crear la promoci?n autom?tica: ${e?.message ?? "desconocido"}`);
+                logger.warn(`No se pudo crear la promoción automática: ${e?.message ?? "desconocido"}`);
             }
         }
 
         try {
-            toastStore.info("Guardando cambios?");
+            toastStore.info("Guardando cambios...");
             await productStore.updatePrice(
                 {
                     ...old,
@@ -137,13 +137,13 @@
     $: isInitialLoading = $productStore.loading && items.length === 0;
 </script>
 
-<section class="mgmt-page" aria-label="Gesti?n de productos">
+<section class="mgmt-page" aria-label="Gestión de productos">
     <header class="mgmt-header">
         <div class="mgmt-toolbar">
             <div>
                 <h1 class="mgmt-title">Productos</h1>
                 <p class="mgmt-subtitle">
-                    Si un precio baja, el sistema crea una promoci?n autom?tica con el porcentaje de descuento.
+                    Si un precio baja, el sistema crea una promoción automática con el porcentaje de descuento.
                 </p>
             </div>
 
@@ -155,7 +155,7 @@
                 {#if isRefreshing}
                     <span class="mgmt-chip" aria-label="Sincronizando">
                         <LoadingSpinner size={16} label="Sincronizando" subtle />
-                        Sincronizando�
+                        Sincronizando...
                     </span>
                 {/if}
             </div>
@@ -169,11 +169,11 @@
             <div class="mgmt-grid">
                 <label class="mgmt-field" style="grid-column:1/-1">
                     <span>Nombre</span>
-                    <input class="mgmt-input" placeholder="Ej. EcoFlow Delta?" bind:value={draftName} />
+                    <input class="mgmt-input" placeholder="Ej. EcoFlow Delta..." bind:value={draftName} />
                 </label>
 
                 <label class="mgmt-field" style="grid-column:1/-1">
-                    <span>Descripci?n</span>
+                    <span>Descripción</span>
                     <textarea class="mgmt-input mgmt-area" placeholder="Opcional" bind:value={draftDescription}></textarea>
                 </label>
 
@@ -183,9 +183,9 @@
                 </label>
 
                 <label class="mgmt-field">
-                    <span>Categor?a</span>
+                    <span>Categoría</span>
                     <select class="mgmt-select" bind:value={draftCategoryId}>
-                        <option value="" disabled>Selecciona?</option>
+                        <option value="" disabled>Selecciona...</option>
                         {#each $categoryStore.items as category (category.id)}
                             <option value={category.id}>{category.name}</option>
                         {/each}
@@ -277,4 +277,8 @@
         </section>
     </div>
 </section>
+
+
+
+
 

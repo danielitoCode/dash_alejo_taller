@@ -1,4 +1,4 @@
-<script lang="ts">
+ï»¿<script lang="ts">
     import { onDestroy, onMount } from "svelte";
     import type { NavBackStackEntry } from "../../../../lib/navigation/NavBackStackEntry";
     import type { NavController } from "../../../../lib/navigation/NavController";
@@ -100,7 +100,7 @@
             .then((u) => {
                 if (u.role !== "admin") {
                     navController.navigate("unauthorized", {
-                        message: "Tu cuenta no estÃ¡ autorizada para usar el panel de gestión."
+                        message: "Tu cuenta no estÃ¡ autorizada para usar el panel de gestiÃ³n."
                     });
                 }
             })
@@ -122,7 +122,7 @@
         });
 
         logger.info(
-            `[Pusher] init key=${ENV.pusherKey ? ENV.pusherKey.slice(0, 6) + "…" : "N/A"} cluster=${ENV.pusherCluster ?? "N/A"} channel=${ENV.pusherSupportChannel ?? "support-inbox"}`
+            `[Pusher] init key=${ENV.pusherKey ? ENV.pusherKey.slice(0, 6) + "â€¦" : "N/A"} cluster=${ENV.pusherCluster ?? "N/A"} channel=${ENV.pusherSupportChannel ?? "support-inbox"}`
         );
 
         stopPulseRefresh = subscribePulseChannelAll((eventName, payload) => {
@@ -150,10 +150,10 @@
 
             toastStore.info(
                 targets.length === 2
-                    ? "Evento realtime: sincronizando todo…"
+                    ? "Evento realtime: sincronizando todoâ€¦"
                     : targets[0] === "support"
-                      ? "Evento realtime: sincronizando mensajes…"
-                      : "Evento realtime: sincronizando ventas…",
+                      ? "Evento realtime: sincronizando mensajesâ€¦"
+                      : "Evento realtime: sincronizando ventasâ€¦",
                 1200
             );
 
@@ -196,7 +196,7 @@
         }
         syncingSupport = true;
         queuedSupport = false;
-        toastStore.info("Actualizando mensajes…", 1200);
+        toastStore.info("Actualizando mensajesâ€¦", 1200);
         try {
             await supportInboxStore.syncAll();
             const afterItems = get(supportInboxStore).items;
@@ -221,7 +221,7 @@
         }
         syncingSales = true;
         queuedSales = false;
-        toastStore.info("Actualizando ventas…", 1200);
+        toastStore.info("Actualizando ventasâ€¦", 1200);
         try {
             await saleStore.syncAll();
             const afterItems = get(saleStore).items;
@@ -246,7 +246,7 @@
                 <div class="brand-meta">
                     <h2>Business Dashboard</h2>
                     {#await currentUser}
-                        <p>Loading user…</p>
+                        <p>Loading user...</p>
                     {:then user}
                         <p>{user.name}</p>
                     {:catch error}
@@ -256,7 +256,7 @@
             </div>
         </header>
 
-        <nav class="sidebar-nav" aria-label="Menú">
+        <nav class="sidebar-nav" aria-label="Menâ€¦">
             {#each items as item}
                 <button
                     class:selected={currentPath === item.path}
@@ -270,9 +270,9 @@
             {/each}
         </nav>
 
-        <button class="logout" on:click={logout} aria-label="Cerrar sesión" title="Cerrar sesión">
-            <Icon icon={LogOut} size={18} className="nav-ico" ariaLabel="Cerrar sesión" />
-            <span class="logout-label">Cerrar sesión</span>
+        <button class="logout" on:click={logout} aria-label="Cerrar sesiâ€¦n" title="Cerrar sesiâ€¦n">
+            <Icon icon={LogOut} size={18} className="nav-ico" ariaLabel="Cerrar sesiâ€¦n" />
+            <span class="logout-label">Cerrar sesiâ€¦n</span>
         </button>
     </aside>
 
@@ -281,12 +281,12 @@
             <button
                 class="menu-toggle"
                 type="button"
-                aria-label={sidebarOpen ? "Cerrar Menú" : "Abrir Menú"}
+                aria-label={sidebarOpen ? "Cerrar Menâ€¦" : "Abrir Menâ€¦"}
                 on:click={() => (sidebarOpen = !sidebarOpen)}
             >
-                <Icon icon={Menu} size={20} className="menu-ico" ariaLabel="Menú" />
+                <Icon icon={Menu} size={20} className="menu-ico" ariaLabel="Menâ€¦" />
             </button>
-            <strong>Panel de gestión</strong>
+            <strong>Panel de gestiÃ³n</strong>
             <span class="ghost" aria-hidden="true">{userId}</span>
         </div>
 
@@ -311,7 +311,7 @@
     </main>
 
     {#if sidebarOpen}
-        <button class="scrim" aria-label="Cerrar Menú" on:click={() => (sidebarOpen = false)}></button>
+        <button class="scrim" aria-label="Cerrar Menâ€¦" on:click={() => (sidebarOpen = false)}></button>
     {/if}
 </section>
 
@@ -561,3 +561,6 @@
         background: transparent;
     }
 </style>
+
+
+

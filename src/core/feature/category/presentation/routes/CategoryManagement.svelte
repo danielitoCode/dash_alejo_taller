@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
     import { onMount } from "svelte";
     import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
     import ImagePicker from "../../../../infrastructure/presentation/components/ImagePicker.svelte";
@@ -36,7 +36,7 @@
         if (!name.trim()) return;
 
         try {
-            toastStore.info("Creando categor?a?");
+            toastStore.info("Creando categoría...");
             await categoryStore.create({
                 id: `c-${Math.random().toString(36).slice(2, 8)}`,
                 name: name.trim(),
@@ -44,11 +44,11 @@
                 photoUrl: photoUrl.trim() || null,
                 status
             });
-            toastStore.success("Categor?a creada.");
+            toastStore.success("Categoría creada.");
             resetForm();
         } catch (e: any) {
             logger.error(e?.message ?? e, e?.stack);
-            toastStore.error(e instanceof Error ? e.message : "No se pudo crear la categor?a.");
+            toastStore.error(e instanceof Error ? e.message : "No se pudo crear la categoría.");
         }
     }
 
@@ -68,7 +68,7 @@
         if (!current) return;
 
         try {
-            toastStore.info("Guardando cambios?");
+            toastStore.info("Guardando cambios...");
             await categoryStore.updateById(editId, {
                 ...current,
                 name: name.trim(),
@@ -76,11 +76,11 @@
                 photoUrl: photoUrl.trim() || null,
                 status
             });
-            toastStore.success("Categor?a actualizada.");
+            toastStore.success("Categoría actualizada.");
             resetForm();
         } catch (e: any) {
             logger.error(e?.message ?? e, e?.stack);
-            toastStore.error(e instanceof Error ? e.message : "No se pudo guardar la categor?a.");
+            toastStore.error(e instanceof Error ? e.message : "No se pudo guardar la categoría.");
         }
     }
 
@@ -102,12 +102,12 @@
     $: isInitialLoading = $categoryStore.loading && items.length === 0;
 </script>
 
-<section class="mgmt-page" aria-label="Gesti?n de categor?as">
+<section class="mgmt-page" aria-label="Gestión de categorías">
     <header class="mgmt-header">
         <div class="mgmt-toolbar">
             <div>
-                <h1 class="mgmt-title">Categor?as</h1>
-                <p class="mgmt-subtitle">Organiza tu cat?logo. Crea, edita y elimina categor?as en segundos.</p>
+                <h1 class="mgmt-title">Categorías</h1>
+                <p class="mgmt-subtitle">Organiza tu catálogo. Crea, edita y elimina categorías en segundos.</p>
             </div>
 
             <div class="mgmt-meta">
@@ -118,7 +118,7 @@
                 {#if isRefreshing}
                     <span class="mgmt-chip" aria-label="Sincronizando">
                         <LoadingSpinner size={16} label="Sincronizando" subtle />
-                        Sincronizando�
+                        Sincronizando...
                     </span>
                 {/if}
             </div>
@@ -127,16 +127,16 @@
 
     <div class="mgmt-layout">
         <section class="mgmt-card mgmt-form-card" aria-label="Formulario">
-            <h2 class="mgmt-card-title">{editId ? "Editar categor?a" : "Nueva categor?a"}</h2>
+            <h2 class="mgmt-card-title">{editId ? "Editar categoría" : "Nueva categoría"}</h2>
 
             <div class="mgmt-grid">
                 <label class="mgmt-field" style="grid-column:1/-1">
                     <span>Nombre</span>
-                    <input class="mgmt-input" bind:value={name} placeholder="Ej. Bater?as, Solar, Herramientas?" />
+                    <input class="mgmt-input" bind:value={name} placeholder="Ej. Baterías, Solar, Herramientas..." />
                 </label>
 
                 <label class="mgmt-field" style="grid-column:1/-1">
-                    <span>Descripci?n</span>
+                    <span>Descripción</span>
                     <textarea class="mgmt-input mgmt-area" bind:value={description} placeholder="Opcional"></textarea>
                 </label>
 
@@ -151,7 +151,7 @@
                 <div style="grid-column:1/-1">
                     {#key imageKey}
                         <ImagePicker
-                            label="Imagen de la categor?a"
+                            label="Imagen de la categoría"
                             bind:value={photoUrl}
                             bind:pending={imagePending}
                         />
@@ -189,8 +189,8 @@
                         <input
                             class="mgmt-input"
                             type="search"
-                            placeholder="Buscar categor?as..."
-                            aria-label="Buscar categor?as"
+                            placeholder="Buscar categorías..."
+                            aria-label="Buscar categorías"
                             bind:value={query}
                         />
                     </div>
@@ -214,8 +214,8 @@
                             {/if}
 
                             <div class="mgmt-row-main">
-                                <div class="mgmt-row-title">{category.name} <span class="mgmt-muted">? {category.status}</span></div>
-                                <p class="mgmt-row-sub">{category.description || "Sin descripci?n"}</p>
+                                <div class="mgmt-row-title">{category.name} <span class="mgmt-muted">· {category.status}</span></div>
+                                <p class="mgmt-row-sub">{category.description || "Sin descripción"}</p>
                             </div>
                         </div>
 
@@ -235,4 +235,6 @@
         </section>
     </div>
 </section>
+
+
 
