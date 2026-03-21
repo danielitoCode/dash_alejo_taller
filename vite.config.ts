@@ -22,22 +22,21 @@ export default defineConfig({
               extends: true,
               test: {
                   name: "unit",
-                  include: ["src/**/*.test.ts"],
-                  exclude: ["src/**/*.component.test.ts", "src/**/*.integration.test.ts"]
+                  include: ["src/**/*.unit.test.ts"],
               }
           },
           {
               extends: true,
               test: {
                   name: "integration",
-                  include: ["src/**/*.integration.test.ts"]
+                  include: ["src/**/*.integration.test.ts"],
               }
           },
           {
               extends: true,
               test: {
-                  name: "component",
-                  include: ["src/**/*.component.test.ts"]
+                  name: "ui",
+                  include: ["src/**/*.ui.test.ts"]
               }
           }
       ]
