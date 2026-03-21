@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
     import { onMount } from "svelte";
     import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
     import LoadingSpinner from "../../../../infrastructure/presentation/components/LoadingSpinner.svelte";
@@ -18,7 +18,7 @@
     async function createUser() {
         if (!name.trim() || !email.trim() || password.length < 6) return;
         try {
-            toastStore.info("Creando usuarioâ€¦");
+            toastStore.info("Creando usuario?");
             await userManagementStore.createUser({ name: name.trim(), email: email.trim(), password, role });
             toastStore.success("Usuario creado.");
             name = "";
@@ -67,7 +67,7 @@
 
     async function toggleBlocked(userId: string) {
         try {
-            toastStore.info("Actualizando estadoâ€¦", 1200);
+            toastStore.info("Actualizando estado?", 1200);
             await userManagementStore.toggleBlocked(userId);
             toastStore.success("Estado actualizado.", 1200);
         } catch (e: any) {
@@ -77,10 +77,10 @@
     }
 
     async function resetPassword(userId: string) {
-        const newPassword = window.prompt("Nuevo password temporal (mÃ­nimo 6 caracteres):");
+        const newPassword = window.prompt("Nuevo password temporal (m?nimo 6 caracteres):");
         if (!newPassword || newPassword.trim().length < 6) return;
         try {
-            toastStore.info("Actualizando passwordâ€¦", 1200);
+            toastStore.info("Actualizando password?", 1200);
             await userManagementStore.requestPasswordReset(userId, newPassword.trim());
             toastStore.success("Password actualizado.", 1400);
         } catch (e: any) {
@@ -90,7 +90,7 @@
     }
 </script>
 
-<section class="mgmt-page" aria-label="GestiÃ³n de usuarios">
+<section class="mgmt-page" aria-label="Gesti?n de usuarios">
     <header class="mgmt-header">
         <div class="mgmt-toolbar">
             <div>
@@ -106,7 +106,7 @@
                 {#if isRefreshing}
                     <span class="mgmt-chip" aria-label="Sincronizando">
                         <LoadingSpinner size={16} label="Sincronizando" subtle />
-                        SincronizandoÃ¢â‚¬Â¦
+                        Sincronizando�
                     </span>
                 {/if}
             </div>
@@ -148,7 +148,7 @@
                     <span>Password temporal</span>
                     <input
                         class="mgmt-input"
-                        placeholder="MÃ­nimo 6 caracteres"
+                        placeholder="M?nimo 6 caracteres"
                         type="password"
                         autocomplete="new-password"
                         bind:value={password}
@@ -203,13 +203,13 @@
                                 <div class="mgmt-row-title">
                                     {user.name}
                                     {#if user.blocked}
-                                        <span class="mgmt-muted" style="font-weight:700"> Â· bloqueado</span>
+                                        <span class="mgmt-muted" style="font-weight:700"> ? bloqueado</span>
                                     {/if}
                                 </div>
                 <p class="mgmt-row-sub">{user.email}</p>
                                 <p class="mgmt-row-sub">
                                     <span class="mgmt-chip" style="padding:4px 10px">
-                                        <Icon icon={BadgeCheck} size={16} ariaLabel="VerificaciÃ³n" />
+                                        <Icon icon={BadgeCheck} size={16} ariaLabel="Verificaci?n" />
                                         {user.verified ? "verificado" : "sin verificar"}
                                     </span>
                                 </p>
