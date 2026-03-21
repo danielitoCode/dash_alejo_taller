@@ -1,5 +1,6 @@
 ﻿<script lang="ts">
     import { onDestroy, onMount } from "svelte";
+    import { fade } from "svelte/transition";
     import type { NavBackStackEntry } from "../../../../lib/navigation/NavBackStackEntry";
     import type { NavController } from "../../../../lib/navigation/NavController";
     import NavHost from "../../../../lib/navigation/NavHost.svelte";
@@ -221,7 +222,7 @@
         }
         syncingSales = true;
         queuedSales = false;
-        toastStore.info("Actualizando ventas…", 1200);
+        toastStore.info("Actualizando ventas...", 1200);
         try {
             await saleStore.syncAll();
             const afterItems = get(saleStore).items;
@@ -256,7 +257,7 @@
             </div>
         </header>
 
-        <nav class="sidebar-nav" aria-label="Men…">
+        <nav class="sidebar-nav" aria-label="Menú">
             {#each items as item}
                 <button
                     class:selected={currentPath === item.path}
@@ -270,9 +271,9 @@
             {/each}
         </nav>
 
-        <button class="logout" on:click={logout} aria-label="Cerrar sesi…n" title="Cerrar sesi…n">
-            <Icon icon={LogOut} size={18} className="nav-ico" ariaLabel="Cerrar sesi…n" />
-            <span class="logout-label">Cerrar sesi…n</span>
+        <button class="logout" on:click={logout} aria-label="Cerrar sesión" title="Cerrar sesión">
+            <Icon icon={LogOut} size={18} className="nav-ico" ariaLabel="Cerrar sesión" />
+            <span class="logout-label">Cerrar sesión</span>
         </button>
     </aside>
 
@@ -281,10 +282,10 @@
             <button
                 class="menu-toggle"
                 type="button"
-                aria-label={sidebarOpen ? "Cerrar Men…" : "Abrir Men…"}
+                aria-label={sidebarOpen ? "Cerrar menú" : "Abrir menú"}
                 on:click={() => (sidebarOpen = !sidebarOpen)}
             >
-                <Icon icon={Menu} size={20} className="menu-ico" ariaLabel="Men…" />
+                <Icon icon={Menu} size={20} className="menu-ico" ariaLabel="Menú" />
             </button>
             <strong>Panel de gestión</strong>
             <span class="ghost" aria-hidden="true">{userId}</span>
@@ -292,26 +293,30 @@
 
         <RealtimeDock navController={internalNavController} />
 
-        <NavHost
-            navController={internalNavController}
-            routes={[
-                composable(dashboard, () => DashboardHome),
-                composable(support, () => SupportInbox),
-                composable(supportDetail, () => SupportDetail),
-                composable(users, () => UserManagement),
-                composable(product, () => ProductManagement),
-                composable(category, () => CategoryManagement),
-                composable(sales, () => SaleManagement),
-                composable(salesDetail, () => SaleDetail),
-                composable(promo, () => PromoManagement),
-                composable(settings, () => SettingsManagement),
-                composable(reservation, () => ReservationManagement)
-            ]}
-        />
+        {#key currentPath}
+            <div class="route-stage" in:fade={{ duration: 180 }} out:fade={{ duration: 120 }}>
+                <NavHost
+                    navController={internalNavController}
+                    routes={[
+                        composable(dashboard, () => DashboardHome),
+                        composable(support, () => SupportInbox),
+                        composable(supportDetail, () => SupportDetail),
+                        composable(users, () => UserManagement),
+                        composable(product, () => ProductManagement),
+                        composable(category, () => CategoryManagement),
+                        composable(sales, () => SaleManagement),
+                        composable(salesDetail, () => SaleDetail),
+                        composable(promo, () => PromoManagement),
+                        composable(settings, () => SettingsManagement),
+                        composable(reservation, () => ReservationManagement)
+                    ]}
+                />
+            </div>
+        {/key}
     </main>
 
     {#if sidebarOpen}
-        <button class="scrim" aria-label="Cerrar Men…" on:click={() => (sidebarOpen = false)}></button>
+        <button class="scrim" aria-label="Cerrar menú" on:click={() => (sidebarOpen = false)}></button>
     {/if}
 </section>
 
@@ -430,6 +435,12 @@
         padding: 16px;
         min-width: 0;
         overflow: auto;
+    }
+
+    .route-stage {
+        min-height: 100%;
+        display: grid;
+        align-content: start;
     }
 
     .top-mobile {
