@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
     import { onMount } from "svelte";
     import type { NavController } from "../../../../../lib/navigation/NavController";
     import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
@@ -45,7 +45,7 @@
                 {#if isRefreshing}
                     <span class="mgmt-chip" aria-label="Sincronizando">
                         <LoadingSpinner size={16} label="Sincronizando" subtle />
-                        Sincronizandoâ€¦
+                        SincronizandoÃ¢â‚¬Â¦
                     </span>
                 {/if}
             </div>
@@ -67,7 +67,7 @@
                                         <span class="pill {sale.verified === BuyState.UNVERIFIED ? 'unverified' : 'verified'}">
                                             {sale.verified}
                                         </span>
-                                        <span class="dot">•</span>
+                                        <span class="dot">â€¢</span>
                                         <span class="muted">{new Date(sale.date).toLocaleString()}</span>
                                     </div>
                                 </div>
@@ -187,3 +187,4 @@
         }
     }
 </style>
+

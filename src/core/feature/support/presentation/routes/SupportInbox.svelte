@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
     import { onMount } from "svelte";
     import type { NavController } from "../../../../../lib/navigation/NavController";
     import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
@@ -47,8 +47,8 @@
 
     function reasonLabel(r: SupportReason): string {
         if (r === "soporte") return "Soporte";
-        if (r === "pregunta_tecnica") return "Pregunta técnica";
-        if (r === "facturacion") return "Facturación";
+        if (r === "pregunta_tecnica") return "Pregunta tÃ©cnica";
+        if (r === "facturacion") return "FacturaciÃ³n";
         return "Otro";
     }
 
@@ -95,7 +95,7 @@
                 {#if isRefreshing}
                     <span class="mgmt-chip" aria-label="Sincronizando">
                         <LoadingSpinner size={16} label="Sincronizando" subtle />
-                        Sincronizandoâ€¦
+                        SincronizandoÃ¢â‚¬Â¦
                     </span>
                 {/if}
             </div>
@@ -114,7 +114,7 @@
                                 class="mgmt-input"
                                 type="text"
                                 bind:value={query}
-                                placeholder="Nombre, correo, asunto…"
+                                placeholder="Nombre, correo, asuntoâ€¦"
                             />
                         </div>
                     </label>
@@ -124,8 +124,8 @@
                         <select class="mgmt-select" bind:value={reason}>
                             <option value="all">Todos</option>
                             <option value="soporte">Soporte</option>
-                            <option value="pregunta_tecnica">Pregunta técnica</option>
-                            <option value="facturacion">Facturación</option>
+                            <option value="pregunta_tecnica">Pregunta tÃ©cnica</option>
+                            <option value="facturacion">FacturaciÃ³n</option>
                             <option value="otro">Otro</option>
                         </select>
                     </label>
@@ -166,8 +166,8 @@
                             <div class="empty-ico">
                                 <Icon icon={Mail} size={22} ariaLabel="Sin mensajes" />
                             </div>
-                            <div class="empty-title">Bandeja vacía</div>
-                            <div class="mgmt-muted">Aún no hay mensajes entrantes.</div>
+                            <div class="empty-title">Bandeja vacÃ­a</div>
+                            <div class="mgmt-muted">AÃºn no hay mensajes entrantes.</div>
                         </div>
                     {/if}
 
@@ -184,7 +184,7 @@
                                     </div>
                                     <div class="row-sub">
                                         <span>{m.fromName || m.fromEmail}</span>
-                                        <span class="dot">·</span>
+                                        <span class="dot">Â·</span>
                                         <span>{reasonLabel(m.reason)}</span>
                                     </div>
                                 </div>
@@ -345,3 +345,4 @@
         }
     }
 </style>
+

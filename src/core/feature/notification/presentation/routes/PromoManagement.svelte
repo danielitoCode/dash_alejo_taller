@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
     import { onMount } from "svelte";
     import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
     import LoadingSpinner from "../../../../infrastructure/presentation/components/LoadingSpinner.svelte";
@@ -35,7 +35,7 @@
     $: isInitialLoading = $promotionStore.loading && items.length === 0;
 </script>
 
-<section class="mgmt-page" aria-label="Gestión de promociones">
+<section class="mgmt-page" aria-label="GestiÃ³n de promociones">
     <header class="mgmt-header">
         <div class="mgmt-toolbar">
             <div>
@@ -53,7 +53,7 @@
                 {#if isRefreshing}
                     <span class="mgmt-chip" aria-label="Sincronizando">
                         <LoadingSpinner size={16} label="Sincronizando" subtle />
-                        Sincronizandoâ€¦
+                        SincronizandoÃ¢â‚¬Â¦
                     </span>
                 {/if}
             </div>
@@ -95,8 +95,8 @@
                     <div class="mgmt-row-main">
                         <div class="mgmt-row-title">{promo.title}</div>
                         <p class="mgmt-row-sub">
-                            {promo.message || "Sin mensaje"} · Descuento: {discountPercent(promo.oldPrice, promo.currentPrice)}%
-                            · ${promo.oldPrice ?? 0} → ${promo.currentPrice ?? 0}
+                            {promo.message || "Sin mensaje"} Â· Descuento: {discountPercent(promo.oldPrice, promo.currentPrice)}%
+                            Â· ${promo.oldPrice ?? 0} â†’ ${promo.currentPrice ?? 0}
                         </p>
                     </div>
 
@@ -111,3 +111,4 @@
         </div>
     </section>
 </section>
+
