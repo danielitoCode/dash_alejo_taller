@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { LinkGoogleAccountCaseUse } from "./LinkGoogleAccountCaseUse";
-import type { SessionNetManager } from "../repository/session.net.manager";
-import type { UserNetRepository } from "../repository/user.net.repository";
+import { LinkGoogleAccountCaseUse } from "../../../../../../core/feature/auth/domain/caseuse/LinkGoogleAccountCaseUse";
+import type { SessionNetManager } from "../../../../../../core/feature/auth/domain/repository/session.net.manager";
+import type { UserNetRepository } from "../../../../../../core/feature/auth/domain/repository/user.net.repository";
 
 describe("LinkGoogleAccountCaseUse", () => {
-    it("crea sesión con la contraseña actual y luego guarda el vínculo Google", async () => {
+    it("crea sesiÃ³n con la contraseÃ±a actual y luego guarda el vÃ­nculo Google", async () => {
         const createEmailSession = vi.fn<SessionNetManager["createEmailSession"]>().mockResolvedValue("user-1");
         const linkGoogle = vi.fn<UserNetRepository["linkGoogle"]>().mockResolvedValue();
 

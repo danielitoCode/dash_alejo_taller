@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { pulseRefreshTargets } from "./pulse.refresh-targets";
+import { pulseRefreshTargets } from "../../../../core/infrastructure/alset-pulse/pulse.refresh-targets";
 
 describe("pulseRefreshTargets", () => {
     it("deduce ambos targets desde el nombre del evento", () => {
         expect(pulseRefreshTargets("support-sales-refresh", null)).toEqual(["support", "sales"]);
     });
 
-    it("interpreta targets desde payload array con alias en español", () => {
+    it("interpreta targets desde payload array con alias en espaÃ±ol", () => {
         expect(
             pulseRefreshTargets("refresh", {
                 targets: ["support", "ventas"]
@@ -22,7 +22,7 @@ describe("pulseRefreshTargets", () => {
         ).toEqual(["support", "sales"]);
     });
 
-    it("retorna vacío cuando no puede inferir recursos", () => {
+    it("retorna vacÃ­o cuando no puede inferir recursos", () => {
         expect(pulseRefreshTargets("unknown-event", { target: "other" })).toEqual([]);
     });
 });
