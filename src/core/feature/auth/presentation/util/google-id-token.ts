@@ -1,4 +1,4 @@
-﻿export type GoogleIdTokenProfile = {
+export type GoogleIdTokenProfile = {
     email: string;
     sub: string;
     name: string;
@@ -20,7 +20,7 @@ function base64UrlDecode(input: string): string {
 export function parseGoogleIdToken(credential: string): GoogleIdTokenProfile {
     const parts = credential.split(".");
     if (parts.length < 2) {
-        throw new Error("Credencial invÃ¡lida");
+        throw new Error("Credencial inv?lida");
     }
 
     const payloadJson = base64UrlDecode(parts[1] || "");
