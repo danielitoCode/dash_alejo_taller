@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseGoogleIdToken } from "../core/feature/auth/presentation/util/google-id-token";
+import { parseGoogleIdToken } from "./google-id-token";
 
 function toBase64Url(value: string): string {
     return btoa(value)

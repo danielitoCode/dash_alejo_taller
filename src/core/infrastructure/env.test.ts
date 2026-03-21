@@ -10,7 +10,7 @@ describe("ENV", () => {
         vi.stubEnv("VITE_GOOGLE_AUTH_URL", "https://worker.example.workers.dev");
         vi.stubEnv("VITE_PASSWORD_RESET_URL", "https://password-reset.onrender.com");
 
-        const { ENV } = await import("../core/infrastructure/env");
+        const { ENV } = await import("./env");
 
         expect(ENV.googleAuthUrl).toBe("https://worker.example.workers.dev");
         expect(ENV.passwordResetUrl).toBe("https://password-reset.onrender.com");
