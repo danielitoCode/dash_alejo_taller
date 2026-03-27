@@ -44,9 +44,7 @@
     ];
 
     const rows = [
-        { id: 0, reverse: false, speed: 48, items: [...baseItems, ...baseItems] },
-        { id: 1, reverse: true, speed: 56, items: [...baseItems, ...baseItems] },
-        { id: 2, reverse: false, speed: 64, items: [...baseItems, ...baseItems] }
+        { id: 0, reverse: false, speed: 48, items: [...baseItems, ...baseItems] }
     ];
 
     function signIn() {
@@ -107,7 +105,7 @@
                     {/each}
                 </section>
             </div>
-        </section>
+    </section>
 </Screen>
 
 <style>

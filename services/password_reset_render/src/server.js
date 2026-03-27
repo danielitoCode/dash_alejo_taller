@@ -1,5 +1,6 @@
 import express from "express";
 import { confirmCode, requestCode } from "./handlers.js";
+import { verifySale } from "./sale-handlers.js";
 
 const app = express();
 app.use(express.json({ limit: "256kb" }));
@@ -23,6 +24,36 @@ app.post("/password-reset/confirm", async (req, res) => {
     const newPassword = req.body?.newPassword;
     await confirmCode({ requesterJwt: jwt, code, newPassword });
     res.json({ success: true });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e instanceof Error ? e.message : "Error" });
+  }
+});
+
+/**
+ * POST /sale/verify
+ * Verifica (confirma o rechaza) una venta, actualiza Appwrite y publica evento Pusher
+ * 
+ * Body:
+ * {
+ *   "saleId": "sale-123",
+ *   "decision": "confirmed" | "rejected",
+ *   "userId": "user-456",
+ *   "saleData": { "amount": 99.99, "products": [...] }
+ * }
+ */
+app.post("/sale/verify", async (req, res) => {
+  try {
+    const { saleId, decision, userId, saleData } = req.body;
+    
+    if (!saleId || !decision || !userId) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Missing required fields: saleId, decision, userId" 
+      });
+    }
+
+    const result = await verifySale(saleId, decision, userId, saleData);
+    res.json({ success: true, sale: result });
   } catch (e) {
     res.status(400).json({ success: false, error: e instanceof Error ? e.message : "Error" });
   }
