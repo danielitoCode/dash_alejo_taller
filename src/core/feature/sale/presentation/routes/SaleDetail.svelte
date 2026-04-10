@@ -9,6 +9,8 @@
     import type { Sale } from "../../domain/entity/Sale";
     import { BuyState } from "../../domain/entity/enums";
     import { ArrowLeft, BadgeDollarSign, CheckCircle2, Clock, Package } from "lucide-svelte";
+    import {userManagementStore} from "../../../auth/presentation/viewmodel/user-management.store";
+    import {productStore} from "../../../product/presentation/viewmodel/product.store";
 
     export let navController: NavController;
     export let navBackStackEntry: NavBackStackEntry<{ id?: string }>;
@@ -16,6 +18,9 @@
     const saleId = navBackStackEntry?.args?.id ?? "";
     let loading = false;
     $: sale = saleId ? $saleStore.items.find((s) => s.id === saleId) ?? null : null;
+    $: user = sale
+        ? $userManagementStore.items.find(u => u.id === sale.userId)
+        : null;
 
     onMount(() => {
         if (!saleId) return;
@@ -32,6 +37,11 @@
 
     function back() {
         navController.popBackStack();
+    }
+
+    function resolveProduct(productId: string) {
+        let product = $productStore.items.find(p => p.id === productId);
+        return product?.name ?? "Producto desconocido";
     }
 
     async function confirmSale(s: Sale) {
@@ -81,7 +91,8 @@
                         <Icon icon={BadgeDollarSign} size={18} ariaLabel="Venta" />
                     </div>
                     <div>
-                        <h2>Venta #{sale.id.slice(0, 8)}</h2>
+                        <h1>Usuario: {user?.name ?? "Usuario desconocido"}</h1>
+                        <h2>id de venta: #{sale.id.slice(0, 8)}</h2>
                         <div class="meta">
                             <span class="meta-item">
                                 <Icon icon={Clock} size={14} ariaLabel="Fecha" />
@@ -119,7 +130,7 @@
                     {#each sale.products as p, idx (idx)}
                         <div class="item">
                             <div class="item-top">
-                                <strong>{p.productId}</strong>
+                                <strong>{resolveProduct(p.productId)}</strong>
                                 <span class="muted">x{p.quantity}</span>
                             </div>
                             <div class="item-sub">
@@ -160,11 +171,18 @@
         align-items: start;
     }
 
+    h1 {
+        margin: 0;
+        font-size: 1.5rem;
+        letter-spacing: -0.01em;
+        font-weight: 1000;
+    }
+
     h2 {
         margin: 0;
-        font-size: 1.2rem;
+        font-size: 1.0rem;
         letter-spacing: -0.01em;
-        font-weight: 950;
+        font-weight: 790;
     }
 
     h3 {

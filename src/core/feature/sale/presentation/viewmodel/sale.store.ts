@@ -23,11 +23,15 @@ function createSaleStore() {
     const {subscribe, update} = writable<SaleState>(initialState)
 
     async function syncAll(): Promise<void> {
+        logger.info("Sync sales from storage")
         update((state) => ({...state, loading: true, error: null}))
         try {
             const sales = await saleContainer.useCases.getAll.execute()
+            logger.log(`Fetched ${sales} sales from storage`)
+
             update((state) => ({...state, items: sales}))
         } catch (error) {
+            logger.error(`Error while sync sales from storage ${error}`)
             update((state) => ({...state, error: normalizeError(error)}))
             throw error
         } finally {

@@ -7,6 +7,7 @@
     import { logger } from "../../../../infrastructure/presentation/util/logger.service";
     import { toastStore } from "../../../../infrastructure/presentation/viewmodel/toast.store";
     import type { Product } from "../../domain/entity/Product";
+    import type { ProductStatus } from "../../domain/entity/Product";
     import CategoryName from "../../../category/presentation/component/CategoryName.svelte";
     import { categoryStore } from "../../../category/presentation/viewmodel/category.store";
     import { promotionStore } from "../../../notification/presentation/viewmodel/promotion.store";
@@ -18,6 +19,7 @@
     let draftPrice: number | string = 0;
     let draftPhotoUrl = "";
     let draftCategoryId = "";
+    let draftStatus: ProductStatus = "active";
     let editId: string | null = null;
     let query = "";
     let imagePending = false;
@@ -36,6 +38,7 @@
         draftPrice = 0;
         draftPhotoUrl = "";
         draftCategoryId = "";
+        draftStatus = "active";
         imageKey += 1;
     }
 
@@ -48,7 +51,8 @@
             description: draftDescription.trim(),
             price: Number(draftPrice),
             photoUrl: draftPhotoUrl.trim() || "https://picsum.photos/600",
-            categoryId: draftCategoryId
+            categoryId: draftCategoryId,
+            status: draftStatus
         };
 
         try {
@@ -70,6 +74,7 @@
         draftPrice = product.price;
         draftPhotoUrl = product.photoUrl;
         draftCategoryId = product.categoryId;
+        draftStatus = product.status;
     }
 
     async function save() {
@@ -84,13 +89,15 @@
             try {
                 await promotionStore.create({
                     id: "",
+                    productId: old.id,
                     title: `Promo por baja de precio: ${old.name}`,
                     message: `Descuento del ${discountPercent}%`,
                     imageUrl: old.photoUrl,
                     oldPrice: old.price,
                     currentPrice: Number(draftPrice),
                     validFromEpochMillis: now,
-                    validUntilEpochMillis: now + 1000 * 60 * 60 * 24 * 30
+                    validUntilEpochMillis: now + 1000 * 60 * 60 * 24 * 30,
+                    source: "automatic"
                 });
             } catch (e: any) {
                 logger.warn(`No se pudo crear la promoción automática: ${e?.message ?? "desconocido"}`);
@@ -105,7 +112,8 @@
                     name: draftName.trim(),
                     description: draftDescription.trim(),
                     photoUrl: draftPhotoUrl.trim() || old.photoUrl,
-                    categoryId: draftCategoryId
+                    categoryId: draftCategoryId,
+                    status: draftStatus
                 },
                 Number(draftPrice)
             );
@@ -132,6 +140,16 @@
 
     $: canSubmit =
         draftName.trim().length > 0 && draftCategoryId.length > 0 && Number(draftPrice) > 0 && !imagePending;
+    $: availableCategories = $categoryStore.items.filter(
+        (category) => category.status === "active" || category.id === draftCategoryId
+    );
+    $: now = Date.now();
+    $: activePromotionProductIds = new Set(
+        $promotionStore.items
+            .filter((promo) => promo.validFromEpochMillis <= now && promo.validUntilEpochMillis >= now)
+            .map((promo) => promo.productId)
+            .filter(Boolean) as string[]
+    );
 
     $: isRefreshing = $productStore.loading && items.length > 0;
     $: isInitialLoading = $productStore.loading && items.length === 0;
@@ -186,9 +204,17 @@
                     <span>Categoría</span>
                     <select class="mgmt-select" bind:value={draftCategoryId}>
                         <option value="" disabled>Selecciona...</option>
-                        {#each $categoryStore.items as category (category.id)}
+                        {#each availableCategories as category (category.id)}
                             <option value={category.id}>{category.name}</option>
                         {/each}
+                    </select>
+                </label>
+
+                <label class="mgmt-field">
+                    <span>Estado</span>
+                    <select class="mgmt-select" bind:value={draftStatus}>
+                        <option value="active">active</option>
+                        <option value="inactive">inactive</option>
                     </select>
                 </label>
 
@@ -256,8 +282,11 @@
                             <div class="mgmt-row-main">
                                 <div class="mgmt-row-title">{product.name}</div>
                                 <p class="mgmt-row-sub">
-                                    <CategoryName categoryId={product.categoryId} /> ? ${product.price.toFixed(2)}
+                                    <CategoryName categoryId={product.categoryId} /> · ${product.price.toFixed(2)} · {product.status}
                                 </p>
+                                {#if activePromotionProductIds.has(product.id)}
+                                    <p class="mgmt-row-sub">Promoción activa</p>
+                                {/if}
                             </div>
                         </div>
 

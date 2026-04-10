@@ -1,5 +1,8 @@
+export type PromotionSource = "automatic" | "manual"
+
 export interface Promotion {
     id: string
+    productId?: string | null
     title: string
     message: string
     imageUrl?: string | null
@@ -7,6 +10,7 @@ export interface Promotion {
     currentPrice?: number | null
     validFromEpochMillis: number
     validUntilEpochMillis: number
+    source?: PromotionSource
 }
 
 export function isPromotionActive(

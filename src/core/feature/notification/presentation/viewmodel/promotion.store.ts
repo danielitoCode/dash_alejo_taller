@@ -61,9 +61,16 @@ function createPromotionStore() {
         });
     }
 
+    async function removeById(id: string): Promise<void> {
+        await runSaving(async () => {
+            await notificationContainer.useCases.promo.delete(id);
+            await syncAll();
+        });
+    }
+
     const hasData = derived({ subscribe }, ($state) => $state.items.length > 0);
 
-    return { subscribe, hasData, syncAll, create };
+    return { subscribe, hasData, syncAll, create, removeById };
 }
 
 export const promotionStore = createPromotionStore();

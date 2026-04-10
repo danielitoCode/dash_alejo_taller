@@ -8,6 +8,7 @@
     import { toastStore } from "../../../../infrastructure/presentation/viewmodel/toast.store";
     import type { Category } from "../../domain/entity/Category";
     import { categoryStore } from "../viewmodel/category.store";
+    import { productStore } from "../../../product/presentation/viewmodel/product.store";
     import { Check, Pencil, Plus, Save, Search, Trash2, X } from "lucide-svelte";
 
     let name = "";
@@ -21,6 +22,7 @@
 
     onMount(() => {
         categoryStore.syncAll().catch(() => {});
+        productStore.syncAll().catch(() => {});
     });
 
     function resetForm(): void {
@@ -100,6 +102,27 @@
     $: canSubmit = name.trim().length > 0 && !imagePending;
     $: isRefreshing = $categoryStore.loading && items.length > 0;
     $: isInitialLoading = $categoryStore.loading && items.length === 0;
+    $: categoryProductCount = $productStore.items.reduce((acc, product) => {
+        acc.set(product.categoryId, (acc.get(product.categoryId) ?? 0) + 1);
+        return acc;
+    }, new Map<string, number>());
+
+    async function removeCategory(category: Category): Promise<void> {
+        const productCount = categoryProductCount.get(category.id) ?? 0;
+        if (productCount > 0) {
+            toastStore.error("No puedes eliminar una categoría con productos asociados. Inactívala primero.");
+            return;
+        }
+
+        try {
+            toastStore.info("Eliminando categoría...");
+            await categoryStore.removeById(category.id);
+            toastStore.success("Categoría eliminada.");
+        } catch (e: any) {
+            logger.error(e?.message ?? e, e?.stack);
+            toastStore.error(e instanceof Error ? e.message : "No se pudo eliminar la categoría.");
+        }
+    }
 </script>
 
 <section class="mgmt-page" aria-label="Gestión de categorías">
@@ -216,6 +239,7 @@
                             <div class="mgmt-row-main">
                                 <div class="mgmt-row-title">{category.name} <span class="mgmt-muted">· {category.status}</span></div>
                                 <p class="mgmt-row-sub">{category.description || "Sin descripción"}</p>
+                                <p class="mgmt-row-sub">{categoryProductCount.get(category.id) ?? 0} productos asociados</p>
                             </div>
                         </div>
 
@@ -224,7 +248,7 @@
                                 <Icon icon={Pencil} size={18} ariaLabel="Editar" />
                                 Editar
                             </button>
-                            <button class="mgmt-btn danger" on:click={() => categoryStore.removeById(category.id)}>
+                            <button class="mgmt-btn danger" on:click={() => removeCategory(category)}>
                                 <Icon icon={Trash2} size={18} ariaLabel="Eliminar" />
                                 Eliminar
                             </button>

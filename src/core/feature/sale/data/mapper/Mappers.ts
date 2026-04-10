@@ -5,7 +5,7 @@ import type {SaleItemDTO} from "../dto/SaleItemDTO";
 
 export type SaleWriteDTO = Pick<
     SaleDTO,
-    "$id" | "date" | "amount" | "verified" | "products" | "userId" | "deliveryType"
+    "$id" | "date" | "amount" | "verified" | "products" | "user_id" | "deliveryType"
 >;
 
 function saleItemFromDTO(item: SaleItemDTO): SaleItem {
@@ -26,14 +26,30 @@ function saleItemToDTO(item: SaleItem): SaleItemDTO {
 
 
 export function saleFromDTO(dto: SaleDTO): Sale {
+    let products: any[] = [];
+
+    try {
+        if (Array.isArray(dto.products)) {
+            products = dto.products;
+        } else if (typeof dto.products === "string") {
+            products = JSON.parse(dto.products);
+        }
+    } catch (e) {
+        console.error("Error parsing products:", dto.products);
+        products = [];
+    }
+
     return {
         id: dto.$id,
+        amount: dto.amount ?? 0,
+        userId: dto.user_id ?? 0,
         date: dto.date,
-        amount: dto.amount,
         verified: dto.verified as BuyState,
-        products: dto.products.map(saleItemFromDTO),
-        userId: dto.userId,
-        deliveryType: dto.deliveryType ? (dto.deliveryType as DeliveryType) : null,
+        products: products.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            price: item.price
+        }))
     };
 }
 
@@ -48,7 +64,7 @@ export function saleToDTO(sale: Sale): SaleWriteDTO {
         amount: sale.amount,
         verified: sale.verified,
         products: sale.products.map(saleItemToDTO),
-        userId: sale.userId,
+        user_id: sale.userId,
         deliveryType: sale.deliveryType ?? null,
     };
 }

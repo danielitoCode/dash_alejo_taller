@@ -6,7 +6,7 @@ export interface SaleDTO extends Models.Document {
     amount: number
     verified: string
     products: SaleItemDTO[]
-    userId: string
+    user_id: string
     deliveryType?: string | null
     $createdAt: string
     $updatedAt: string

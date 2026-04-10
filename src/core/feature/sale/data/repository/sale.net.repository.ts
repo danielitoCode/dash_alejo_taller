@@ -2,6 +2,7 @@ import type { SaleDTO } from "../dto/SaleDTO";
 import { type Databases, ID, Query } from "appwrite";
 import type { Models } from "appwrite";
 import { ENV } from "../../../../infrastructure/env";
+import {logger} from "../../../../infrastructure/presentation/util/logger.service";
 
 const COLLECTION_ID = "sale";
 
@@ -19,6 +20,8 @@ export class SaleNetRepository {
             this.databaseId,
             COLLECTION_ID
         )
+
+        logger.log(`Error while sync sales from storage ${response.documents}`)
 
         return response.documents
     }

@@ -112,12 +112,15 @@
         productStore.syncAll().catch(() => {
             toastStore.error("Error al sincronizar datos");
         });
+
         categoryStore.syncAll().catch(() => {
             toastStore.error("Error al sincronizar datos");
         });
+
         promotionStore.syncAll().catch(() => {
             toastStore.error("Error al sincronizar datos");
         });
+
         saleStore.syncAll().catch(() => {
             toastStore.error("Error al sincronizar ventas");
         });

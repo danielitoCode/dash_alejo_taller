@@ -8,22 +8,34 @@
     import { salesDetail } from "../../../../infrastructure/presentation/navigation/nested.router";
     import LoadingSpinner from "../../../../infrastructure/presentation/components/LoadingSpinner.svelte";
     import SkeletonTiles from "../../../../infrastructure/presentation/components/SkeletonTiles.svelte";
+    import {userManagementStore} from "../../../auth/presentation/viewmodel/user-management.store";
     import { BadgeDollarSign, ChevronRight, Inbox } from "lucide-svelte";
 
     export let navController: NavController;
 
     onMount(() => {
         saleStore.syncAll().catch(() => toastStore.error("Error al sincronizar ventas"));
+        userManagementStore.syncAll().catch(() => toastStore.error("Error al usuarios desde administracion de ventas"));
     });
 
     function openDetail(id: string) {
         navController.navigate(salesDetail.path, { id });
     }
 
-    $: items = $saleStore.items.slice().sort((a, b) => String(b.date ?? "").localeCompare(String(a.date ?? "")));
+    $: items = $saleStore.items
+        .slice()
+        .sort((a, b) => new Date(b.date ?? 0).getTime() - new Date(a.date ?? 0).getTime());
+
     $: pending = items.filter((s) => s.verified === BuyState.UNVERIFIED).length;
     $: isRefreshing = $saleStore.loading && items.length > 0;
     $: isInitialLoading = $saleStore.loading && items.length === 0;
+
+    function resolveUserSale(saleId: string) {
+        const sale = $saleStore.items.find(s => s.id === saleId);
+        if (!sale) return "Usuario desconocido";
+        const user = $userManagementStore.items.find(u => u.id === sale.userId);
+        return user ? user.name : "Usuario desconocido";
+    }
 </script>
 
 <section class="mgmt-screen">
@@ -50,7 +62,6 @@
                 {/if}
             </div>
         </header>
-
         <section class="mgmt-card">
             {#if isInitialLoading}
                 <SkeletonTiles count={6} columns={2} />
@@ -62,7 +73,12 @@
                         <button class="sale-card" type="button" on:click={() => openDetail(sale.id)}>
                             <div class="sale-top">
                                 <div>
-                                    <div class="sale-title">Venta #{sale.id.slice(0, 8)}</div>
+                                    <div class="sale-title">
+                                        <h1>Venta: #{sale.id.slice(0, 8)}</h1>
+                                    </div>
+                                    <div class="sale-user-title">
+                                        <h2>Usuario: {resolveUserSale(sale.id)}</h2>
+                                    </div>
                                     <div class="sale-sub">
                                         <span class="pill {sale.verified === BuyState.UNVERIFIED ? 'unverified' : 'verified'}">
                                             {sale.verified}
@@ -71,11 +87,11 @@
                                         <span class="muted">{new Date(sale.date).toLocaleString()}</span>
                                     </div>
                                 </div>
-                                <div class="sale-amount">${sale.amount.toFixed(2)}</div>
+                                <div class="sale-amount">${(sale.amount ?? 0).toFixed(2)}</div>
                             </div>
 
                             <div class="sale-meta">
-                                <span class="muted">{sale.products.length} items</span>
+                                <span class="muted">{sale.products?.length ?? 0} items</span>
                                 <Icon icon={ChevronRight} size={16} ariaLabel="Abrir" />
                             </div>
                         </button>
@@ -87,6 +103,19 @@
 </section>
 
 <style>
+    h1 {
+        margin: 0;
+        font-size: 1.2rem;
+        letter-spacing: -0.01em;
+        font-weight: 1000;
+    }
+
+    h2 {
+        margin: 0;
+        font-size: 1.0rem;
+        letter-spacing: -0.01em;
+        font-weight: 790;
+    }
     .sales-grid {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -122,7 +151,14 @@
     }
 
     .sale-title {
+        color: var(--md-sys-color-on-background);
         font-weight: 950;
+        letter-spacing: -0.01em;
+    }
+
+    .sale-user-title {
+        color: var(--md-sys-color-on-background);
+        font-weight: 1200;
         letter-spacing: -0.01em;
     }
 
@@ -137,6 +173,7 @@
     }
 
     .sale-amount {
+        color: var(--md-sys-color-on-background);
         font-weight: 1000;
         letter-spacing: -0.02em;
         font-size: 1.2rem;

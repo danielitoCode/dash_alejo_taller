@@ -1,3 +1,5 @@
+export type ProductStatus = "active" | "inactive"
+
 export interface Product {
     id: string
     name: string
@@ -5,6 +7,7 @@ export interface Product {
     price: number
     photoUrl: string
     categoryId: string
+    status: ProductStatus
     rating?: number
     photoLocalResource?: number | null
 }
@@ -22,7 +25,8 @@ export function createProduct(product: Product): Product {
     }
 
     return {
-        rating: 0.0,
         ...product
+        status: product.status ?? "active",
+        rating: product.rating ?? 0.0,
     }
 }

@@ -2,6 +2,7 @@ import type {Models} from "appwrite";
 
 export interface PromotionDTO extends Models.Document{
     id: string
+    productId?: string | null
     title: string
     message: string
     imageUrl?: string | null
@@ -9,6 +10,7 @@ export interface PromotionDTO extends Models.Document{
     currentPrice?: number | null
     validFromEpochMillis: number
     validUntilEpochMillis: number
+    source?: string | null
     $createdAt: string
     $updatedAt: string
 }

@@ -3,12 +3,15 @@
     import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
     import LoadingSpinner from "../../../../infrastructure/presentation/components/LoadingSpinner.svelte";
     import SkeletonList from "../../../../infrastructure/presentation/components/SkeletonList.svelte";
+    import { logger } from "../../../../infrastructure/presentation/util/logger.service";
+    import { toastStore } from "../../../../infrastructure/presentation/viewmodel/toast.store";
     import { promotionStore } from "../viewmodel/promotion.store";
     import { productStore } from "../../../product/presentation/viewmodel/product.store";
     import { BadgePercent, Search, Trash2 } from "lucide-svelte";
 
     onMount(() => {
         promotionStore.syncAll().catch(() => {});
+        productStore.syncAll().catch(() => {});
     });
 
     let query = "";
@@ -33,6 +36,26 @@
 
     $: isRefreshing = $promotionStore.loading && items.length > 0;
     $: isInitialLoading = $promotionStore.loading && items.length === 0;
+
+    function resolveProductName(productId?: string | null): string {
+        if (!productId) return "Sin producto asociado";
+        return $productStore.items.find((product) => product.id === productId)?.name ?? `Producto ${productId.slice(0, 8)}`;
+    }
+
+    function promoState(validUntilEpochMillis: number): string {
+        return validUntilEpochMillis >= Date.now() ? "activa" : "expirada";
+    }
+
+    async function removePromotion(id: string): Promise<void> {
+        try {
+            toastStore.info("Eliminando promoción...");
+            await promotionStore.removeById(id);
+            toastStore.success("Promoción eliminada.");
+        } catch (e: any) {
+            logger.error(e?.message ?? e, e?.stack);
+            toastStore.error(e instanceof Error ? e.message : "No se pudo eliminar la promoción.");
+        }
+    }
 </script>
 
 <section class="mgmt-page" aria-label="Gestión de promociones">
@@ -95,13 +118,16 @@
                     <div class="mgmt-row-main">
                         <div class="mgmt-row-title">{promo.title}</div>
                         <p class="mgmt-row-sub">
-                            {promo.message || "Sin mensaje"} · Descuento: {discountPercent(promo.oldPrice, promo.currentPrice)}%
+                            {resolveProductName(promo.productId)} · {promo.message || "Sin mensaje"} · Descuento: {discountPercent(promo.oldPrice, promo.currentPrice)}%
                             · ${promo.oldPrice ?? 0} → ${promo.currentPrice ?? 0}
+                        </p>
+                        <p class="mgmt-row-sub">
+                            Estado: {promoState(promo.validUntilEpochMillis)} · Origen: {promo.source ?? "automatic"}
                         </p>
                     </div>
 
                     <div class="mgmt-row-actions">
-                        <button class="mgmt-btn danger" on:click={() => productStore.removeById(promo.id)}>
+                        <button class="mgmt-btn danger" on:click={() => removePromotion(promo.id)}>
                             <Icon icon={Trash2} size={18} ariaLabel="Eliminar" />
                             Eliminar
                         </button>

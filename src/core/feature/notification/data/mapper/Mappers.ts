@@ -4,6 +4,7 @@ import type {Promotion} from "../../domain/entity/Promotion";
 export type PromotionWriteDTO = Pick<
     PromotionDTO,
     | "$id"
+    | "productId"
     | "title"
     | "message"
     | "imageUrl"
@@ -11,11 +12,13 @@ export type PromotionWriteDTO = Pick<
     | "currentPrice"
     | "validFromEpochMillis"
     | "validUntilEpochMillis"
+    | "source"
 >;
 
 export function promotionFromDTO(dto: PromotionDTO): Promotion {
     return {
         id: dto.$id,
+        productId: dto.productId ?? null,
         title: dto.title,
         message: dto.message,
         imageUrl: dto.imageUrl ?? null,
@@ -23,6 +26,7 @@ export function promotionFromDTO(dto: PromotionDTO): Promotion {
         currentPrice: dto.currentPrice ?? null,
         validFromEpochMillis: dto.validFromEpochMillis,
         validUntilEpochMillis: dto.validUntilEpochMillis,
+        source: dto.source === "manual" ? "manual" : "automatic",
     };
 }
 
@@ -33,6 +37,7 @@ export function promotionFromDTO(dto: PromotionDTO): Promotion {
 export function promotionToDTO(promotion: Promotion): PromotionWriteDTO {
     return {
         $id: promotion.id,
+        productId: promotion.productId ?? null,
         title: promotion.title,
         message: promotion.message,
         imageUrl: promotion.imageUrl ?? null,
@@ -40,5 +45,6 @@ export function promotionToDTO(promotion: Promotion): PromotionWriteDTO {
         currentPrice: promotion.currentPrice ?? null,
         validFromEpochMillis: promotion.validFromEpochMillis,
         validUntilEpochMillis: promotion.validUntilEpochMillis,
+        source: promotion.source ?? "automatic",
     };
 }

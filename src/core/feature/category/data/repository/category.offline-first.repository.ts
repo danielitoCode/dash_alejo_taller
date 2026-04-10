@@ -4,7 +4,6 @@ import type {Category} from "../../domain/entity/Category";
 import {db} from "../../../../infrastructure/di/dexie.db";
 import {categoryFromDTO, categoryToDTO} from "../mapper/Mappers";
 import {logger} from "../../../../infrastructure/presentation/util/logger.service";
-import {ID} from "appwrite";
 
 export class CategoryOfflineFirstRepository implements CategoryRepository {
     constructor(private readonly net: CategoryNetRepository) {}
