@@ -8,6 +8,7 @@
     import { rememberNavController } from "../../../../lib/navigation/rememberNavController";
     import { authContainer } from "../../../feature/auth/di/auth.container";
     import { sessionStore } from "../../../feature/auth/presentation/viewmodel/session.store";
+    import { normalizeBusinessRole, type BusinessRole } from "../../../feature/auth/domain/entity/BusinessRole";
     import CategoryManagement from "../../../feature/category/presentation/routes/CategoryManagement.svelte";
     import ProductManagement from "../../../feature/product/presentation/routes/ProductManagement.svelte";
     import { categoryStore } from "../../../feature/category/presentation/viewmodel/category.store";
@@ -56,6 +57,7 @@
     const userId = navBackStackEntry?.args?.id ?? "usuario";
 
     const currentUser = sessionStore.getCurrentUser();
+    let currentRole: BusinessRole = "viewer";
 
     const items = [
         { label: "Principal", path: dashboard.path, icon: Home },
@@ -69,9 +71,31 @@
         { label: "Ajustes", path: settings.path, icon: Settings }
     ];
 
+    const roleAccess: Record<BusinessRole, string[]> = {
+        owner: [dashboard.path, support.path, supportDetail.path, users.path, product.path, category.path, sales.path, salesDetail.path, promo.path, settings.path, reservation.path],
+        admin: [dashboard.path, support.path, supportDetail.path, users.path, product.path, category.path, sales.path, salesDetail.path, promo.path, settings.path, reservation.path],
+        sales: [dashboard.path, support.path, supportDetail.path, sales.path, salesDetail.path, reservation.path],
+        viewer: [dashboard.path, support.path, supportDetail.path]
+    };
+
+    function canAccess(path: string): boolean {
+        return roleAccess[currentRole]?.includes(path) ?? false;
+    }
+
+    function firstAllowedPath(role: BusinessRole): string {
+        return roleAccess[role]?.[0] ?? dashboard.path;
+    }
+
     const internalStackStore = internalNavController._getStackStore();
     $: internalStack = $internalStackStore;
     $: currentPath = internalStack.at(-1)?.route ?? dashboard.path;
+    $: visibleItems = items.filter((item) => canAccess(item.path));
+    $: if (currentRole && currentPath && !canAccess(currentPath)) {
+        const allowedPath = firstAllowedPath(currentRole);
+        if (allowedPath !== currentPath) {
+            internalNavController.navigate(allowedPath);
+        }
+    }
 
     let sidebarOpen = false;
     let stopPulseRefresh: (() => void) | null = null;
@@ -83,6 +107,11 @@
     let queuedSales = false;
 
     function go(path: string) {
+        if (!canAccess(path)) {
+            toastStore.error("Tu rol no tiene acceso a esta sección.");
+            sidebarOpen = false;
+            return;
+        }
         if (currentPath !== path) internalNavController.navigate(path);
         sidebarOpen = false;
     }
@@ -99,10 +128,18 @@
         authContainer.useCases.accounts
             .getCurrentUser()
             .then((u) => {
-                if (u.role !== "admin") {
+                currentRole = normalizeBusinessRole(u.role);
+
+                if (!["owner", "admin", "sales", "viewer"].includes(currentRole)) {
                     navController.navigate("unauthorized", {
                         message: "Tu cuenta no está autorizada para usar el panel de gestión."
                     });
+                    return;
+                }
+
+                const allowedPath = firstAllowedPath(currentRole);
+                if (!canAccess(currentPath)) {
+                    internalNavController.navigate(allowedPath);
                 }
             })
             .catch(() => {
@@ -252,7 +289,7 @@
                     {#await currentUser}
                         <p>Loading user...</p>
                     {:then user}
-                        <p>{user.name}</p>
+                        <p>{user.name} · {currentRole}</p>
                     {:catch error}
                         <p>{error.message}</p>
                     {/await}
@@ -261,7 +298,7 @@
         </header>
 
         <nav class="sidebar-nav" aria-label="Menú">
-            {#each items as item}
+            {#each visibleItems as item}
                 <button
                     class:selected={currentPath === item.path}
                     on:click={() => go(item.path)}
@@ -575,6 +612,4 @@
         background: transparent;
     }
 </style>
-
-
 

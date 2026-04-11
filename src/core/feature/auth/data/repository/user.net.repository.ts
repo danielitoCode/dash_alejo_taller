@@ -13,9 +13,15 @@ export class UserNetRepositoryImpl implements UserNetRepository {
 
         const roleFromLabels =
             Array.isArray(labels) && labels.length
-                ? labels.includes("admin")
-                    ? "admin"
-                    : (typeof labels[0] === "string" ? labels[0] : null)
+                ? labels.includes("owner")
+                    ? "owner"
+                    : labels.includes("admin")
+                      ? "admin"
+                      : labels.includes("sales")
+                        ? "sales"
+                        : labels.includes("viewer")
+                          ? "viewer"
+                          : (typeof labels[0] === "string" ? labels[0] : null)
                 : null;
 
         return {

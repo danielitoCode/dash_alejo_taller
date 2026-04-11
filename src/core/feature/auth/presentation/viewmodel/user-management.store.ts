@@ -1,8 +1,8 @@
 import { derived, writable } from "svelte/store";
 import { authContainer } from "../../di/auth.container";
 import type { User } from "../../domain/entity/User";
-
-export type BusinessRole = "owner" | "admin" | "sales" | "viewer";
+import type { BusinessRole } from "../../domain/entity/BusinessRole";
+import { normalizeBusinessRole } from "../../domain/entity/BusinessRole";
 
 export interface ManagedBusinessUser {
     id: string;
@@ -30,11 +30,7 @@ const initialState: UserManagementState = {
 };
 
 function mapRole(role: unknown): BusinessRole {
-    if (role === "owner" || role === "admin" || role === "sales" || role === "viewer") {
-        return role;
-    }
-
-    return "viewer";
+    return normalizeBusinessRole(role);
 }
 
 function mapDomainUserToManagedUser(user: User): ManagedBusinessUser {

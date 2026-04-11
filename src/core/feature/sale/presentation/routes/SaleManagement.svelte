@@ -9,9 +9,11 @@
     import LoadingSpinner from "../../../../infrastructure/presentation/components/LoadingSpinner.svelte";
     import SkeletonTiles from "../../../../infrastructure/presentation/components/SkeletonTiles.svelte";
     import {userManagementStore} from "../../../auth/presentation/viewmodel/user-management.store";
-    import { BadgeDollarSign, ChevronRight, Inbox } from "lucide-svelte";
+    import { BadgeDollarSign, ChevronRight, Inbox, Search, ShieldCheck, XCircle } from "lucide-svelte";
 
     export let navController: NavController;
+    let query = "";
+    let statusFilter: "all" | BuyState = "all";
 
     onMount(() => {
         saleStore.syncAll().catch(() => toastStore.error("Error al sincronizar ventas"));
@@ -27,6 +29,8 @@
         .sort((a, b) => new Date(b.date ?? 0).getTime() - new Date(a.date ?? 0).getTime());
 
     $: pending = items.filter((s) => s.verified === BuyState.UNVERIFIED).length;
+    $: verified = items.filter((s) => s.verified === BuyState.VERIFIED).length;
+    $: rejected = items.filter((s) => s.verified === BuyState.DELETED).length;
     $: isRefreshing = $saleStore.loading && items.length > 0;
     $: isInitialLoading = $saleStore.loading && items.length === 0;
 
@@ -36,6 +40,14 @@
         const user = $userManagementStore.items.find(u => u.id === sale.userId);
         return user ? user.name : "Usuario desconocido";
     }
+
+    $: filteredItems = items.filter((sale) => {
+        if (statusFilter !== "all" && sale.verified !== statusFilter) return false;
+        const q = query.trim().toLowerCase();
+        if (!q) return true;
+        const userName = resolveUserSale(sale.id).toLowerCase();
+        return sale.id.toLowerCase().includes(q) || sale.userId.toLowerCase().includes(q) || userName.includes(q);
+    });
 </script>
 
 <section class="mgmt-screen">
@@ -54,6 +66,14 @@
                     <Icon icon={Inbox} size={18} ariaLabel="Pendientes" />
                     {pending} pendientes
                 </span>
+                <span class="mgmt-chip">
+                    <Icon icon={ShieldCheck} size={18} ariaLabel="Confirmadas" />
+                    {verified} confirmadas
+                </span>
+                <span class="mgmt-chip">
+                    <Icon icon={XCircle} size={18} ariaLabel="Rechazadas" />
+                    {rejected} rechazadas
+                </span>
                 {#if isRefreshing}
                     <span class="mgmt-chip" aria-label="Sincronizando">
                         <LoadingSpinner size={16} label="Sincronizando" subtle />
@@ -63,13 +83,28 @@
             </div>
         </header>
         <section class="mgmt-card">
+            <div class="filters">
+                <label class="filter-field search">
+                    <Icon icon={Search} size={18} ariaLabel="Buscar" />
+                    <input type="search" placeholder="Buscar por venta o cliente..." bind:value={query} />
+                </label>
+                <label class="filter-field">
+                    <span>Estado</span>
+                    <select bind:value={statusFilter}>
+                        <option value="all">Todos</option>
+                        <option value={BuyState.UNVERIFIED}>Pendientes</option>
+                        <option value={BuyState.VERIFIED}>Confirmadas</option>
+                        <option value={BuyState.DELETED}>Rechazadas</option>
+                    </select>
+                </label>
+            </div>
             {#if isInitialLoading}
                 <SkeletonTiles count={6} columns={2} />
-            {:else if items.length === 0}
+            {:else if filteredItems.length === 0}
                 <p class="mgmt-muted">No hay ventas registradas.</p>
             {:else}
                 <div class="sales-grid">
-                    {#each items as sale (sale.id)}
+                    {#each filteredItems as sale (sale.id)}
                         <button class="sale-card" type="button" on:click={() => openDetail(sale.id)}>
                             <div class="sale-top">
                                 <div>
@@ -120,6 +155,44 @@
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 12px;
+    }
+
+    .filters {
+        display: grid;
+        grid-template-columns: minmax(0, 1.6fr) minmax(180px, 0.6fr);
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+
+    .filter-field {
+        display: grid;
+        gap: 6px;
+    }
+
+    .filter-field span {
+        font-size: 0.86rem;
+        color: color-mix(in srgb, var(--md-sys-color-on-background) 70%, transparent);
+    }
+
+    .filter-field.search {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border: 1px solid var(--md-sys-color-outline-variant);
+        border-radius: 14px;
+        padding: 0 12px;
+        background: color-mix(in srgb, var(--md-sys-color-surface) 90%, transparent);
+    }
+
+    .filter-field.search input,
+    .filter-field select {
+        width: 100%;
+        height: 44px;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: inherit;
+        font: inherit;
     }
 
     .sale-card {
@@ -219,11 +292,14 @@
     }
 
     @media (max-width: 860px) {
+        .filters {
+            grid-template-columns: 1fr;
+        }
+
         .sales-grid {
             grid-template-columns: 1fr;
         }
     }
 </style>
-
 
 

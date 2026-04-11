@@ -6,9 +6,8 @@
     import { toastStore } from "../../../../infrastructure/presentation/viewmodel/toast.store";
     import { logger } from "../../../../infrastructure/presentation/util/logger.service";
     import { saleStore } from "../viewmodel/sale.store";
-    import type { Sale } from "../../domain/entity/Sale";
     import { BuyState } from "../../domain/entity/enums";
-    import { ArrowLeft, BadgeDollarSign, CheckCircle2, Clock, Package } from "lucide-svelte";
+    import { ArrowLeft, BadgeDollarSign, Clock, Package, ShieldCheck } from "lucide-svelte";
     import {userManagementStore} from "../../../auth/presentation/viewmodel/user-management.store";
     import {productStore} from "../../../product/presentation/viewmodel/product.store";
 
@@ -43,18 +42,6 @@
         let product = $productStore.items.find(p => p.id === productId);
         return product?.name ?? "Producto desconocido";
     }
-
-    async function confirmSale(s: Sale) {
-        if (s.verified !== BuyState.UNVERIFIED) return;
-        toastStore.info("Confirmando venta...", 1200);
-        try {
-            await saleStore.setVerified(s.id, BuyState.VERIFIED);
-            toastStore.success("Venta confirmada", 1400);
-        } catch (e: any) {
-            logger.error(e?.message ?? e, e?.stack);
-            toastStore.error("No se pudo confirmar la venta.");
-        }
-    }
 </script>
 
 <section class="mgmt-container">
@@ -66,7 +53,7 @@
             </button>
             <div>
                 <h1 class="mgmt-h1">Detalle de venta</h1>
-                <p class="mgmt-muted">Pedidos y estado de compra</p>
+                <p class="mgmt-muted">Supervisión administrativa del pedido</p>
             </div>
         </div>
     </header>
@@ -102,6 +89,10 @@
                                 <Icon icon={Package} size={14} ariaLabel="Items" />
                                 {sale.products.length} items
                             </span>
+                            <span class="meta-item">
+                                <Icon icon={ShieldCheck} size={14} ariaLabel="Operación" />
+                                Validación operativa solo desde Android operador
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -111,16 +102,9 @@
                         {sale.verified}
                     </span>
                     <div class="amount">${sale.amount.toFixed(2)}</div>
-                    {#if sale.verified === BuyState.UNVERIFIED}
-                        <button class="mgmt-btn" type="button" on:click={() => confirmSale(sale)}>
-                            <Icon icon={CheckCircle2} size={18} ariaLabel="Confirmar" />
-                            Confirmar
-                        </button>
-                    {:else}
-                        <button class="mgmt-btn ghost" type="button" disabled>
-                            Confirmada
-                        </button>
-                    {/if}
+                    <button class="mgmt-btn ghost" type="button" disabled>
+                        Vista de supervisión
+                    </button>
                 </div>
             </div>
 
@@ -306,6 +290,5 @@
         }
     }
 </style>
-
 
 
