@@ -23,13 +23,15 @@
 
     onMount(() => {
         if (!saleId) return;
-        if (sale) return;
         loading = true;
-        saleStore
-            .syncAll()
+        Promise.all([
+            sale ? Promise.resolve() : saleStore.syncAll(),
+            userManagementStore.syncAll(),
+            productStore.syncAll()
+        ])
             .catch((e) => {
                 logger.error(e?.message ?? e, e?.stack);
-                toastStore.error("No se pudo cargar la venta.");
+                toastStore.error("No se pudo cargar el detalle de la venta.");
             })
             .finally(() => (loading = false));
     });
@@ -39,8 +41,14 @@
     }
 
     function resolveProduct(productId: string) {
-        let product = $productStore.items.find(p => p.id === productId);
+        const product = $productStore.items.find(p => p.id === productId);
         return product?.name ?? "Producto desconocido";
+    }
+
+    function saleStateClass(state: BuyState): string {
+        if (state === BuyState.UNVERIFIED) return "unverified";
+        if (state === BuyState.DELETED) return "rejected";
+        return "verified";
     }
 </script>
 
@@ -98,7 +106,7 @@
                 </div>
 
                 <div class="right">
-                    <span class="pill {sale.verified === BuyState.UNVERIFIED ? 'unverified' : 'verified'}">
+                    <span class="pill {saleStateClass(sale.verified)}">
                         {sale.verified}
                     </span>
                     <div class="amount">${sale.amount.toFixed(2)}</div>
@@ -233,6 +241,11 @@
         background: color-mix(in srgb, #a855f7 12%, transparent);
     }
 
+    .pill.rejected {
+        border-color: color-mix(in srgb, #ef4444 38%, var(--md-sys-color-outline-variant));
+        background: color-mix(in srgb, #ef4444 12%, transparent);
+    }
+
     .body {
         padding: 16px;
     }
@@ -290,5 +303,4 @@
         }
     }
 </style>
-
 

@@ -24,6 +24,12 @@
         navController.navigate(salesDetail.path, { id });
     }
 
+    function saleStateClass(state: BuyState): string {
+        if (state === BuyState.UNVERIFIED) return "unverified";
+        if (state === BuyState.DELETED) return "rejected";
+        return "verified";
+    }
+
     $: items = $saleStore.items
         .slice()
         .sort((a, b) => new Date(b.date ?? 0).getTime() - new Date(a.date ?? 0).getTime());
@@ -115,7 +121,7 @@
                                         <h2>Usuario: {resolveUserSale(sale.id)}</h2>
                                     </div>
                                     <div class="sale-sub">
-                                        <span class="pill {sale.verified === BuyState.UNVERIFIED ? 'unverified' : 'verified'}">
+                                        <span class="pill {saleStateClass(sale.verified)}">
                                             {sale.verified}
                                         </span>
                                         <span class="dot">?</span>
@@ -282,6 +288,11 @@
         background: color-mix(in srgb, #a855f7 12%, transparent);
     }
 
+    .pill.rejected {
+        border-color: color-mix(in srgb, #ef4444 38%, var(--md-sys-color-outline-variant));
+        background: color-mix(in srgb, #ef4444 12%, transparent);
+    }
+
     .muted {
         color: inherit;
         opacity: 0.92;
@@ -301,5 +312,4 @@
         }
     }
 </style>
-
 
