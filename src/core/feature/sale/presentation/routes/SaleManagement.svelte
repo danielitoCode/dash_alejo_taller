@@ -9,6 +9,7 @@
     import LoadingSpinner from "../../../../infrastructure/presentation/components/LoadingSpinner.svelte";
     import SkeletonTiles from "../../../../infrastructure/presentation/components/SkeletonTiles.svelte";
     import {userManagementStore} from "../../../auth/presentation/viewmodel/user-management.store";
+    import { productStore } from "../../../product/presentation/viewmodel/product.store";
     import { BadgeDollarSign, ChevronRight, Inbox, Search, ShieldCheck, XCircle } from "lucide-svelte";
 
     export let navController: NavController;
@@ -17,17 +18,39 @@
 
     onMount(() => {
         saleStore.syncAll().catch(() => toastStore.error("Error al sincronizar ventas"));
-        userManagementStore.syncAll().catch(() => toastStore.error("Error al usuarios desde administracion de ventas"));
+        userManagementStore.syncAll().catch(() => toastStore.error("Error al sincronizar usuarios"));
+        productStore.syncAll().catch(() => toastStore.error("Error al sincronizar productos"));
     });
 
     function openDetail(id: string) {
         navController.navigate(salesDetail.path, { id });
     }
 
+    function saleStateText(state: BuyState): string {
+        if (state === BuyState.UNVERIFIED) return "Pendiente";
+        if (state === BuyState.DELETED) return "Rechazado";
+        return "Confirmado";
+    }
+
     function saleStateClass(state: BuyState): string {
         if (state === BuyState.UNVERIFIED) return "unverified";
         if (state === BuyState.DELETED) return "rejected";
         return "verified";
+    }
+
+    function getSaleItemsDetails(saleId: string) {
+        const sale = $saleStore.items.find(s => s.id === saleId);
+        if (!sale || !Array.isArray(sale.products)) return [];
+
+        return sale.products.map(item => {
+            const rawId = typeof item === "string" ? item : (item?.productId ?? "");
+            const product = $productStore.items.find(p => p.id === rawId);
+            return {
+                name: product ? product.name : "Producto reservado / desconocido",
+                quantity: typeof item === "object" ? (item?.quantity ?? 1) : 1,
+                price: typeof item === "object" ? (item?.price ?? 0) : 0
+            };
+        });
     }
 
     $: items = $saleStore.items
@@ -52,7 +75,9 @@
         const q = query.trim().toLowerCase();
         if (!q) return true;
         const userName = resolveUserSale(sale.id).toLowerCase();
-        return sale.id.toLowerCase().includes(q) || sale.userId.toLowerCase().includes(q) || userName.includes(q);
+        const safeId = (sale.id || "").toLowerCase();
+        const safeUserId = (sale.userId || "").toLowerCase();
+        return safeId.includes(q) || safeUserId.includes(q) || userName.includes(q);
     });
 </script>
 
@@ -111,31 +136,53 @@
             {:else}
                 <div class="sales-grid">
                     {#each filteredItems as sale (sale.id)}
-                        <button class="sale-card" type="button" on:click={() => openDetail(sale.id)}>
-                            <div class="sale-top">
-                                <div>
-                                    <div class="sale-title">
-                                        <h1>Venta: #{sale.id.slice(0, 8)}</h1>
+                        <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+                        <div class="sale-card-wrapper">
+                            <button class="sale-card" type="button" on:click={() => openDetail(sale.id)}>
+                                <div class="sale-top">
+                                    <div>
+                                        <div class="sale-title">
+                                            <h1>Venta: #{sale.id.slice(0, 8)}</h1>
+                                        </div>
+                                        <div class="sale-user-title">
+                                            <h2>Usuario: {resolveUserSale(sale.id)}</h2>
+                                        </div>
+                                        <div class="sale-sub">
+                                            <span class="pill {saleStateClass(sale.verified)}">
+                                                {saleStateText(sale.verified)}
+                                            </span>
+                                            <span class="dot">•</span>
+                                            <span class="muted">{new Date(sale.date).toLocaleString()}</span>
+                                        </div>
                                     </div>
-                                    <div class="sale-user-title">
-                                        <h2>Usuario: {resolveUserSale(sale.id)}</h2>
-                                    </div>
-                                    <div class="sale-sub">
-                                        <span class="pill {saleStateClass(sale.verified)}">
-                                            {sale.verified}
-                                        </span>
-                                        <span class="dot">?</span>
-                                        <span class="muted">{new Date(sale.date).toLocaleString()}</span>
-                                    </div>
+                                    <div class="sale-amount">${(sale.amount ?? 0).toFixed(2)}</div>
                                 </div>
-                                <div class="sale-amount">${(sale.amount ?? 0).toFixed(2)}</div>
-                            </div>
 
-                            <div class="sale-meta">
-                                <span class="muted">{sale.products?.length ?? 0} items</span>
-                                <Icon icon={ChevronRight} size={16} ariaLabel="Abrir" />
+                                <div class="sale-meta">
+                                    <span class="muted">{sale.products?.length ?? 0} items</span>
+                                    <Icon icon={ChevronRight} size={16} ariaLabel="Abrir" />
+                                </div>
+                            </button>
+
+                            <!-- Tooltip Estilizado -->
+                            <div class="custom-tooltip">
+                                <div class="tooltip-header">
+                                    <Icon icon={Inbox} size={14} ariaLabel="Productos" />
+                                    <span>Contenido del pedido</span>
+                                </div>
+                                <div class="tooltip-body">
+                                    {#each getSaleItemsDetails(sale.id) as item}
+                                        <div class="tooltip-item">
+                                            <span class="tooltip-qty">{item.quantity}x</span>
+                                            <span class="tooltip-name">{item.name}</span>
+                                            <span class="tooltip-price">${Number(item.price || 0).toFixed(2)}</span>
+                                        </div>
+                                    {:else}
+                                        <span class="tooltip-empty">No hay productos en esta venta</span>
+                                    {/each}
+                                </div>
                             </div>
-                        </button>
+                        </div>
                     {/each}
                 </div>
             {/if}
@@ -201,7 +248,12 @@
         font: inherit;
     }
 
+    .sale-card-wrapper {
+        position: relative;
+    }
+
     .sale-card {
+        width: 100%;
         text-align: left;
         border-radius: 20px;
         border: 1px solid var(--md-sys-color-outline-variant);
@@ -210,16 +262,21 @@
         display: grid;
         gap: 12px;
         box-shadow: 0 14px 34px color-mix(in srgb, black 30%, transparent);
+        transition: border-color 0.2s ease, background-color 0.2s ease;
     }
 
     .sale-card:hover {
         border-color: color-mix(in srgb, var(--md-sys-color-primary) 35%, var(--md-sys-color-outline-variant));
         background: color-mix(in srgb, var(--md-sys-color-primary) 10%, var(--md-sys-color-surface) 88%);
+        z-index: 2; /* Para que al flotar quede por encima */
     }
 
-    .sale-card:focus-visible {
-        outline: 2px solid color-mix(in srgb, var(--md-sys-color-primary) 55%, white);
-        outline-offset: 2px;
+    /* Animación del tooltip */
+    .sale-card-wrapper:hover .custom-tooltip {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+        transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28), visibility 0s ease 0s;
     }
 
     .sale-top {
@@ -280,17 +337,20 @@
 
     .pill.verified {
         border-color: color-mix(in srgb, #22c55e 35%, var(--md-sys-color-outline-variant));
-        background: color-mix(in srgb, #22c55e 12%, transparent);
+        background: color-mix(in srgb, #22c55e 15%, transparent);
+        color: #4ade80; /* Verde brillante para visibilidad */
     }
 
     .pill.unverified {
-        border-color: color-mix(in srgb, #a855f7 38%, var(--md-sys-color-outline-variant));
-        background: color-mix(in srgb, #a855f7 12%, transparent);
+        border-color: color-mix(in srgb, #f97316 38%, var(--md-sys-color-outline-variant));
+        background: color-mix(in srgb, #f97316 15%, transparent);
+        color: #fb923c; /* Naranja claro */
     }
 
     .pill.rejected {
         border-color: color-mix(in srgb, #ef4444 38%, var(--md-sys-color-outline-variant));
-        background: color-mix(in srgb, #ef4444 12%, transparent);
+        background: color-mix(in srgb, #ef4444 15%, transparent);
+        color: #f87171; /* Rojo claro */
     }
 
     .muted {
@@ -302,6 +362,80 @@
         opacity: 0.7;
     }
 
+    /* Tooltip Premium Styles */
+    .custom-tooltip {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 50%;
+        transform: translateX(-50%) translateY(10px);
+        width: 100%;
+        max-width: 320px;
+        background: color-mix(in srgb, var(--md-sys-color-surface-container-highest) 90%, black);
+        backdrop-filter: blur(8px);
+        border: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 40%, transparent);
+        border-radius: 14px;
+        padding: 12px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05) inset;
+        z-index: 50;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s ease 0.2s;
+        pointer-events: none; /* Que no interrumpa el clic ni el hover del botón original */
+    }
+
+    .tooltip-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.82rem;
+        font-weight: 800;
+        color: var(--md-sys-color-on-surface);
+        padding-bottom: 8px;
+        border-bottom: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 30%, transparent);
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .tooltip-body {
+        display: grid;
+        gap: 6px;
+    }
+
+    .tooltip-item {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 8px;
+        align-items: center;
+        font-size: 0.9rem;
+        color: color-mix(in srgb, var(--md-sys-color-on-surface) 80%, transparent);
+    }
+
+    .tooltip-qty {
+        font-weight: 900;
+        color: var(--md-sys-color-primary);
+        font-size: 0.85rem;
+    }
+
+    .tooltip-name {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-weight: 500;
+    }
+
+    .tooltip-price {
+        font-weight: 700;
+        color: color-mix(in srgb, var(--md-sys-color-on-surface) 60%, transparent);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .tooltip-empty {
+        font-size: 0.85rem;
+        color: var(--md-sys-color-error);
+        font-style: italic;
+    }
+
     @media (max-width: 860px) {
         .filters {
             grid-template-columns: 1fr;
@@ -309,6 +443,10 @@
 
         .sales-grid {
             grid-template-columns: 1fr;
+        }
+        
+        .custom-tooltip {
+            display: none; /* Escondemos el tooltip en mobile ya que no hay 'hover' real (tap abre el detalle) */
         }
     }
 </style>
