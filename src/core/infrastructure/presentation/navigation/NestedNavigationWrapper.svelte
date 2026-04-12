@@ -89,7 +89,10 @@
     const internalStackStore = internalNavController._getStackStore();
     $: internalStack = $internalStackStore;
     $: currentPath = internalStack.at(-1)?.route ?? dashboard.path;
-    $: visibleItems = items.filter((item) => canAccess(item.path));
+    // IMPORTANTE: Se referencia `currentRole` directamente para que Svelte
+    // detecte la dependencia reactiva y re-evalúe cuando el rol cambie.
+    // Usar canAccess() aquí oculta la dependencia al compilador de Svelte.
+    $: visibleItems = items.filter((item) => roleAccess[currentRole]?.includes(item.path) ?? false);
     $: if (currentRole && currentPath && !canAccess(currentPath)) {
         const allowedPath = firstAllowedPath(currentRole);
         if (allowedPath !== currentPath) {
@@ -116,6 +119,33 @@
         sidebarOpen = false;
     }
 
+    // 🔄 Refrescar rol sin desloguearse (útil cuando cambias el rol en AppWrite)
+    async function refreshUserRole() {
+        try {
+            logger.info("[NestedNav] Refrescando rol del usuario...");
+            const u = await authContainer.useCases.accounts.getCurrentUser();
+            const newRole = normalizeBusinessRole(u.role);
+            const oldRole = currentRole;
+
+            if (newRole !== oldRole) {
+                logger.info(`[NestedNav] Rol actualizado: ${oldRole} → ${newRole}`);
+                currentRole = newRole;
+                toastStore.success(`✅ Rol actualizado a: ${newRole}`);
+
+                const allowedPath = firstAllowedPath(currentRole);
+                if (!canAccess(currentPath)) {
+                    internalNavController.navigate(allowedPath);
+                }
+            } else {
+                logger.info(`[NestedNav] El rol sigue siendo: ${currentRole}`);
+                toastStore.info(`El rol es: ${currentRole}`);
+            }
+        } catch (error) {
+            logger.error("[NestedNav] Error refrescando rol:", error);
+            toastStore.error("Error al refrescar rol");
+        }
+    }
+
     async function logout() {
         try {
             await authContainer.useCases.sessions.closeSession.execute();
@@ -129,6 +159,20 @@
             .getCurrentUser()
             .then((u) => {
                 currentRole = normalizeBusinessRole(u.role);
+
+                // 🔍 DIAGNÓSTICO: Si el rol es null, mostrar advertencia
+                if (u.role === null || u.role === undefined) {
+                    logger.warn(
+                        "[NestedNav] Usuario sin rol configurado. Labels:",
+                        u.labels ?? "[]",
+                        "Prefs.role:",
+                        (u as any)?.prefs?.role ?? "undefined"
+                    );
+                    toastStore.error(
+                        "⚠️ Tu cuenta no tiene rol configurado. Contacta al administrador. " +
+                        "(Se asignó rol por defecto: viewer)"
+                    );
+                }
 
                 if (!["owner", "admin", "sales", "viewer"].includes(currentRole)) {
                     navController.navigate("unauthorized", {
@@ -328,6 +372,14 @@
                 <Icon icon={Menu} size={20} className="menu-ico" ariaLabel="Menú" />
             </button>
             <strong>Panel de gestión</strong>
+            <button
+                class="refresh-role-btn"
+                title="Refrescar rol (si lo cambiaste en AppWrite)"
+                on:click={refreshUserRole}
+                aria-label="Refrescar rol"
+            >
+                🔄
+            </button>
             <span class="ghost" aria-hidden="true">{userId}</span>
         </div>
 
@@ -517,7 +569,7 @@
 
         .top-mobile {
             display: grid;
-            grid-template-columns: auto 1fr auto;
+            grid-template-columns: auto 1fr auto auto;
             gap: 10px;
             align-items: center;
             margin-bottom: 12px;
@@ -535,6 +587,28 @@
 
         .menu-ico {
             opacity: 0.9;
+        }
+
+        .refresh-role-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            border: 1px solid var(--md-sys-color-outline-variant);
+            background: var(--md-sys-color-surface);
+            display: grid;
+            place-items: center;
+            cursor: pointer;
+            font-size: 20px;
+            transition: all 200ms ease;
+        }
+
+        .refresh-role-btn:hover {
+            background: var(--md-sys-color-surface-dim);
+            border-color: var(--md-sys-color-outline);
+        }
+
+        .refresh-role-btn:active {
+            transform: scale(0.95);
         }
 
         .ghost {

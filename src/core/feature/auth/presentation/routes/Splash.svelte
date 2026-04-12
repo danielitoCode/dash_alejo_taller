@@ -1,6 +1,7 @@
 <script lang="ts">
     import {onMount} from "svelte";
     import {authContainer} from "../../di/auth.container";
+    import {isAdminRole} from "../../domain/config/RoleConfig";
     import alejoIcon from "/alejoicon_clean.svg";
 
     export let navController;
@@ -9,7 +10,8 @@
         try {
             const user = await authContainer.useCases.accounts.getCurrentUser();
 
-            if (user.role !== "admin") {
+            // Permitir acceso a usuarios con roles de administrador (admin u owner)
+            if (!isAdminRole(user.role)) {
                 navController.navigate("unauthorized", { message: "Tu cuenta existe, pero no tiene permisos de administrador." });
                 return;
             }

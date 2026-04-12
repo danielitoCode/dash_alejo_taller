@@ -9,10 +9,16 @@ export class UserNetRepositoryImpl implements UserNetRepository {
 
     async getCurrentUser(): Promise<Partial<UserDTO>> {
         const current = await this.account.get();
-        const labels = (current as any)?.labels;
+
+        // Appwrite puede devolver labels con cualquier capitalización (ej: "Admin", "OWNER").
+        // Normalizamos a minúsculas para que la comparación sea robusta.
+        const rawLabels = (current as any)?.labels;
+        const labels: string[] = Array.isArray(rawLabels)
+            ? rawLabels.map((l: unknown) => (typeof l === "string" ? l.toLowerCase().trim() : "")).filter(Boolean)
+            : [];
 
         const roleFromLabels =
-            Array.isArray(labels) && labels.length
+            labels.length > 0
                 ? labels.includes("owner")
                     ? "owner"
                     : labels.includes("admin")
@@ -21,8 +27,11 @@ export class UserNetRepositoryImpl implements UserNetRepository {
                         ? "sales"
                         : labels.includes("viewer")
                           ? "viewer"
-                          : (typeof labels[0] === "string" ? labels[0] : null)
+                          : null
                 : null;
+
+        // Fallback a prefs.role normalizando también a minúsculas
+        const rawPrefRole = typeof current.prefs?.role === "string" ? current.prefs.role.toLowerCase().trim() : null;
 
         return {
             id: current.$id,
@@ -30,9 +39,10 @@ export class UserNetRepositoryImpl implements UserNetRepository {
             email: current.email,
             phone: current.phone ?? "",
             photo_url: typeof current.prefs?.photo_url === "string" ? current.prefs.photo_url : "",
-            role: roleFromLabels ?? (typeof current.prefs?.role === "string" ? current.prefs.role : null),
+            role: roleFromLabels ?? rawPrefRole,
             sub: typeof current.prefs?.sub === "string" ? current.prefs.sub : "",
             verification: current.emailVerification,
+            labels,
         };
     }
 

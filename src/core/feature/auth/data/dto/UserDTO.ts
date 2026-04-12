@@ -10,4 +10,5 @@ export interface UserDTO extends Models.Document{
     sub: string
     verification: boolean
     role: string | null
+    labels: string[]
 }
