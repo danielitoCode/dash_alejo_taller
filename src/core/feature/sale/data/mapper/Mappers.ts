@@ -5,7 +5,7 @@ import type {SaleItemDTO} from "../dto/SaleItemDTO";
 
 export type SaleWriteDTO = Pick<
     SaleDTO,
-    "$id" | "date" | "amount" | "verified" | "products" | "user_id" | "deliveryType"
+    "$id" | "date" | "amount" | "buy_state" | "products" | "user_id" | "delivery_type"
 >;
 
 function saleItemFromDTO(item: SaleItemDTO): SaleItem {
@@ -27,6 +27,8 @@ function saleItemToDTO(item: SaleItem): SaleItemDTO {
 
 export function saleFromDTO(dto: SaleDTO): Sale {
     let products: any[] = [];
+    const verified = dto.verified ?? dto.buy_state ?? BuyState.UNVERIFIED;
+    const deliveryType = dto.deliveryType ?? dto.delivery_type ?? null;
 
     try {
         if (Array.isArray(dto.products)) {
@@ -42,14 +44,15 @@ export function saleFromDTO(dto: SaleDTO): Sale {
     return {
         id: dto.$id,
         amount: dto.amount ?? 0,
-        userId: dto.user_id ?? 0,
+        userId: dto.user_id ?? "",
         date: dto.date,
-        verified: dto.verified as BuyState,
+        verified: verified as BuyState,
         products: products.map((item) => ({
             productId: item.productId,
             quantity: item.quantity,
             price: item.price
-        }))
+        })),
+        deliveryType: deliveryType as DeliveryType | null
     };
 }
 
@@ -62,9 +65,9 @@ export function saleToDTO(sale: Sale): SaleWriteDTO {
         $id: sale.id,
         date: sale.date,
         amount: sale.amount,
-        verified: sale.verified,
+        buy_state: sale.verified,
         products: sale.products.map(saleItemToDTO),
         user_id: sale.userId,
-        deliveryType: sale.deliveryType ?? null,
+        delivery_type: sale.deliveryType ?? null,
     };
 }

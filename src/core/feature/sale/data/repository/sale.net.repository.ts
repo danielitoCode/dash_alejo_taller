@@ -41,7 +41,7 @@ export class SaleNetRepository {
         const response = await this.databases.listDocuments<SaleDTO>(
             this.databaseId,
             COLLECTION_ID,
-            [Query.equal("userId", userId)]
+            [Query.equal("user_id", userId)]
         )
 
         return response.documents
@@ -52,7 +52,7 @@ export class SaleNetRepository {
             this.databaseId,
             COLLECTION_ID,
             id,
-            { verified }
+            { buy_state: verified }
         );
     }
 }
