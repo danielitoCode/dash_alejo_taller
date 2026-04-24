@@ -30,6 +30,18 @@ export function saleFromDTO(dto: SaleDTO): Sale {
     const verified = dto.verified ?? dto.buy_state ?? BuyState.UNVERIFIED;
     const deliveryType = dto.deliveryType ?? dto.delivery_type ?? null;
 
+    console.debug("[sale-debug][mapper.saleFromDTO] raw dto", {
+        id: dto.$id,
+        amount: dto.amount,
+        verified: dto.verified,
+        buy_state: dto.buy_state,
+        deliveryType: dto.deliveryType,
+        delivery_type: dto.delivery_type,
+        user_id: dto.user_id,
+        productsType: typeof dto.products,
+        productsPreview: dto.products
+    });
+
     try {
         if (Array.isArray(dto.products)) {
             products = dto.products;
@@ -41,7 +53,7 @@ export function saleFromDTO(dto: SaleDTO): Sale {
         products = [];
     }
 
-    return {
+    const sale = {
         id: dto.$id,
         amount: dto.amount ?? 0,
         userId: dto.user_id ?? "",
@@ -54,6 +66,10 @@ export function saleFromDTO(dto: SaleDTO): Sale {
         })),
         deliveryType: deliveryType as DeliveryType | null
     };
+
+    console.debug("[sale-debug][mapper.saleFromDTO] mapped sale", sale);
+
+    return sale;
 }
 
 /**

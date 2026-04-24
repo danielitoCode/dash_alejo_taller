@@ -12,12 +12,34 @@ export class SaleOfflineFirstRepository implements SaleRepository {
 
     async getAllSales(): Promise<Sale[]> {
         try {
+            console.debug("[sale-debug][offline.getAllSales] trying remote source");
             const remote = await this.net.getAll()
+            console.debug("[sale-debug][offline.getAllSales] remote received", {
+                count: remote.length,
+                firstDocument: remote[0] ?? null
+            });
             await db.sales.bulkPut(remote)
-            return remote.map(saleFromDTO)
-        } catch {
+            const mapped = remote.map(saleFromDTO)
+            console.debug("[sale-debug][offline.getAllSales] mapped remote sales", {
+                count: mapped.length,
+                firstSale: mapped[0] ?? null
+            });
+            return mapped
+        } catch (error: any) {
+            console.debug("[sale-debug][offline.getAllSales] remote failed, using local fallback", {
+                message: error?.message ?? String(error)
+            });
             const local = await db.sales.toArray()
-            return local.map(saleFromDTO)
+            console.debug("[sale-debug][offline.getAllSales] local cache loaded", {
+                count: local.length,
+                firstDocument: local[0] ?? null
+            });
+            const mapped = local.map(saleFromDTO)
+            console.debug("[sale-debug][offline.getAllSales] mapped local sales", {
+                count: mapped.length,
+                firstSale: mapped[0] ?? null
+            });
+            return mapped
         }
     }
 
@@ -37,12 +59,27 @@ export class SaleOfflineFirstRepository implements SaleRepository {
 
     async getByUser(userId: string): Promise<Sale[]> {
         try {
+            console.debug("[sale-debug][offline.getByUser] trying remote source", { userId });
             const remote = await this.net.getByUser(userId);
             await db.sales.bulkPut(remote);
-            return remote.map(saleFromDTO);
-        } catch {
-            const local = await db.sales.where("userId").equals(userId).toArray();
-            return local.map(saleFromDTO);
+            const mapped = remote.map(saleFromDTO);
+            console.debug("[sale-debug][offline.getByUser] mapped remote sales", {
+                userId,
+                count: mapped.length
+            });
+            return mapped;
+        } catch (error: any) {
+            console.debug("[sale-debug][offline.getByUser] remote failed, using local fallback", {
+                userId,
+                message: error?.message ?? String(error)
+            });
+            const local = await db.sales.where("user_id").equals(userId).toArray();
+            const mapped = local.map(saleFromDTO);
+            console.debug("[sale-debug][offline.getByUser] mapped local sales", {
+                userId,
+                count: mapped.length
+            });
+            return mapped;
         }
     }
 

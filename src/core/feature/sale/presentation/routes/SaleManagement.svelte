@@ -79,6 +79,16 @@
         const safeUserId = (sale.userId || "").toLowerCase();
         return safeId.includes(q) || safeUserId.includes(q) || userName.includes(q);
     });
+
+    $: console.debug("[sale-debug][view.SaleManagement] render state", {
+        rawItems: items.length,
+        filteredItems: filteredItems.length,
+        loading: $saleStore.loading,
+        error: $saleStore.error,
+        statusFilter,
+        query,
+        firstItem: items[0] ?? null
+    });
 </script>
 
 <section class="mgmt-screen">
@@ -450,4 +460,3 @@
         }
     }
 </style>
-
