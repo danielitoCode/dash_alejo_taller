@@ -32,7 +32,11 @@ function createSaleStore() {
                 count: sales.length,
                 firstSale: sales[0] ?? null
             });
-            logger.log(`Fetched ${sales} sales from storage`)
+            logger.log({
+                scope: "sale.store.syncAll",
+                count: sales.length,
+                firstSaleId: sales[0]?.id ?? null
+            })
 
             update((state) => {
                 const nextState = {...state, items: sales};
@@ -46,7 +50,10 @@ function createSaleStore() {
             console.error("[sale-debug][step 8x][store.syncAll] failed", {
                 message: error instanceof Error ? error.message : String(error)
             });
-            logger.error(`Error while sync sales from storage ${error}`)
+            logger.error({
+                scope: "sale.store.syncAll",
+                message: error instanceof Error ? error.message : String(error)
+            })
             update((state) => ({...state, error: normalizeError(error)}))
             throw error
         } finally {

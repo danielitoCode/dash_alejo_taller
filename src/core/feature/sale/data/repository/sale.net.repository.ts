@@ -33,7 +33,12 @@ export class SaleNetRepository {
                 firstDocument: response.documents[0] ?? null
             });
 
-            logger.log(`Error while sync sales from storage ${response.documents}`)
+            logger.log({
+                scope: "sale.net.getAll",
+                total: response.total,
+                documentsLength: response.documents.length,
+                firstDocumentId: response.documents[0]?.$id ?? null
+            })
 
             return response.documents
         } catch (error: any) {

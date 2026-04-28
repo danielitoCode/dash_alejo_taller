@@ -6,8 +6,12 @@ import { logger } from "../../../../infrastructure/presentation/util/logger.serv
 export class GetSalesCaseUse {
     constructor(private salesRepository: SaleRepository) {}
     async execute(): Promise<Sale[]> {
-        let response = await this.salesRepository.getAllSales()
-        logger.log(`GetSalesCaseUse.execute() ${response}`)
+        const response = await this.salesRepository.getAllSales()
+        logger.log({
+            scope: "GetSalesCaseUse.execute",
+            count: response.length,
+            firstSaleId: response[0]?.id ?? null
+        })
         return response
     }
 }
