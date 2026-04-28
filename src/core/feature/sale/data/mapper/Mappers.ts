@@ -30,7 +30,7 @@ export function saleFromDTO(dto: SaleDTO): Sale {
     const verified = dto.verified ?? dto.buy_state ?? BuyState.UNVERIFIED;
     const deliveryType = dto.deliveryType ?? dto.delivery_type ?? null;
 
-    console.debug("[sale-debug][mapper.saleFromDTO] raw dto", {
+    console.info("[sale-debug][step 5][mapper.saleFromDTO] raw dto", {
         id: dto.$id,
         amount: dto.amount,
         verified: dto.verified,
@@ -67,7 +67,7 @@ export function saleFromDTO(dto: SaleDTO): Sale {
         deliveryType: deliveryType as DeliveryType | null
     };
 
-    console.debug("[sale-debug][mapper.saleFromDTO] mapped sale", sale);
+    console.info("[sale-debug][step 5b][mapper.saleFromDTO] mapped sale", sale);
 
     return sale;
 }

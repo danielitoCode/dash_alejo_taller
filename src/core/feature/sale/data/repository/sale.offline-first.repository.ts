@@ -12,30 +12,30 @@ export class SaleOfflineFirstRepository implements SaleRepository {
 
     async getAllSales(): Promise<Sale[]> {
         try {
-            console.debug("[sale-debug][offline.getAllSales] trying remote source");
+            console.info("[sale-debug][step 3][sale.offlineFirst.getAllSales] trying remote source");
             const remote = await this.net.getAll()
-            console.debug("[sale-debug][offline.getAllSales] remote received", {
+            console.info("[sale-debug][step 4][sale.offlineFirst.getAllSales] remote received", {
                 count: remote.length,
                 firstDocument: remote[0] ?? null
             });
             await db.sales.bulkPut(remote)
             const mapped = remote.map(saleFromDTO)
-            console.debug("[sale-debug][offline.getAllSales] mapped remote sales", {
+            console.info("[sale-debug][step 6][sale.offlineFirst.getAllSales] mapped remote sales", {
                 count: mapped.length,
                 firstSale: mapped[0] ?? null
             });
             return mapped
         } catch (error: any) {
-            console.debug("[sale-debug][offline.getAllSales] remote failed, using local fallback", {
+            console.warn("[sale-debug][step 3x][sale.offlineFirst.getAllSales] remote failed, using local fallback", {
                 message: error?.message ?? String(error)
             });
             const local = await db.sales.toArray()
-            console.debug("[sale-debug][offline.getAllSales] local cache loaded", {
+            console.info("[sale-debug][step 4x][sale.offlineFirst.getAllSales] local cache loaded", {
                 count: local.length,
                 firstDocument: local[0] ?? null
             });
             const mapped = local.map(saleFromDTO)
-            console.debug("[sale-debug][offline.getAllSales] mapped local sales", {
+            console.info("[sale-debug][step 6x][sale.offlineFirst.getAllSales] mapped local sales", {
                 count: mapped.length,
                 firstSale: mapped[0] ?? null
             });

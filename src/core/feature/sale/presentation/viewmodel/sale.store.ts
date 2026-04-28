@@ -24,11 +24,11 @@ function createSaleStore() {
 
     async function syncAll(): Promise<void> {
         logger.info("Sync sales from storage")
-        console.debug("[sale-debug][store.syncAll] start");
+        console.info("[sale-debug][step 7][store.syncAll] start");
         update((state) => ({...state, loading: true, error: null}))
         try {
             const sales = await saleContainer.useCases.getAll.execute()
-            console.debug("[sale-debug][store.syncAll] use case resolved", {
+            console.info("[sale-debug][step 8][store.syncAll] use case resolved", {
                 count: sales.length,
                 firstSale: sales[0] ?? null
             });
@@ -36,21 +36,21 @@ function createSaleStore() {
 
             update((state) => {
                 const nextState = {...state, items: sales};
-                console.debug("[sale-debug][store.syncAll] state updated", {
+                console.info("[sale-debug][step 9][store.syncAll] state updated", {
                     itemsLength: nextState.items.length,
                     error: nextState.error
                 });
                 return nextState;
             })
         } catch (error) {
-            console.debug("[sale-debug][store.syncAll] failed", {
+            console.error("[sale-debug][step 8x][store.syncAll] failed", {
                 message: error instanceof Error ? error.message : String(error)
             });
             logger.error(`Error while sync sales from storage ${error}`)
             update((state) => ({...state, error: normalizeError(error)}))
             throw error
         } finally {
-            console.debug("[sale-debug][store.syncAll] finish");
+            console.info("[sale-debug][step 10][store.syncAll] finish");
             update((state) => ({...state, loading: false}))
         }
     }

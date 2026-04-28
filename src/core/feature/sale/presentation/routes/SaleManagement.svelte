@@ -80,7 +80,7 @@
         return safeId.includes(q) || safeUserId.includes(q) || userName.includes(q);
     });
 
-    $: console.debug("[sale-debug][view.SaleManagement] render state", {
+    $: console.info("[sale-debug][step 11][view.SaleManagement] render state", {
         rawItems: items.length,
         filteredItems: filteredItems.length,
         loading: $saleStore.loading,
