@@ -16,22 +16,11 @@ export class SaleNetRepository {
     }
 
     async getAll(): Promise<SaleDTO[]> {
-        console.info("[sale-debug][step 1][sale.net.getAll] requesting documents", {
-            databaseId: this.databaseId,
-            collectionId: COLLECTION_ID
-        });
-
         try {
             const response = await this.databases.listDocuments<SaleDTO>(
                 this.databaseId,
                 COLLECTION_ID
             )
-
-            console.info("[sale-debug][step 2][sale.net.getAll] response received", {
-                total: response.total,
-                documentsLength: response.documents.length,
-                firstDocument: response.documents[0] ?? null
-            });
 
             logger.log({
                 scope: "sale.net.getAll",
@@ -42,12 +31,6 @@ export class SaleNetRepository {
 
             return response.documents
         } catch (error: any) {
-            console.error("[sale-debug][step 2][sale.net.getAll] request failed", {
-                message: error?.message ?? String(error),
-                code: error?.code,
-                type: error?.type,
-                response: error
-            });
             throw error;
         }
     }
@@ -64,12 +47,6 @@ export class SaleNetRepository {
     }
 
     async getByUser(userId: string): Promise<SaleDTO[]> {
-        console.info("[sale-debug][step 1b][sale.net.getByUser] requesting user documents", {
-            databaseId: this.databaseId,
-            collectionId: COLLECTION_ID,
-            userId
-        });
-
         try {
             const response = await this.databases.listDocuments<SaleDTO>(
                 this.databaseId,
@@ -77,27 +54,13 @@ export class SaleNetRepository {
                 [Query.equal("user_id", userId)]
             )
 
-            console.info("[sale-debug][step 2b][sale.net.getByUser] response received", {
-                total: response.total,
-                documentsLength: response.documents.length,
-                firstDocument: response.documents[0] ?? null
-            });
-
             return response.documents
         } catch (error: any) {
-            console.error("[sale-debug][step 2b][sale.net.getByUser] request failed", {
-                userId,
-                message: error?.message ?? String(error),
-                code: error?.code,
-                type: error?.type,
-                response: error
-            });
             throw error;
         }
     }
 
     async updateVerified(id: string, verified: string): Promise<SaleDTO> {
-        console.debug("[sale-debug][net.updateVerified] updating", { id, verified });
         return await this.databases.updateDocument<SaleDTO>(
             this.databaseId,
             COLLECTION_ID,

@@ -24,14 +24,9 @@ function createSaleStore() {
 
     async function syncAll(): Promise<void> {
         logger.info("Sync sales from storage")
-        console.info("[sale-debug][step 7][store.syncAll] start");
         update((state) => ({...state, loading: true, error: null}))
         try {
             const sales = await saleContainer.useCases.getAll.execute()
-            console.info("[sale-debug][step 8][store.syncAll] use case resolved", {
-                count: sales.length,
-                firstSale: sales[0] ?? null
-            });
             logger.log({
                 scope: "sale.store.syncAll",
                 count: sales.length,
@@ -39,17 +34,9 @@ function createSaleStore() {
             })
 
             update((state) => {
-                const nextState = {...state, items: sales};
-                console.info("[sale-debug][step 9][store.syncAll] state updated", {
-                    itemsLength: nextState.items.length,
-                    error: nextState.error
-                });
-                return nextState;
+                return {...state, items: sales};
             })
         } catch (error) {
-            console.error("[sale-debug][step 8x][store.syncAll] failed", {
-                message: error instanceof Error ? error.message : String(error)
-            });
             logger.error({
                 scope: "sale.store.syncAll",
                 message: error instanceof Error ? error.message : String(error)
@@ -57,7 +44,6 @@ function createSaleStore() {
             update((state) => ({...state, error: normalizeError(error)}))
             throw error
         } finally {
-            console.info("[sale-debug][step 10][store.syncAll] finish");
             update((state) => ({...state, loading: false}))
         }
     }
