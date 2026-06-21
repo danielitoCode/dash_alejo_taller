@@ -1,7 +1,8 @@
-﻿<script lang="ts">
+<script lang="ts">
     import { onMount } from "svelte";
     import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
-    import ImagePicker from "../../../../infrastructure/presentation/components/ImagePicker.svelte";
+    import MultiImagePicker from "../components/MultiImagePicker.svelte";
+    import { getPrimaryProductImage } from "../../domain/entity/Product";
     import LoadingSpinner from "../../../../infrastructure/presentation/components/LoadingSpinner.svelte";
     import SkeletonList from "../../../../infrastructure/presentation/components/SkeletonList.svelte";
     import { logger } from "../../../../infrastructure/presentation/util/logger.service";
@@ -12,12 +13,13 @@
     import { categoryStore } from "../../../category/presentation/viewmodel/category.store";
     import { promotionStore } from "../../../notification/presentation/viewmodel/promotion.store";
     import { productStore } from "../viewmodel/product.store";
+    import { parseProductImages, serializeProductImages } from "../util/product.image";
     import { BadgeDollarSign, Pencil, Plus, Save, Search, Trash2, X } from "lucide-svelte";
 
     let draftName = "";
     let draftDescription = "";
     let draftPrice: number | string = 0;
-    let draftPhotoUrl = "";
+    let draftPhotoUrls: string[] = [];
     let draftCategoryId = "";
     let draftStatus: ProductStatus = "active";
     let editId: string | null = null;
@@ -36,10 +38,14 @@
         draftName = "";
         draftDescription = "";
         draftPrice = 0;
-        draftPhotoUrl = "";
+        draftPhotoUrls = [];
         draftCategoryId = "";
         draftStatus = "active";
         imageKey += 1;
+    }
+
+    function getProductImageUrl(product: Product): string | undefined {
+        return parseProductImages(product.photoUrl)[0];
     }
 
     async function create() {
@@ -50,7 +56,7 @@
             name: draftName.trim(),
             description: draftDescription.trim(),
             price: Number(draftPrice),
-            photoUrl: draftPhotoUrl.trim() || "https://picsum.photos/600",
+            photoUrl: serializeProductImages(draftPhotoUrls),
             categoryId: draftCategoryId,
             status: draftStatus
         };
@@ -72,7 +78,7 @@
         draftName = product.name;
         draftDescription = product.description;
         draftPrice = product.price;
-        draftPhotoUrl = product.photoUrl;
+        draftPhotoUrls = parseProductImages(product.photoUrl);
         draftCategoryId = product.categoryId;
         draftStatus = product.status;
     }
@@ -92,7 +98,7 @@
                     productId: old.id,
                     title: `Promo por baja de precio: ${old.name}`,
                     message: `Descuento del ${discountPercent}%`,
-                    imageUrl: old.photoUrl,
+                    imageUrl: getPrimaryProductImage(old.photoUrl),
                     oldPrice: old.price,
                     currentPrice: Number(draftPrice),
                     validFromEpochMillis: now,
@@ -111,7 +117,7 @@
                     ...old,
                     name: draftName.trim(),
                     description: draftDescription.trim(),
-                    photoUrl: draftPhotoUrl.trim() || old.photoUrl,
+                    photoUrl: serializeProductImages(draftPhotoUrls),
                     categoryId: draftCategoryId,
                     status: draftStatus
                 },
@@ -183,52 +189,73 @@
     <div class="mgmt-layout">
         <section class="mgmt-card mgmt-form-card" aria-label="Formulario">
             <h2 class="mgmt-card-title">{editId ? "Editar producto" : "Nuevo producto"}</h2>
-
             <div class="mgmt-grid">
                 <label class="mgmt-field" style="grid-column:1/-1">
                     <span>Nombre</span>
-                    <input class="mgmt-input" placeholder="Ej. EcoFlow Delta..." bind:value={draftName} />
-                </label>
 
+                    <input
+                            class="mgmt-input"
+                            bind:value={draftName}
+                            placeholder="Ej. Batería AGM 12V 9Ah"
+                    />
+                </label>
                 <label class="mgmt-field" style="grid-column:1/-1">
                     <span>Descripción</span>
-                    <textarea class="mgmt-input mgmt-area" placeholder="Opcional" bind:value={draftDescription}></textarea>
-                </label>
 
-                <label class="mgmt-field">
-                    <span>Precio</span>
-                    <input class="mgmt-input" type="number" bind:value={draftPrice} min="0" step="0.01" />
-                </label>
+                    <textarea
+                            class="mgmt-input mgmt-area"
+                            bind:value={draftDescription}
+                            placeholder="Descripción del producto"/>
+                    <label class="mgmt-field">
+                        <span>Precio</span>
 
-                <label class="mgmt-field">
-                    <span>Categoría</span>
-                    <select class="mgmt-select" bind:value={draftCategoryId}>
-                        <option value="" disabled>Selecciona...</option>
-                        {#each availableCategories as category (category.id)}
-                            <option value={category.id}>{category.name}</option>
-                        {/each}
-                    </select>
-                </label>
-
-                <label class="mgmt-field">
-                    <span>Estado</span>
-                    <select class="mgmt-select" bind:value={draftStatus}>
-                        <option value="active">active</option>
-                        <option value="inactive">inactive</option>
-                    </select>
-                </label>
-
-                <div style="grid-column:1/-1">
-                    {#key imageKey}
-                        <ImagePicker
-                            label="Imagen del producto"
-                            bind:value={draftPhotoUrl}
-                            bind:pending={imagePending}
+                        <input
+                                class="mgmt-input"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                bind:value={draftPrice}
                         />
-                    {/key}
-                </div>
+                    </label>
+                    <label class="mgmt-field">
+                        <span>Categoría</span>
 
-                <div class="mgmt-actions" style="grid-column:1/-1">
+                        <select
+                                class="mgmt-select"
+                                bind:value={draftCategoryId}
+                        >
+                            <option value="">Seleccione...</option>
+
+                            {#each availableCategories as category}
+                                <option value={category.id}>
+                                    {category.name}
+                                </option>
+                            {/each}
+                        </select>
+                    </label>
+                    <label class="mgmt-field">
+                        <span>Estado</span>
+
+                        <select
+                                class="mgmt-select"
+                                bind:value={draftStatus}
+                        >
+                            <option value="active">active</option>
+                            <option value="inactive">inactive</option>
+                        </select>
+                    </label>
+                </label>
+            </div>
+            <div class="product-images-field" style="grid-column:1/-1; margin-top: 10px;">
+                {#key imageKey}
+                    <MultiImagePicker
+                            label="Imágenes del producto"
+                            bind:values={draftPhotoUrls}
+                            bind:pending={imagePending}
+                    />
+                {/key}
+
+                <div class="mgmt-actions" style="grid-column:1/-1; margin-top: 15px;">
                     {#if editId}
                         <button class="mgmt-btn primary" on:click={save} disabled={!canSubmit}>
                             <Icon icon={Save} size={18} ariaLabel="Guardar cambios" />
@@ -275,9 +302,14 @@
                 {/if}
 
                 {#each filtered as product (product.id)}
+                    {@const primaryImage = getPrimaryProductImage(product.photoUrl)}
                     <article class="mgmt-row" aria-label={product.name}>
                         <div style="display:grid; grid-template-columns:58px 1fr; gap:12px; align-items:center">
-                            <img class="mgmt-avatar" src={product.photoUrl} alt="" aria-hidden="true" />
+                            {#if primaryImage}
+                                <img class="mgmt-avatar" src={primaryImage} alt="" aria-hidden="true" />
+                            {:else}
+                                <div class="mgmt-avatar" aria-hidden="true"></div>
+                            {/if}
 
                             <div class="mgmt-row-main">
                                 <div class="mgmt-row-title">{product.name}</div>
@@ -303,9 +335,47 @@
                     </article>
                 {/each}
             </div>
+
+            <div class="mgmt-pagination">
+                <button
+                    class="mgmt-btn ghost"
+                    disabled={$productStore.page <= 1 || $productStore.loading}
+                    on:click={() => productStore.prevPage()}
+                >
+                    Anterior
+                </button>
+                <span class="mgmt-pagination-info">
+                    Página {$productStore.page} de {Math.max(1, Math.ceil($productStore.total / $productStore.pageSize))} ({$productStore.total} productos)
+                </span>
+                <button
+                    class="mgmt-btn ghost"
+                    disabled={$productStore.page * $productStore.pageSize >= $productStore.total || $productStore.loading}
+                    on:click={() => productStore.nextPage()}
+                >
+                    Siguiente
+                </button>
+            </div>
         </section>
     </div>
 </section>
+
+<style>
+    .mgmt-pagination {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 20px;
+        padding-top: 15px;
+        border-top: 1px solid var(--md-sys-color-outline-variant);
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .mgmt-pagination-info {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--md-sys-color-on-surface-variant);
+    }
+</style>
 
 
 

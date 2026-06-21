@@ -15,13 +15,18 @@ class ProductNetRepository {
         return id;
     }
 
-    async getAll(): Promise<ProductDTO[]> {
+    async getAll(limit: number = 25, offset: number = 0): Promise<{ documents: ProductDTO[]; total: number }> {
         const response = await this.databases.listDocuments<ProductDTO>(
             this.databaseId,
-            COLLECTION_ID
+            COLLECTION_ID,
+            [
+                Query.orderDesc("$createdAt"),
+                Query.limit(limit),
+                Query.offset(offset),
+            ]
         )
 
-        return response.documents
+        return { documents: response.documents, total: response.total }
     }
 
     async getById(id: string): Promise<ProductDTO> {

@@ -8,6 +8,9 @@ interface ProductState {
     loading: boolean
     saving: boolean
     error: string | null
+    page: number
+    pageSize: number
+    total: number
 }
 
 const initialState: ProductState = {
@@ -15,7 +18,10 @@ const initialState: ProductState = {
     selected: null,
     loading: false,
     saving: false,
-    error: null
+    error: null,
+    page: 1,
+    pageSize: 10,
+    total: 0
 }
 
 function normalizeError(error: unknown): string {
@@ -51,9 +57,49 @@ function createProductStore() {
 
     async function syncAll(): Promise<void> {
         await runLoading(async () => {
-            const products = await productContainer.useCases.getAll.execute()
-            update((state) => ({...state, items: products}))
+            let limit = 10
+            let offset = 0
+            update((state) => {
+                limit = state.pageSize
+                offset = (state.page - 1) * state.pageSize
+                return state
+            })
+            const result = await productContainer.useCases.getAll.execute(limit, offset)
+            update((state) => ({
+                ...state,
+                items: result.items,
+                total: result.total
+            }))
         })
+    }
+
+    async function setPage(page: number): Promise<void> {
+        update((state) => ({...state, page}))
+        await syncAll()
+    }
+
+    async function nextPage(): Promise<void> {
+        let hasMore = false
+        update((state) => {
+            hasMore = state.page * state.pageSize < state.total
+            return state
+        })
+        if (hasMore) {
+            update((state) => ({...state, page: state.page + 1}))
+            await syncAll()
+        }
+    }
+
+    async function prevPage(): Promise<void> {
+        let hasPrev = false
+        update((state) => {
+            hasPrev = state.page > 1
+            return state
+        })
+        if (hasPrev) {
+            update((state) => ({...state, page: state.page - 1}))
+            await syncAll()
+        }
     }
 
     async function syncById(id: string): Promise<Product | null> {
@@ -67,6 +113,7 @@ function createProductStore() {
     async function create(data: Product): Promise<void> {
         await runSaving(async () => {
             await productContainer.useCases.create.execute(data)
+            update((state) => ({...state, page: 1}))
             await syncAll()
         })
     }
@@ -83,6 +130,13 @@ function createProductStore() {
     async function removeById(id: string): Promise<void> {
         await runSaving(async () => {
             await productContainer.useCases.delete.execute(id)
+            // If the item deleted was the only one on the page, and page > 1, go back one page
+            let newPage = 1
+            update((state) => {
+                const totalPages = Math.ceil((state.total - 1) / state.pageSize)
+                newPage = state.page > totalPages ? Math.max(1, totalPages) : state.page
+                return {...state, page: newPage}
+            })
             await syncAll()
             update((state) => ({
                 ...state,
@@ -105,6 +159,9 @@ function createProductStore() {
         subscribe,
         hasData,
         syncAll,
+        setPage,
+        nextPage,
+        prevPage,
         syncById,
         create,
         updatePrice,

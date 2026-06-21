@@ -1,7 +1,12 @@
 import type {Product} from "../entity/Product";
 
+export interface PaginatedResult<T> {
+    items: T[]
+    total: number
+}
+
 export interface ProductRepository {
-    getAll(): Promise<Product[]>
+    getAll(limit: number, offset: number): Promise<PaginatedResult<Product>>
 
     getById(id: string): Promise<Product | null>
 

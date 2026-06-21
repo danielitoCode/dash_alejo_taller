@@ -9,6 +9,7 @@
     import { BuyState } from "../../../feature/sale/domain/entity/enums";
     import { saleStore } from "../../../feature/sale/presentation/viewmodel/sale.store";
     import { toastStore } from "../viewmodel/toast.store";
+    import { getPrimaryProductImage } from "../../../feature/product/domain/entity/Product";
     import { logger } from "../util/logger.service";
     import {
         BarChart3,
@@ -139,7 +140,7 @@
                 return {
                     id,
                     name: product?.name ?? `Producto ${id.slice(0, 8)}`,
-                    photoUrl: product?.photoUrl ?? "",
+                    imageUrl: getPrimaryProductImage(product?.photoUrl ?? ""),
                     revenue: value.revenue,
                     units: value.units
                 };
@@ -321,8 +322,8 @@
                 {#each topProducts as product (product.id)}
                     <article class="mgmt-row">
                         <div style="display:grid; grid-template-columns:58px 1fr; gap:12px; align-items:center">
-                            {#if product.photoUrl}
-                                <img class="mgmt-avatar" src={product.photoUrl} alt="" aria-hidden="true" />
+                            {#if product.imageUrl}
+                                <img class="mgmt-avatar" src={product.imageUrl} alt="" aria-hidden="true" />
                             {:else}
                                 <div class="mgmt-avatar" aria-hidden="true"></div>
                             {/if}

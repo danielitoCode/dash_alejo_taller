@@ -1,6 +1,7 @@
 import ProductNetRepository from "./product.net.repository"
 import type {ProductRepository} from "../../domain/repository/product.repository";
 import type {Product} from "../../domain/entity/Product";
+import type {PaginatedResult} from "../../domain/repository/product.repository";
 import {db} from "../../../../infrastructure/di/dexie.db";
 import {productFromDTO, productToDTO} from "../mapper/Mappers";
 import type Dexie from "dexie";
@@ -11,15 +12,24 @@ export class ProductOfflineFirstRepository implements ProductRepository {
         private readonly net: ProductNetRepository
     ) {}
 
-    async getAll(): Promise<Product[]> {
+    async getAll(limit: number = 25, offset: number = 0): Promise<PaginatedResult<Product>> {
         try {
-            const remote = await this.net.getAll()
-            await db.products.bulkPut(remote)
-            return remote.map(productFromDTO)
+            const remote = await this.net.getAll(limit, offset)
+            await db.products.bulkPut(remote.documents)
+            return {
+                items: remote.documents.map(productFromDTO),
+                total: remote.total
+            }
         } catch(error: any) {
             logger.error(error.message, error.stack);
-            const local = await db.products.toArray()
-            return local.map(productFromDTO)
+            const local = await db.products
+                .reverse()
+                .sortBy("$createdAt")
+            const sorted = local.reverse()
+            return {
+                items: sorted.slice(offset, offset + limit).map(productFromDTO),
+                total: sorted.length
+            }
         }
     }
 
@@ -100,8 +110,19 @@ export class ProductOfflineFirstRepository implements ProductRepository {
     }
 
     async sync(): Promise<void> {
-        const remote = await this.net.getAll()
+        let allDocs: import("../dto/ProductDTO").ProductDTO[] = []
+        let offset = 0
+        const batchSize = 100
+        let total = 0
+
+        do {
+            const batch = await this.net.getAll(batchSize, offset)
+            allDocs = allDocs.concat(batch.documents)
+            total = batch.total
+            offset += batchSize
+        } while (allDocs.length < total)
+
         await db.products.clear()
-        await db.products.bulkPut(remote)
+        await db.products.bulkPut(allDocs)
     }
 }
