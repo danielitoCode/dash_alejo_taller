@@ -1,7 +1,7 @@
 # Core 1 — Estado MVP Back-office
 
 **Última actualización:** 2026-08-09  
-**Veredicto desarrollo:** en alineación — Fase 0 hecha; **Fase 1.1–1.2** en código (`reserved` / `available`).
+**Veredicto desarrollo:** en alineación — Fase 0 hecha; Fase 1.1–1.2 hecha; **2.1 alta producto** hecha.
 
 ## Fase 0 — Baseline
 
@@ -13,17 +13,22 @@
 
 ## Fase 1 — Modelo stock
 
+| Tarea | Estado |
+|-------|--------|
+| 1.1 `reserved` dominio | **Hecho** |
+| 1.2 DTO + mapper | **Hecho** |
+| 1.4–1.5 UI + no pisar reserved | **Hecho** |
+
+## Fase 2 — Validaciones catálogo
+
 | Tarea | Estado | Evidencia |
 |-------|--------|-----------|
-| **1.1** `reserved` en dominio + factory | **Hecho** | `Product.ts` + `availableStock()` + validaciones |
-| **1.2** DTO + mapper | **Hecho** | `ProductDTO`, `productFromDTO` / `productToDTO` / `productToCatalogWriteDTO` |
-| **1.3** Dexie schema note | Parcial | `bulkPut` ya persiste campos del DTO; versión explícita v3 opcional |
-| **1.4** `available` en UI | **Hecho (listado)** | `ProductManagement` muestra disp. / exist. / res. |
-| **1.5** Update no pisa reserved | **Hecho** | offline-first usa `productToCatalogWriteDTO` |
+| **2.1** Alta: existence ≥ 0, reserved = 0 | **Hecho** | `SaveProductCaseUse` + test unitario |
+| **2.2** Edición: existence ≥ reserved | Pendiente (parcial en UI/repo update) |
+| **2.3** Reserved no editable a mano | Pendiente formal |
+| **2.4** Roles en catálogo | Fase 3 |
+| **2.5** Status active/inactive | Base ya existe |
 
 ## Siguiente
 
-- Completar **1.3** (Dexie version bump documentado si hace falta)
-- **Fase 2** validaciones restantes / form existence ya parcial
-- **Fase 3** gates roles
-- **Fase 4–5** sale currency + confirm/reject con stock
+**2.2** — endurecer path de edición (case use dedicado o ampliar update) para `existence >= reserved`.
