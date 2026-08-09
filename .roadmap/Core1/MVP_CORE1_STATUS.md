@@ -1,32 +1,31 @@
 # Core 1 — Estado MVP Back-office
 
 **Última actualización:** 2026-08-09  
-**Veredicto desarrollo:** Fase 1–2 catálogo + **tests unitarios de políticas**.
+**Veredicto:** Fase 1–2 catálogo hechas; **3.1 gates de ruta** hechos.
 
-## Tests (fases 1–2)
+## Fase 3 — Auth staff
 
-| Suite | Política |
-|-------|----------|
-| `Product.stock.unit.test.ts` | available = existence − reserved; createProduct invariantes |
-| `product.mappers.unit.test.ts` | reserved en lectura; catalog write **sin** reserved |
-| `SaveProductCaseUse.unit.test.ts` | 2.1 alta reserved=0 |
-| `UpdateProductCatalogCaseUse.unit.test.ts` | 2.2 existence≥reserved; 2.3 no muta reserved |
+| Tarea | Estado | Evidencia |
+|-------|--------|-----------|
+| **3.1** Rutas vs `ROLE_ROUTE_ACCESS` | **Hecho** | Shell usa `canAccessRoute` / `getFirstAllowedRoute`; sin matriz duplicada; tests unitarios |
+| **3.2** UserManagement + canManageRole | Pendiente |
+| **3.3** Labels Appwrite | Pendiente |
+| **3.4** Sin sesión visitante tienda | Base (login staff) |
+
+## Tests 3.1
 
 ```bash
 npm run test:unit
-# o
-npm test -- --project unit
+# RoleConfig.routes.unit.test.ts
 ```
 
-## Fase 0–2
+## Fases previas
 
 | Área | Estado |
 |------|--------|
-| 0.1–0.3 | **Hecho** |
-| 1.x reserved + mapper | **Hecho** + tests |
-| 2.1–2.3 catálogo | **Hecho** + tests |
-| 2.4 roles | Fase 3 |
+| 0.x baseline | Hecho |
+| 1–2 stock catálogo + tests | Hecho |
 
 ## Siguiente
 
-**Fase 3** — gates de roles.
+**3.2** UserManagement respeta `canManageRole` en UI y acciones.
