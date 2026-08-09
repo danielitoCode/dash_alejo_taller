@@ -122,4 +122,4 @@ Detalle: `.policies/auth/AUTH_POLICY.md` (este repo).
 - [x] Roles staff resumidos
 - [x] Referencias a políticas canónicas AlejoTaller + dash
 
-**Siguiente tarea:** **0.2** Higiene de secretos (`.env` fuera de git, `.gitignore`).
+**Siguiente tras 0.2:** **0.3** Inventario de archivos a tocar en el código del dash.

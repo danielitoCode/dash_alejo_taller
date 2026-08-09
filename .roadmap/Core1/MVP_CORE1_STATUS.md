@@ -8,8 +8,10 @@
 | Tarea | Estado | Evidencia |
 |-------|--------|-----------|
 | **0.1** Congelar reglas canónicas | **Hecho** | [`CANONICAL_RULES_FREEZE.md`](./CANONICAL_RULES_FREEZE.md) |
-| **0.2** Higiene secretos (`.env` / `.npm-cache`) | Pendiente | — |
+| **0.2** Higiene secretos (`.env` / ignore) | **Hecho** | `.env` eliminado del árbol; `.gitignore` endurecido; `.env.example` sin secretos |
 | **0.3** Inventario de archivos a tocar | Pendiente | — |
+
+> **Rotación recomendada:** el `.env` estuvo en el historial de git. Rotar `RENDER_API_KEY`, secret de Pusher y cualquier key de servidor que hubiera estado en ese archivo. Borrar del historial (`git filter-repo` / BFG) es opcional pero recomendable si el repo es público.
 
 ## Resumen de alcance
 
@@ -23,7 +25,7 @@
 | Currency en detalle de venta | Pendiente | Debe mostrar moneda del pedido (paridad operador) |
 | Soft-hold respect | Pendiente | Panel no debe pisar `reserved` al editar existence a ciegas |
 | Realtime stock/sale | Pendiente | Clientes ya usan Appwrite RT; dash aún orientado a flujos legacy/Pusher support |
-| Secretos / `.env` en repo | Deuda | Core 1 exige higiene mínima (tarea **0.2**) |
+| Secretos / `.env` en repo | **Hecho (0.2)** | Archivo quitado del tip; historial puede seguir conteniendo blobs |
 | QA checklist | Documentado | Ejecución **después** de alineación código |
 
 ## Micro-tareas Core 1 (checklist desarrollo)
@@ -50,9 +52,10 @@
 - [ ] No crear ventas B2C desde el panel en Core 1 (solo supervisión)
 
 ### Seguridad / repo
-- [ ] `.env` fuera de git; solo `.env.example`
-- [ ] No commitear `.npm-cache`
+- [x] `.env` fuera de git (tip actual); solo `.env.example`
+- [x] `.gitignore` incluye `.env`, `.npm-cache/`, patrones de secretos
 - [ ] API keys de workers no embebidas en bundle admin sin necesidad
+- [ ] (Opcional) limpiar historial git de blobs `.env` antiguos
 
 ### QA
 - [ ] Ejecutar `QA_CORE1_CHECK_plan.md`

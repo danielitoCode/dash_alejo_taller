@@ -10,7 +10,7 @@
 | Tarea | Estado |
 |-------|--------|
 | [0.1 Congelar reglas canónicas](./CANONICAL_RULES_FREEZE.md) | **Hecho** |
-| 0.2 Higiene secretos | Pendiente |
+| 0.2 Higiene secretos | **Hecho** (`.env` eliminado del tip; rotar keys expuestas) |
 | 0.3 Inventario de código | Pendiente |
 
 ## Qué incluye Core 1 (dash)
