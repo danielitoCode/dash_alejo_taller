@@ -20,7 +20,7 @@
     import SkeletonTiles from "../../../../infrastructure/presentation/components/SkeletonTiles.svelte";
     import { userManagementStore } from "../../../auth/presentation/viewmodel/user-management.store";
     import { productStore } from "../../../product/presentation/viewmodel/product.store";
-    import { BadgeDollarSign, ChevronRight, Inbox, Search, ShieldCheck, XCircle } from "lucide-svelte";
+    import { BadgeDollarSign, ChevronRight, Inbox, Search, ShieldCheck, Store, XCircle } from "lucide-svelte";
 
     export let navController: NavController;
 
@@ -106,10 +106,14 @@
             <div class="mgmt-page-title">
                 <h1 class="mgmt-h1">Ventas</h1>
                 <p class="mgmt-muted">
-                    Supervisión por estado · importes con moneda del documento del cliente
+                    Supervisión de pedidos originados en la tienda (web/Android). Este panel no crea ventas B2C.
                 </p>
             </div>
             <div class="mgmt-chip-row status-tabs" role="tablist" aria-label="Filtrar por estado">
+                <span class="mgmt-chip origin" title="Core1 4.4">
+                    <Icon icon={Store} size={18} ariaLabel="Origen" />
+                    Origen: tienda cliente
+                </span>
                 <button
                     type="button"
                     role="tab"
@@ -267,6 +271,11 @@
         flex-wrap: wrap;
         gap: 8px;
         align-items: center;
+    }
+
+    .mgmt-chip.origin {
+        opacity: 0.95;
+        border-style: dashed;
     }
 
     .mgmt-chip.tab {

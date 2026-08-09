@@ -2,7 +2,8 @@ import type { SaleDTO } from "../dto/SaleDTO";
 import { type Databases, ID, Query } from "appwrite";
 import type { Models } from "appwrite";
 import { ENV } from "../../../../infrastructure/env";
-import {logger} from "../../../../infrastructure/presentation/util/logger.service";
+import { logger } from "../../../../infrastructure/presentation/util/logger.service";
+import { assertBackofficeCannotCreateB2cSale } from "../../domain/policy/BackofficeSalePolicy";
 
 const COLLECTION_ID = "sale";
 
@@ -20,30 +21,29 @@ export class SaleNetRepository {
             const response = await this.databases.listDocuments<SaleDTO>(
                 this.databaseId,
                 COLLECTION_ID
-            )
+            );
 
             logger.log({
                 scope: "sale.net.getAll",
                 total: response.total,
                 documentsLength: response.documents.length,
-                firstDocumentId: response.documents[0]?.$id ?? null
-            })
+                firstDocumentId: response.documents[0]?.$id ?? null,
+            });
 
-            return response.documents
+            return response.documents;
         } catch (error: any) {
             throw error;
         }
     }
 
+    /**
+     * Core1 4.4: bloqueado. Alta B2C solo en clientes de tienda.
+     * Firma conservada por compatibilidad; no ejecuta createDocument.
+     */
     async create(
-        data: Omit<SaleDTO, keyof Models.Document>
+        _data: Omit<SaleDTO, keyof Models.Document>
     ): Promise<SaleDTO> {
-        return await this.databases.createDocument<SaleDTO>(
-            this.databaseId,
-            COLLECTION_ID,
-            ID.unique(),
-            data
-        )
+        assertBackofficeCannotCreateB2cSale();
     }
 
     async getByUser(userId: string): Promise<SaleDTO[]> {
@@ -52,9 +52,9 @@ export class SaleNetRepository {
                 this.databaseId,
                 COLLECTION_ID,
                 [Query.equal("user_id", userId)]
-            )
+            );
 
-            return response.documents
+            return response.documents;
         } catch (error: any) {
             throw error;
         }
