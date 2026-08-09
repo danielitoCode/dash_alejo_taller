@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
     import { onMount } from "svelte";
     import type { NavBackStackEntry } from "../../../../../lib/navigation/NavBackStackEntry";
     import type { NavController } from "../../../../../lib/navigation/NavController";
@@ -6,20 +6,21 @@
     import { toastStore } from "../../../../infrastructure/presentation/viewmodel/toast.store";
     import { logger } from "../../../../infrastructure/presentation/util/logger.service";
     import { saleStore } from "../viewmodel/sale.store";
-    import { BuyState } from "../../domain/entity/enums";
-    import { ArrowLeft, BadgeDollarSign, Clock, Package, ShieldCheck } from "lucide-svelte";
-    import {userManagementStore} from "../../../auth/presentation/viewmodel/user-management.store";
-    import {productStore} from "../../../product/presentation/viewmodel/product.store";
+    import { BuyState, DeliveryType } from "../../domain/entity/enums";
+    import { saleLineTotal } from "../../domain/entity/Sale";
+    import { saleStateLabel } from "../../domain/util/filterSalesByStatus";
+    import { ArrowLeft, BadgeDollarSign, Clock, Hash, Package, ShieldCheck, Truck, User } from "lucide-svelte";
+    import { userManagementStore } from "../../../auth/presentation/viewmodel/user-management.store";
+    import { productStore } from "../../../product/presentation/viewmodel/product.store";
 
     export let navController: NavController;
     export let navBackStackEntry: NavBackStackEntry<{ id?: string }>;
 
     const saleId = navBackStackEntry?.args?.id ?? "";
     let loading = false;
+
     $: sale = saleId ? $saleStore.items.find((s) => s.id === saleId) ?? null : null;
-    $: user = sale
-        ? $userManagementStore.items.find(u => u.id === sale.userId)
-        : null;
+    $: user = sale ? $userManagementStore.items.find((u) => u.id === sale.userId) : null;
 
     onMount(() => {
         if (!saleId) return;
@@ -27,7 +28,7 @@
         Promise.all([
             sale ? Promise.resolve() : saleStore.syncAll(),
             userManagementStore.syncAll(),
-            productStore.syncAll()
+            productStore.syncAll(),
         ])
             .catch((e) => {
                 logger.error(e?.message ?? e, e?.stack);
@@ -41,7 +42,7 @@
     }
 
     function resolveProduct(productId: string) {
-        const product = $productStore.items.find(p => p.id === productId);
+        const product = $productStore.items.find((p) => p.id === productId);
         return product?.name ?? "Producto desconocido";
     }
 
@@ -50,6 +51,44 @@
         if (state === BuyState.DELETED) return "rejected";
         return "verified";
     }
+
+    function formatMoney(amount: number, currency: string | null | undefined): string {
+        const n = Number(amount) || 0;
+        const code = (currency || "").trim().toUpperCase();
+        if (code) {
+            try {
+                return new Intl.NumberFormat(undefined, {
+                    style: "currency",
+                    currency: code,
+                    maximumFractionDigits: 2,
+                }).format(n);
+            } catch {
+                return `${n.toFixed(2)} ${code}`;
+            }
+        }
+        // Sin currency en documento: no forzar USD; número + aviso
+        return n.toFixed(2);
+    }
+
+    function deliveryLabel(d: DeliveryType | null | undefined): string {
+        if (d === DeliveryType.PICKUP) return "Recogida (PICKUP)";
+        if (d === DeliveryType.DELIVERY) return "Entrega (DELIVERY)";
+        return "No indicado";
+    }
+
+    function formatIso(iso: string | undefined): string {
+        if (!iso) return "—";
+        try {
+            return new Date(iso).toLocaleString();
+        } catch {
+            return iso;
+        }
+    }
+
+    $: currencyCode = sale?.currency?.trim() || null;
+    $: linesTotal = sale
+        ? sale.products.reduce((acc, p) => acc + saleLineTotal(p), 0)
+        : 0;
 </script>
 
 <section class="mgmt-container">
@@ -61,7 +100,7 @@
             </button>
             <div>
                 <h1 class="mgmt-h1">Detalle de venta</h1>
-                <p class="mgmt-muted">Supervisión administrativa del pedido</p>
+                <p class="mgmt-muted">Supervisión · solo lectura del pedido del cliente</p>
             </div>
         </div>
     </header>
@@ -70,7 +109,7 @@
         <div class="mgmt-card">
             <p class="mgmt-muted">Falta el id de la venta.</p>
         </div>
-    {:else if loading}
+    {:else if loading && !sale}
         <div class="mgmt-card">
             <p class="mgmt-muted">Cargando...</p>
         </div>
@@ -86,20 +125,43 @@
                         <Icon icon={BadgeDollarSign} size={18} ariaLabel="Venta" />
                     </div>
                     <div>
-                        <h1>Usuario: {user?.name ?? "Usuario desconocido"}</h1>
-                        <h2>id de venta: #{sale.id.slice(0, 8)}</h2>
+                        <h1>{user?.name ?? "Usuario desconocido"}</h1>
+                        <p class="sub-line">
+                            <Icon icon={User} size={14} ariaLabel="Email" />
+                            {user?.email ?? "—"}
+                        </p>
                         <div class="meta">
                             <span class="meta-item">
-                                <Icon icon={Clock} size={14} ariaLabel="Fecha" />
-                                {new Date(sale.date).toLocaleString()}
+                                <Icon icon={Hash} size={14} ariaLabel="Id venta" />
+                                <code class="id-full">{sale.id}</code>
+                            </span>
+                            <span class="meta-item">
+                                <Icon icon={User} size={14} ariaLabel="User id" />
+                                <code class="id-full">{sale.userId || "—"}</code>
+                            </span>
+                            <span class="meta-item">
+                                <Icon icon={Clock} size={14} ariaLabel="Fecha pedido" />
+                                Pedido: {formatIso(sale.date)}
+                            </span>
+                            <span class="meta-item">
+                                <Icon icon={Clock} size={14} ariaLabel="Creado" />
+                                Creado: {formatIso(sale.createdAtIso)}
+                            </span>
+                            <span class="meta-item">
+                                <Icon icon={Clock} size={14} ariaLabel="Actualizado" />
+                                Actualizado: {formatIso(sale.updatedAtIso)}
                             </span>
                             <span class="meta-item">
                                 <Icon icon={Package} size={14} ariaLabel="Items" />
-                                {sale.products.length} items
+                                {sale.products.length} líneas
+                            </span>
+                            <span class="meta-item">
+                                <Icon icon={Truck} size={14} ariaLabel="Entrega" />
+                                {deliveryLabel(sale.deliveryType)}
                             </span>
                             <span class="meta-item">
                                 <Icon icon={ShieldCheck} size={14} ariaLabel="Operación" />
-                                Validación operativa solo desde Android operador
+                                Confirmación operativa: operador (o supervisión en Fase 5)
                             </span>
                         </div>
                     </div>
@@ -107,9 +169,17 @@
 
                 <div class="right">
                     <span class="pill {saleStateClass(sale.verified)}">
-                        {sale.verified}
+                        {saleStateLabel(sale.verified)}
+                        <span class="pill-code">({sale.verified})</span>
                     </span>
-                    <div class="amount">${sale.amount.toFixed(2)}</div>
+                    <div class="amount">{formatMoney(sale.amount, currencyCode)}</div>
+                    <div class="currency-note">
+                        {#if currencyCode}
+                            Moneda del documento: <strong>{currencyCode}</strong>
+                        {:else}
+                            Sin <code>currency</code> en documento (no se fuerza USD)
+                        {/if}
+                    </div>
                     <button class="mgmt-btn ghost" type="button" disabled>
                         Vista de supervisión
                     </button>
@@ -117,20 +187,28 @@
             </div>
 
             <div class="body">
-                <h3>Productos</h3>
+                <div class="body-head">
+                    <h3>Líneas del pedido</h3>
+                    <span class="muted">Suma líneas: {formatMoney(linesTotal, currencyCode)}</span>
+                </div>
                 <div class="items">
-                    {#each sale.products as p, idx (idx)}
+                    {#each sale.products as p, idx (p.productId + "-" + idx)}
                         <div class="item">
                             <div class="item-top">
-                                <strong>{resolveProduct(p.productId)}</strong>
-                                <span class="muted">x{p.quantity}</span>
+                                <div>
+                                    <strong>{resolveProduct(p.productId)}</strong>
+                                    <div class="product-id muted">id: <code>{p.productId}</code></div>
+                                </div>
+                                <span class="qty">×{p.quantity}</span>
                             </div>
                             <div class="item-sub">
-                                <span class="muted">Unit: ${p.price.toFixed(2)}</span>
+                                <span>Unit: {formatMoney(p.price, currencyCode)}</span>
                                 <span class="dot">•</span>
-                                <span class="muted">Total: ${(p.price * p.quantity).toFixed(2)}</span>
+                                <span>Línea: {formatMoney(saleLineTotal(p), currencyCode)}</span>
                             </div>
                         </div>
+                    {:else}
+                        <p class="muted">Sin productos en este pedido.</p>
                     {/each}
                 </div>
             </div>
@@ -161,26 +239,29 @@
         grid-template-columns: auto 1fr;
         gap: 12px;
         align-items: start;
+        min-width: 0;
     }
 
     h1 {
         margin: 0;
-        font-size: 1.5rem;
+        font-size: 1.35rem;
         letter-spacing: -0.01em;
         font-weight: 1000;
     }
 
-    h2 {
-        margin: 0;
-        font-size: 1.0rem;
-        letter-spacing: -0.01em;
-        font-weight: 790;
-    }
-
     h3 {
-        margin: 0 0 10px 0;
+        margin: 0;
         font-weight: 950;
         letter-spacing: -0.01em;
+    }
+
+    .sub-line {
+        margin: 4px 0 0;
+        display: inline-flex;
+        gap: 6px;
+        align-items: center;
+        font-size: 0.92rem;
+        color: color-mix(in srgb, var(--md-sys-color-on-background) 75%, transparent);
     }
 
     .ico {
@@ -194,18 +275,23 @@
     }
 
     .meta {
-        margin-top: 6px;
-        display: inline-flex;
-        gap: 12px;
-        flex-wrap: wrap;
-        color: color-mix(in srgb, var(--md-sys-color-on-background) 72%, transparent);
-        font-size: 0.88rem;
+        margin-top: 10px;
+        display: grid;
+        gap: 8px;
+        color: color-mix(in srgb, var(--md-sys-color-on-background) 78%, transparent);
+        font-size: 0.86rem;
     }
 
     .meta-item {
         display: inline-flex;
         gap: 6px;
-        align-items: center;
+        align-items: flex-start;
+        min-width: 0;
+    }
+
+    .id-full {
+        font-size: 0.78rem;
+        word-break: break-all;
     }
 
     .right {
@@ -216,9 +302,16 @@
     }
 
     .amount {
-        font-size: 1.5rem;
+        font-size: 1.45rem;
         font-weight: 1000;
         letter-spacing: -0.02em;
+    }
+
+    .currency-note {
+        font-size: 0.8rem;
+        text-align: right;
+        color: color-mix(in srgb, var(--md-sys-color-on-background) 70%, transparent);
+        max-width: 220px;
     }
 
     .pill {
@@ -231,23 +324,40 @@
         justify-self: end;
     }
 
+    .pill-code {
+        font-weight: 600;
+        opacity: 0.85;
+    }
+
     .pill.verified {
         border-color: color-mix(in srgb, #22c55e 35%, var(--md-sys-color-outline-variant));
         background: color-mix(in srgb, #22c55e 12%, transparent);
+        color: #4ade80;
     }
 
     .pill.unverified {
-        border-color: color-mix(in srgb, #a855f7 38%, var(--md-sys-color-outline-variant));
-        background: color-mix(in srgb, #a855f7 12%, transparent);
+        border-color: color-mix(in srgb, #f97316 38%, var(--md-sys-color-outline-variant));
+        background: color-mix(in srgb, #f97316 12%, transparent);
+        color: #fb923c;
     }
 
     .pill.rejected {
         border-color: color-mix(in srgb, #ef4444 38%, var(--md-sys-color-outline-variant));
         background: color-mix(in srgb, #ef4444 12%, transparent);
+        color: #f87171;
     }
 
     .body {
         padding: 16px;
+    }
+
+    .body-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 12px;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
     }
 
     .items {
@@ -268,7 +378,17 @@
         display: flex;
         justify-content: space-between;
         gap: 10px;
-        align-items: baseline;
+        align-items: flex-start;
+    }
+
+    .product-id {
+        margin-top: 2px;
+        font-size: 0.78rem;
+    }
+
+    .qty {
+        font-weight: 900;
+        white-space: nowrap;
     }
 
     .item-sub {
@@ -282,7 +402,7 @@
 
     .muted {
         color: inherit;
-        opacity: 0.92;
+        opacity: 0.9;
     }
 
     .dot {
@@ -298,9 +418,10 @@
             min-width: 0;
         }
         .amount,
-        .pill {
+        .pill,
+        .currency-note {
             justify-self: start;
+            text-align: left;
         }
     }
 </style>
-

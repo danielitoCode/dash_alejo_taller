@@ -1,73 +1,83 @@
-import type {SaleDTO} from "../dto/SaleDTO";
-import type {Sale, SaleItem} from "../../domain/entity/Sale";
-import {type BuyState, DeliveryType} from "../../domain/entity/enums";
-import type {SaleItemDTO} from "../dto/SaleItemDTO";
+import type { SaleDTO } from "../dto/SaleDTO"
+import type { Sale, SaleItem } from "../../domain/entity/Sale"
+import { BuyState, DeliveryType } from "../../domain/entity/enums"
+import type { SaleItemDTO } from "../dto/SaleItemDTO"
 
 export type SaleWriteDTO = Pick<
     SaleDTO,
-    "$id" | "date" | "amount" | "buy_state" | "products" | "user_id" | "delivery_type"
->;
-
-function saleItemFromDTO(item: SaleItemDTO): SaleItem {
-    return {
-        productId: item.productId,
-        quantity: item.quantity,
-        price: item.price,
-    };
-}
+    "$id" | "date" | "amount" | "currency" | "buy_state" | "products" | "user_id" | "delivery_type"
+>
 
 function saleItemToDTO(item: SaleItem): SaleItemDTO {
     return {
         productId: item.productId,
         quantity: item.quantity,
-        price: item.price
-    };
+        price: item.price,
+    }
 }
 
+function normalizeBuyState(raw: unknown): BuyState {
+    const s = String(raw ?? "").toUpperCase()
+    if (s === BuyState.VERIFIED) return BuyState.VERIFIED
+    if (s === BuyState.DELETED) return BuyState.DELETED
+    return BuyState.UNVERIFIED
+}
+
+function normalizeDelivery(raw: unknown): DeliveryType | null {
+    if (raw == null || raw === "") return null
+    const s = String(raw).toUpperCase()
+    if (s === DeliveryType.PICKUP) return DeliveryType.PICKUP
+    if (s === DeliveryType.DELIVERY) return DeliveryType.DELIVERY
+    return null
+}
 
 export function saleFromDTO(dto: SaleDTO): Sale {
-    let products: any[] = [];
-    const verified = dto.verified ?? dto.buy_state ?? BuyState.UNVERIFIED;
-    const deliveryType = dto.deliveryType ?? dto.delivery_type ?? null;
+    let products: any[] = []
+    const verified = normalizeBuyState(dto.verified ?? dto.buy_state)
+    const deliveryType = normalizeDelivery(dto.deliveryType ?? dto.delivery_type)
 
     try {
         if (Array.isArray(dto.products)) {
-            products = dto.products;
+            products = dto.products
         } else if (typeof dto.products === "string") {
-            products = JSON.parse(dto.products);
+            products = JSON.parse(dto.products)
         }
-    } catch (e) {
-        console.error("Error parsing products:", dto.products);
-        products = [];
+    } catch {
+        products = []
     }
+
+    const currency =
+        typeof dto.currency === "string" && dto.currency.trim()
+            ? dto.currency.trim().toUpperCase()
+            : null
 
     return {
         id: dto.$id,
-        amount: dto.amount ?? 0,
+        amount: Number(dto.amount) || 0,
+        currency,
         userId: dto.user_id ?? "",
         date: dto.date,
-        verified: verified as BuyState,
+        verified,
         products: products.map((item) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            price: item.price
+            productId: String(item?.productId ?? item?.product_id ?? ""),
+            quantity: Number(item?.quantity) || 0,
+            price: Number(item?.price) || 0,
         })),
-        deliveryType: deliveryType as DeliveryType | null
-    };
+        deliveryType,
+        createdAtIso: dto.$createdAt,
+        updatedAtIso: dto.$updatedAt,
+    }
 }
 
-/**
- * Domain → DTO (create/update payload)
- * El id de dominio se serializa en $id de Appwrite.
- */
 export function saleToDTO(sale: Sale): SaleWriteDTO {
     return {
         $id: sale.id,
         date: sale.date,
         amount: sale.amount,
+        currency: sale.currency ?? null,
         buy_state: sale.verified,
         products: sale.products.map(saleItemToDTO),
         user_id: sale.userId,
         delivery_type: sale.deliveryType ?? null,
-    };
+    }
 }

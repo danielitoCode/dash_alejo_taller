@@ -1,28 +1,26 @@
 # Core 1 — Estado MVP Back-office
 
 **Última actualización:** 2026-08-09  
-**Veredicto:** Fase 3 hecha; **4.1 listado ventas por estado** hecho.
+**Veredicto:** **4.1 y 4.2** hechos.
 
 ## Fase 4 — Ventas lectura
 
 | Tarea | Estado | Evidencia |
 |-------|--------|-----------|
-| **4.1** Filtros UNVERIFIED / VERIFIED / DELETED | **Hecho** | Tabs + `filterSalesByStatus` + tests; default = pendientes |
-| **4.2** Detalle completo | Pendiente |
-| **4.3** Currency en UI | Pendiente |
-| **4.4** Origen pedido solo lectura | Pendiente |
+| **4.1** Filtros por estado | **Hecho** | Tabs + util + tests |
+| **4.2** Detalle completo | **Hecho** | SaleDetail: líneas, qty, amount, currency, userId, fechas, delivery |
+| **4.3** Currency en UI listado | Parcial (detalle ya formatea currency del doc) |
+| **4.4** Origen solo lectura | Base en detalle |
 
-## 4.1
+## 4.2 campos en detalle
 
-- Tabs clicables: total / pendientes / confirmadas / rechazadas
-- Default: **UNVERIFIED** (cola de supervisión)
-- Select de estado sincronizado con el mismo filtro
-- Util de dominio testeable: `filterSalesByStatus`, `countSalesByStatus`
-
-```bash
-npm run test:unit
-```
+- Id venta completo + userId + nombre/email cliente
+- Estado legible + código BuyState
+- date / $createdAt / $updatedAt
+- deliveryType
+- Líneas: productId, nombre, qty, unit, total línea
+- amount con `currency` del documento (sin forzar USD)
 
 ## Siguiente
 
-**4.2** detalle de venta completo · **4.3** currency del documento Sale.
+**4.3** currency también en listado de tarjetas · o **Fase 5** confirm/reject con stock.
