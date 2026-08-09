@@ -23,6 +23,8 @@
     let draftCategoryId = "";
     let draftStatus: ProductStatus = "active";
     let draftExistence: number | string = 0;
+    /** Core1 2.3: reserved nunca es editable; solo se muestra en edición. */
+    let reservedReadOnly = 0;
     let editId: string | null = null;
     let query = "";
     let imagePending = false;
@@ -43,16 +45,14 @@
         draftCategoryId = "";
         draftStatus = "active";
         draftExistence = 0;
+        reservedReadOnly = 0;
         imageKey += 1;
-    }
-
-    function getProductImageUrl(product: Product): string | undefined {
-        return parseProductImages(product.photoUrl)[0];
     }
 
     async function create() {
         if (!draftName.trim() || !draftCategoryId || Number(draftPrice) <= 0) return;
 
+        // reserved siempre 0 en alta (SaveProductCaseUse también lo fuerza)
         const data: Product = {
             id: `p-${Math.random().toString(36).slice(2, 8)}`,
             name: draftName.trim(),
@@ -86,6 +86,7 @@
         draftCategoryId = product.categoryId;
         draftStatus = product.status;
         draftExistence = product.existence;
+        reservedReadOnly = product.reserved ?? 0;
     }
 
     async function save() {
@@ -95,9 +96,10 @@
         if (!old) return;
 
         const nextExistence = Math.max(0, Math.floor(Number(draftExistence) || 0));
-        if (nextExistence < (old.reserved ?? 0)) {
+        // reserved del form es solo lectura; la autoridad real la re-lee el case use
+        if (nextExistence < reservedReadOnly) {
             toastStore.error(
-                `existence (${nextExistence}) no puede ser menor que reserved (${old.reserved}).`
+                `existence (${nextExistence}) no puede ser menor que reserved (${reservedReadOnly}).`
             );
             return;
         }
@@ -125,19 +127,18 @@
 
         try {
             toastStore.info("Guardando cambios...");
-            await productStore.updatePrice(
-                {
-                    ...old,
-                    name: draftName.trim(),
-                    description: draftDescription.trim(),
-                    existence: nextExistence,
-                    reserved: old.reserved,
-                    photoUrl: serializeProductImages(draftPhotoUrls),
-                    categoryId: draftCategoryId,
-                    status: draftStatus
-                },
-                Number(draftPrice)
-            );
+            // updateCatalog: no escribe reserved (2.2 / 2.3)
+            await productStore.updateCatalog({
+                ...old,
+                name: draftName.trim(),
+                description: draftDescription.trim(),
+                existence: nextExistence,
+                reserved: reservedReadOnly,
+                price: Number(draftPrice),
+                photoUrl: serializeProductImages(draftPhotoUrls),
+                categoryId: draftCategoryId,
+                status: draftStatus
+            });
             toastStore.success("Producto actualizado.");
             resetForm();
         } catch (e: any) {
@@ -174,6 +175,10 @@
 
     $: isRefreshing = $productStore.loading && items.length > 0;
     $: isInitialLoading = $productStore.loading && items.length === 0;
+    $: draftAvailablePreview = Math.max(
+        0,
+        Math.floor(Number(draftExistence) || 0) - (editId ? reservedReadOnly : 0)
+    );
 </script>
 
 <section class="mgmt-page" aria-label="Gestión de productos">
@@ -182,7 +187,7 @@
             <div>
                 <h1 class="mgmt-title">Productos</h1>
                 <p class="mgmt-subtitle">
-                    Stock: available = existence − reserved. Reserved solo cambia por ventas (soft-hold).
+                    Stock: available = existence − reserved. Reserved solo cambia por ventas (soft-hold); no es editable aquí.
                 </p>
             </div>
 
@@ -207,77 +212,81 @@
             <div class="mgmt-grid">
                 <label class="mgmt-field" style="grid-column:1/-1">
                     <span>Nombre</span>
-
                     <input
-                            class="mgmt-input"
-                            bind:value={draftName}
-                            placeholder="Ej. Batería AGM 12V 9Ah"
+                        class="mgmt-input"
+                        bind:value={draftName}
+                        placeholder="Ej. Batería AGM 12V 9Ah"
                     />
                 </label>
                 <label class="mgmt-field" style="grid-column:1/-1">
                     <span>Descripción</span>
-
                     <textarea
-                            class="mgmt-input mgmt-area"
-                            bind:value={draftDescription}
-                            placeholder="Descripción del producto"/>
+                        class="mgmt-input mgmt-area"
+                        bind:value={draftDescription}
+                        placeholder="Descripción del producto"
+                    ></textarea>
+                </label>
+                <label class="mgmt-field">
+                    <span>Precio</span>
+                    <input class="mgmt-input" type="number" min="0" step="0.01" bind:value={draftPrice} />
+                </label>
+                <label class="mgmt-field">
+                    <span>Existencia</span>
+                    <input class="mgmt-input" type="number" min="0" step="1" bind:value={draftExistence} />
+                </label>
+                {#if editId}
                     <label class="mgmt-field">
-                        <span>Precio</span>
-
+                        <span>Reservado (solo lectura)</span>
                         <input
-                                class="mgmt-input"
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                bind:value={draftPrice}
+                            class="mgmt-input mgmt-input-readonly"
+                            type="number"
+                            value={reservedReadOnly}
+                            readonly
+                            tabindex="-1"
+                            aria-readonly="true"
+                            title="Soft-hold: solo lo modifican las ventas UNVERIFIED / confirm / reject"
                         />
                     </label>
                     <label class="mgmt-field">
-                        <span>Existencia</span>
-
+                        <span>Disponible (calculado)</span>
                         <input
-                                class="mgmt-input"
-                                type="number"
-                                min="0"
-                                step="1"
-                                bind:value={draftExistence}
+                            class="mgmt-input mgmt-input-readonly"
+                            type="number"
+                            value={draftAvailablePreview}
+                            readonly
+                            tabindex="-1"
+                            aria-readonly="true"
+                            title="available = existence − reserved"
                         />
                     </label>
-                    <label class="mgmt-field">
-                        <span>Categoría</span>
-
-                        <select
-                                class="mgmt-select"
-                                bind:value={draftCategoryId}
-                        >
-                            <option value="">Seleccione...</option>
-
-                            {#each availableCategories as category}
-                                <option value={category.id}>
-                                    {category.name}
-                                </option>
-                            {/each}
-                        </select>
-                    </label>
-                    <label class="mgmt-field">
-                        <span>Estado</span>
-
-                        <select
-                                class="mgmt-select"
-                                bind:value={draftStatus}
-                        >
-                            <option value="active">active</option>
-                            <option value="inactive">inactive</option>
-                        </select>
-                    </label>
+                {:else}
+                    <p class="mgmt-hint" style="grid-column:1/-1">
+                        Al crear, <strong>reserved = 0</strong>. El soft-hold lo aplican solo los clientes al pedir.
+                    </p>
+                {/if}
+                <label class="mgmt-field">
+                    <span>Categoría</span>
+                    <select class="mgmt-select" bind:value={draftCategoryId}>
+                        <option value="">Seleccione...</option>
+                        {#each availableCategories as category}
+                            <option value={category.id}>{category.name}</option>
+                        {/each}
+                    </select>
+                </label>
+                <label class="mgmt-field">
+                    <span>Estado</span>
+                    <select class="mgmt-select" bind:value={draftStatus}>
+                        <option value="active">active</option>
+                        <option value="inactive">inactive</option>
+                    </select>
                 </label>
             </div>
             <div class="product-images-field" style="grid-column:1/-1; margin-top: 10px;">
                 {#key imageKey}
                     <MultiImagePicker
-                            label="Imágenes del producto"
-                            bind:values={draftPhotoUrls}
-                            bind:pending={imagePending}
+                        label="Imágenes del producto"
+                        bind:values={draftPhotoUrls}
+                        bind:pending={imagePending}
                     />
                 {/key}
 
@@ -304,7 +313,6 @@
         <section class="mgmt-card" aria-label="Listado">
             <div class="mgmt-toolbar" style="margin-bottom:12px">
                 <h2 class="mgmt-card-title" style="margin:0">Listado</h2>
-
                 <label class="mgmt-field" style="min-width:min(420px,100%); margin:0">
                     <span class="mgmt-muted" style="display:none">Buscar</span>
                     <div style="display:flex; gap:10px; align-items:center">
@@ -337,7 +345,6 @@
                             {:else}
                                 <div class="mgmt-avatar" aria-hidden="true"></div>
                             {/if}
-
                             <div class="mgmt-row-main">
                                 <div class="mgmt-row-title">{product.name}</div>
                                 <p class="mgmt-row-sub">
@@ -351,7 +358,6 @@
                                 {/if}
                             </div>
                         </div>
-
                         <div class="mgmt-row-actions">
                             <button class="mgmt-btn ghost" on:click={() => startEdit(product)}>
                                 <Icon icon={Pencil} size={18} ariaLabel="Editar" />
@@ -404,5 +410,15 @@
         font-size: 0.9rem;
         font-weight: 600;
         color: var(--md-sys-color-on-surface-variant);
+    }
+    .mgmt-input-readonly {
+        opacity: 0.85;
+        cursor: not-allowed;
+        background: color-mix(in srgb, var(--md-sys-color-surface-variant, #e7e0ec) 55%, transparent);
+    }
+    .mgmt-hint {
+        margin: 0;
+        font-size: 0.85rem;
+        color: var(--md-sys-color-on-surface-variant, #49454f);
     }
 </style>
