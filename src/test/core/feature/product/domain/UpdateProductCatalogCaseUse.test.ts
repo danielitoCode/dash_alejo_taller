@@ -1,4 +1,2 @@
-/**
- * Compat: suite canónica en UpdateProductCatalogCaseUse.unit.test.ts
- */
-import "./UpdateProductCatalogCaseUse.unit.test"
+// Movido a UpdateProductCatalogCaseUse.unit.test.ts (proyecto vitest `unit`).
+export {}
