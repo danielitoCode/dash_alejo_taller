@@ -3,7 +3,6 @@ import {
     canAccessRoute,
     getFirstAllowedRoute,
     ROLE_ROUTE_ACCESS,
-    type /* noop */ ,
 } from "../../../../../core/feature/auth/domain/config/RoleConfig"
 import type { BusinessRole } from "../../../../../core/feature/auth/domain/entity/BusinessRole"
 
