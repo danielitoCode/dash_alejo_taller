@@ -1,43 +1,29 @@
 # Core 1 — Estado MVP Back-office
 
 **Última actualización:** 2026-08-09  
-**Veredicto desarrollo:** **parcial** — app usable pero **desalineada** respecto al soft-hold / reserved / currency de AlejoTaller Core 1.
+**Veredicto desarrollo:** en alineación — Fase 0 hecha; **Fase 1.1–1.2** en código (`reserved` / `available`).
 
-## Fase 0 — Baseline alineación
+## Fase 0 — Baseline
+
+| Tarea | Estado |
+|-------|--------|
+| 0.1 Reglas canónicas | **Hecho** |
+| 0.2 Secretos | **Hecho** |
+| 0.3 Inventario | **Hecho** |
+
+## Fase 1 — Modelo stock
 
 | Tarea | Estado | Evidencia |
 |-------|--------|-----------|
-| **0.1** Congelar reglas canónicas | **Hecho** | [`CANONICAL_RULES_FREEZE.md`](./CANONICAL_RULES_FREEZE.md) |
-| **0.2** Higiene secretos | **Hecho** | `.env` fuera del tip; `.gitignore` endurecido |
-| **0.3** Inventario de archivos a tocar | **Hecho** | [`CODE_INVENTORY_0_3.md`](./CODE_INVENTORY_0_3.md) |
+| **1.1** `reserved` en dominio + factory | **Hecho** | `Product.ts` + `availableStock()` + validaciones |
+| **1.2** DTO + mapper | **Hecho** | `ProductDTO`, `productFromDTO` / `productToDTO` / `productToCatalogWriteDTO` |
+| **1.3** Dexie schema note | Parcial | `bulkPut` ya persiste campos del DTO; versión explícita v3 opcional |
+| **1.4** `available` en UI | **Hecho (listado)** | `ProductManagement` muestra disp. / exist. / res. |
+| **1.5** Update no pisa reserved | **Hecho** | offline-first usa `productToCatalogWriteDTO` |
 
-## Resumen de alcance (código)
+## Siguiente
 
-| Área | Estado | Nota del inventario 0.3 |
-|------|--------|-------------------------|
-| Product `reserved` | Ausente | Empezar Fase 1 |
-| Verify sale + stock | Solo `buy_state` | Fase 5 — gap crítico |
-| Currency en Sale | Ausente en dominio | Fase 4 |
-| Roles / gates | Config existe | Fase 3 — validar NestedNavigation |
-| Secretos tip | Hecho | 0.2 |
-
-## Micro-tareas (post Fase 0)
-
-### Product / warehouse — Fase 1–2
-- [ ] Entidad + DTO + mapper + Dexie con `reserved`
-- [ ] UI available / reserved read-only
-- [ ] `existence >= reserved` al guardar
-
-### Auth — Fase 3
-- [ ] Gates por `ROLE_ROUTE_ACCESS`
-- [ ] UserManagement + `canManageRole`
-
-### Sale — Fase 4–5
-- [ ] Currency en modelo/UI
-- [ ] Filtros por estado
-- [ ] Confirm/reject con consume/release + idempotencia
-
-### QA
-- [ ] Tras código alineado: `QA_CORE1_CHECK_plan.md`
-
-**Siguiente implementación:** Fase **1.1** (`Product.reserved`).
+- Completar **1.3** (Dexie version bump documentado si hace falta)
+- **Fase 2** validaciones restantes / form existence ya parcial
+- **Fase 3** gates roles
+- **Fase 4–5** sale currency + confirm/reject con stock

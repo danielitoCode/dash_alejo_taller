@@ -3,8 +3,7 @@ import type {ProductRepository} from "../../domain/repository/product.repository
 import type {Product} from "../../domain/entity/Product";
 import type {PaginatedResult} from "../../domain/repository/product.repository";
 import {db} from "../../../../infrastructure/di/dexie.db";
-import {productFromDTO, productToDTO} from "../mapper/Mappers";
-import type Dexie from "dexie";
+import {productFromDTO, productToCatalogWriteDTO, productToDTO} from "../mapper/Mappers";
 import {logger} from "../../../../infrastructure/presentation/util/logger.service";
 
 export class ProductOfflineFirstRepository implements ProductRepository {
@@ -59,7 +58,9 @@ export class ProductOfflineFirstRepository implements ProductRepository {
 
     async create(product: Product): Promise<Product> {
         try {
-            const created = await this.net.create(productToDTO(product))
+            // Alta: reserved forzado a 0 en dominio antes de persistir
+            const toCreate = productToDTO({ ...product, reserved: 0 })
+            const created = await this.net.create(toCreate)
             await db.products.put(created)
             return productFromDTO(created)
         } catch (error: any) {
@@ -80,11 +81,21 @@ export class ProductOfflineFirstRepository implements ProductRepository {
         const merged: Product = {
             ...current,
             ...product,
-            id
+            id,
+            // Nunca permitir que un update de catálogo baje reserved a undefined
+            reserved: product.reserved !== undefined ? product.reserved : current.reserved,
+            existence: product.existence !== undefined ? product.existence : current.existence,
+        }
+
+        if (merged.existence < merged.reserved) {
+            throw new Error(
+                `existence (${merged.existence}) cannot be less than reserved (${merged.reserved})`
+            )
         }
 
         try {
-            const updated = await this.net.update(id, productToDTO(merged))
+            // Catálogo: no enviar reserved para no pisar soft-hold concurrente en Appwrite
+            const updated = await this.net.update(id, productToCatalogWriteDTO(merged))
             await db.products.put(updated)
             return productFromDTO(updated)
         } catch (error: any) {

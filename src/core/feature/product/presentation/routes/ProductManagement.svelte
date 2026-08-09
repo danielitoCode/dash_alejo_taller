@@ -2,7 +2,7 @@
     import { onMount } from "svelte";
     import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
     import MultiImagePicker from "../components/MultiImagePicker.svelte";
-    import { getPrimaryProductImage } from "../../domain/entity/Product";
+    import { availableStock, getPrimaryProductImage } from "../../domain/entity/Product";
     import LoadingSpinner from "../../../../infrastructure/presentation/components/LoadingSpinner.svelte";
     import SkeletonList from "../../../../infrastructure/presentation/components/SkeletonList.svelte";
     import { logger } from "../../../../infrastructure/presentation/util/logger.service";
@@ -22,6 +22,7 @@
     let draftPhotoUrls: string[] = [];
     let draftCategoryId = "";
     let draftStatus: ProductStatus = "active";
+    let draftExistence: number | string = 0;
     let editId: string | null = null;
     let query = "";
     let imagePending = false;
@@ -41,6 +42,7 @@
         draftPhotoUrls = [];
         draftCategoryId = "";
         draftStatus = "active";
+        draftExistence = 0;
         imageKey += 1;
     }
 
@@ -55,6 +57,8 @@
             id: `p-${Math.random().toString(36).slice(2, 8)}`,
             name: draftName.trim(),
             description: draftDescription.trim(),
+            existence: Math.max(0, Math.floor(Number(draftExistence) || 0)),
+            reserved: 0,
             price: Number(draftPrice),
             photoUrl: serializeProductImages(draftPhotoUrls),
             categoryId: draftCategoryId,
@@ -81,6 +85,7 @@
         draftPhotoUrls = parseProductImages(product.photoUrl);
         draftCategoryId = product.categoryId;
         draftStatus = product.status;
+        draftExistence = product.existence;
     }
 
     async function save() {
@@ -88,6 +93,14 @@
 
         const old = $productStore.items.find((p) => p.id === editId);
         if (!old) return;
+
+        const nextExistence = Math.max(0, Math.floor(Number(draftExistence) || 0));
+        if (nextExistence < (old.reserved ?? 0)) {
+            toastStore.error(
+                `existence (${nextExistence}) no puede ser menor que reserved (${old.reserved}).`
+            );
+            return;
+        }
 
         if (Number(draftPrice) < old.price) {
             const discountPercent = Math.round(((old.price - Number(draftPrice)) / old.price) * 100);
@@ -117,6 +130,8 @@
                     ...old,
                     name: draftName.trim(),
                     description: draftDescription.trim(),
+                    existence: nextExistence,
+                    reserved: old.reserved,
                     photoUrl: serializeProductImages(draftPhotoUrls),
                     categoryId: draftCategoryId,
                     status: draftStatus
@@ -167,7 +182,7 @@
             <div>
                 <h1 class="mgmt-title">Productos</h1>
                 <p class="mgmt-subtitle">
-                    Si un precio baja, el sistema crea una promoción automática con el porcentaje de descuento.
+                    Stock: available = existence − reserved. Reserved solo cambia por ventas (soft-hold).
                 </p>
             </div>
 
@@ -215,6 +230,17 @@
                                 min="0"
                                 step="0.01"
                                 bind:value={draftPrice}
+                        />
+                    </label>
+                    <label class="mgmt-field">
+                        <span>Existencia</span>
+
+                        <input
+                                class="mgmt-input"
+                                type="number"
+                                min="0"
+                                step="1"
+                                bind:value={draftExistence}
                         />
                     </label>
                     <label class="mgmt-field">
@@ -303,6 +329,7 @@
 
                 {#each filtered as product (product.id)}
                     {@const primaryImage = getPrimaryProductImage(product.photoUrl)}
+                    {@const available = availableStock(product)}
                     <article class="mgmt-row" aria-label={product.name}>
                         <div style="display:grid; grid-template-columns:58px 1fr; gap:12px; align-items:center">
                             {#if primaryImage}
@@ -315,6 +342,9 @@
                                 <div class="mgmt-row-title">{product.name}</div>
                                 <p class="mgmt-row-sub">
                                     <CategoryName categoryId={product.categoryId} /> · ${product.price.toFixed(2)} · {product.status}
+                                </p>
+                                <p class="mgmt-row-sub">
+                                    Stock: {available} disp. (exist. {product.existence} · res. {product.reserved ?? 0})
                                 </p>
                                 {#if activePromotionProductIds.has(product.id)}
                                     <p class="mgmt-row-sub">Promoción activa</p>
@@ -376,8 +406,3 @@
         color: var(--md-sys-color-on-surface-variant);
     }
 </style>
-
-
-
-
-
