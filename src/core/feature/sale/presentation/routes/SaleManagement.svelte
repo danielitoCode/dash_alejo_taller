@@ -11,6 +11,10 @@
         saleStateLabel,
         type SaleStatusFilter,
     } from "../../domain/util/filterSalesByStatus";
+    import {
+        formatSaleMoney,
+        saleCurrencyCode,
+    } from "../../domain/util/formatSaleMoney";
     import { salesDetail } from "../../../../infrastructure/presentation/navigation/nested.router";
     import LoadingSpinner from "../../../../infrastructure/presentation/components/LoadingSpinner.svelte";
     import SkeletonTiles from "../../../../infrastructure/presentation/components/SkeletonTiles.svelte";
@@ -21,7 +25,6 @@
     export let navController: NavController;
 
     let query = "";
-    /** Core1 4.1: por defecto cola de pendientes (supervisión). */
     let statusFilter: SaleStatusFilter = BuyState.UNVERIFIED;
 
     onMount(() => {
@@ -102,7 +105,9 @@
         <header class="mgmt-page-head">
             <div class="mgmt-page-title">
                 <h1 class="mgmt-h1">Ventas</h1>
-                <p class="mgmt-muted">Supervisión por estado · cola pendiente por defecto</p>
+                <p class="mgmt-muted">
+                    Supervisión por estado · importes con moneda del documento del cliente
+                </p>
             </div>
             <div class="mgmt-chip-row status-tabs" role="tablist" aria-label="Filtrar por estado">
                 <button
@@ -182,7 +187,7 @@
             {:else}
                 <div class="sales-grid">
                     {#each filteredItems as sale (sale.id)}
-                        <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+                        {@const code = saleCurrencyCode(sale.currency)}
                         <div class="sale-card-wrapper">
                             <button class="sale-card" type="button" on:click={() => openDetail(sale.id)}>
                                 <div class="sale-top">
@@ -197,11 +202,16 @@
                                             <span class="pill {saleStateClass(sale.verified)}">
                                                 {saleStateLabel(sale.verified)}
                                             </span>
+                                            {#if code}
+                                                <span class="pill currency">{code}</span>
+                                            {/if}
                                             <span class="dot">•</span>
                                             <span class="muted">{new Date(sale.date).toLocaleString()}</span>
                                         </div>
                                     </div>
-                                    <div class="sale-amount">${(sale.amount ?? 0).toFixed(2)}</div>
+                                    <div class="sale-amount">
+                                        {formatSaleMoney(sale.amount ?? 0, sale.currency)}
+                                    </div>
                                 </div>
 
                                 <div class="sale-meta">
@@ -220,7 +230,9 @@
                                         <div class="tooltip-item">
                                             <span class="tooltip-qty">{item.quantity}x</span>
                                             <span class="tooltip-name">{item.name}</span>
-                                            <span class="tooltip-price">${Number(item.price || 0).toFixed(2)}</span>
+                                            <span class="tooltip-price">
+                                                {formatSaleMoney(item.price, sale.currency)}
+                                            </span>
                                         </div>
                                     {:else}
                                         <span class="tooltip-empty">No hay productos en esta venta</span>
@@ -348,7 +360,8 @@
         opacity: 1;
         visibility: visible;
         transform: translateY(0);
-        transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28), visibility 0s ease 0s;
+        transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28),
+            visibility 0s ease 0s;
     }
 
     .sale-top {
@@ -384,8 +397,9 @@
         color: var(--md-sys-color-on-background);
         font-weight: 1000;
         letter-spacing: -0.02em;
-        font-size: 1.2rem;
+        font-size: 1.15rem;
         white-space: nowrap;
+        text-align: right;
     }
 
     .sale-meta {
@@ -405,6 +419,12 @@
         background: color-mix(in srgb, var(--md-sys-color-surface-variant) 35%, transparent);
         white-space: nowrap;
         color: var(--md-sys-color-on-surface);
+    }
+
+    .pill.currency {
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        opacity: 0.95;
     }
 
     .pill.verified {
