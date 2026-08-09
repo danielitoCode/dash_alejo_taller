@@ -1,20 +1,28 @@
-﻿<script lang="ts">
+<script lang="ts">
     import { onMount } from "svelte";
     import type { NavController } from "../../../../../lib/navigation/NavController";
     import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
     import { toastStore } from "../../../../infrastructure/presentation/viewmodel/toast.store";
     import { saleStore } from "../viewmodel/sale.store";
     import { BuyState } from "../../domain/entity/enums";
+    import {
+        countSalesByStatus,
+        filterSalesByStatus,
+        saleStateLabel,
+        type SaleStatusFilter,
+    } from "../../domain/util/filterSalesByStatus";
     import { salesDetail } from "../../../../infrastructure/presentation/navigation/nested.router";
     import LoadingSpinner from "../../../../infrastructure/presentation/components/LoadingSpinner.svelte";
     import SkeletonTiles from "../../../../infrastructure/presentation/components/SkeletonTiles.svelte";
-    import {userManagementStore} from "../../../auth/presentation/viewmodel/user-management.store";
+    import { userManagementStore } from "../../../auth/presentation/viewmodel/user-management.store";
     import { productStore } from "../../../product/presentation/viewmodel/product.store";
     import { BadgeDollarSign, ChevronRight, Inbox, Search, ShieldCheck, XCircle } from "lucide-svelte";
 
     export let navController: NavController;
+
     let query = "";
-    let statusFilter: "all" | BuyState = "all";
+    /** Core1 4.1: por defecto cola de pendientes (supervisión). */
+    let statusFilter: SaleStatusFilter = BuyState.UNVERIFIED;
 
     onMount(() => {
         saleStore.syncAll().catch(() => toastStore.error("Error al sincronizar ventas"));
@@ -26,52 +34,49 @@
         navController.navigate(salesDetail.path, { id });
     }
 
-    function saleStateText(state: BuyState): string {
-        if (state === BuyState.UNVERIFIED) return "Pendiente";
-        if (state === BuyState.DELETED) return "Rechazado";
-        return "Confirmado";
-    }
-
     function saleStateClass(state: BuyState): string {
         if (state === BuyState.UNVERIFIED) return "unverified";
         if (state === BuyState.DELETED) return "rejected";
         return "verified";
     }
 
+    function setStatusTab(filter: SaleStatusFilter) {
+        statusFilter = filter;
+    }
+
     function getSaleItemsDetails(saleId: string) {
-        const sale = $saleStore.items.find(s => s.id === saleId);
+        const sale = $saleStore.items.find((s) => s.id === saleId);
         if (!sale || !Array.isArray(sale.products)) return [];
 
-        return sale.products.map(item => {
+        return sale.products.map((item) => {
             const rawId = typeof item === "string" ? item : (item?.productId ?? "");
-            const product = $productStore.items.find(p => p.id === rawId);
+            const product = $productStore.items.find((p) => p.id === rawId);
             return {
                 name: product ? product.name : "Producto reservado / desconocido",
                 quantity: typeof item === "object" ? (item?.quantity ?? 1) : 1,
-                price: typeof item === "object" ? (item?.price ?? 0) : 0
+                price: typeof item === "object" ? (item?.price ?? 0) : 0,
             };
         });
+    }
+
+    function resolveUserSale(saleId: string) {
+        const sale = $saleStore.items.find((s) => s.id === saleId);
+        if (!sale) return "Usuario desconocido";
+        const user = $userManagementStore.items.find((u) => u.id === sale.userId);
+        return user ? user.name : "Usuario desconocido";
     }
 
     $: items = $saleStore.items
         .slice()
         .sort((a, b) => new Date(b.date ?? 0).getTime() - new Date(a.date ?? 0).getTime());
 
-    $: pending = items.filter((s) => s.verified === BuyState.UNVERIFIED).length;
-    $: verified = items.filter((s) => s.verified === BuyState.VERIFIED).length;
-    $: rejected = items.filter((s) => s.verified === BuyState.DELETED).length;
+    $: counts = countSalesByStatus(items);
     $: isRefreshing = $saleStore.loading && items.length > 0;
     $: isInitialLoading = $saleStore.loading && items.length === 0;
 
-    function resolveUserSale(saleId: string) {
-        const sale = $saleStore.items.find(s => s.id === saleId);
-        if (!sale) return "Usuario desconocido";
-        const user = $userManagementStore.items.find(u => u.id === sale.userId);
-        return user ? user.name : "Usuario desconocido";
-    }
+    $: byStatus = filterSalesByStatus(items, statusFilter);
 
-    $: filteredItems = items.filter((sale) => {
-        if (statusFilter !== "all" && sale.verified !== statusFilter) return false;
+    $: filteredItems = byStatus.filter((sale) => {
         const q = query.trim().toLowerCase();
         if (!q) return true;
         const userName = resolveUserSale(sale.id).toLowerCase();
@@ -80,6 +85,16 @@
         return safeId.includes(q) || safeUserId.includes(q) || userName.includes(q);
     });
 
+    $: emptyMessage =
+        items.length === 0
+            ? "No hay ventas registradas."
+            : statusFilter === BuyState.UNVERIFIED
+              ? "No hay pedidos pendientes."
+              : statusFilter === BuyState.VERIFIED
+                ? "No hay ventas confirmadas en este filtro."
+                : statusFilter === BuyState.DELETED
+                  ? "No hay ventas rechazadas en este filtro."
+                  : "No hay resultados para la búsqueda.";
 </script>
 
 <section class="mgmt-screen">
@@ -87,25 +102,53 @@
         <header class="mgmt-page-head">
             <div class="mgmt-page-title">
                 <h1 class="mgmt-h1">Ventas</h1>
-                <p class="mgmt-muted">Pedidos y confirmaciones</p>
+                <p class="mgmt-muted">Supervisión por estado · cola pendiente por defecto</p>
             </div>
-            <div class="mgmt-chip-row">
-                <span class="mgmt-chip">
+            <div class="mgmt-chip-row status-tabs" role="tablist" aria-label="Filtrar por estado">
+                <button
+                    type="button"
+                    role="tab"
+                    class="mgmt-chip tab"
+                    class:active={statusFilter === "all"}
+                    aria-selected={statusFilter === "all"}
+                    on:click={() => setStatusTab("all")}
+                >
                     <Icon icon={BadgeDollarSign} size={18} ariaLabel="Total" />
-                    {items.length} total
-                </span>
-                <span class="mgmt-chip">
+                    {counts.total} total
+                </button>
+                <button
+                    type="button"
+                    role="tab"
+                    class="mgmt-chip tab"
+                    class:active={statusFilter === BuyState.UNVERIFIED}
+                    aria-selected={statusFilter === BuyState.UNVERIFIED}
+                    on:click={() => setStatusTab(BuyState.UNVERIFIED)}
+                >
                     <Icon icon={Inbox} size={18} ariaLabel="Pendientes" />
-                    {pending} pendientes
-                </span>
-                <span class="mgmt-chip">
+                    {counts.pending} pendientes
+                </button>
+                <button
+                    type="button"
+                    role="tab"
+                    class="mgmt-chip tab"
+                    class:active={statusFilter === BuyState.VERIFIED}
+                    aria-selected={statusFilter === BuyState.VERIFIED}
+                    on:click={() => setStatusTab(BuyState.VERIFIED)}
+                >
                     <Icon icon={ShieldCheck} size={18} ariaLabel="Confirmadas" />
-                    {verified} confirmadas
-                </span>
-                <span class="mgmt-chip">
+                    {counts.verified} confirmadas
+                </button>
+                <button
+                    type="button"
+                    role="tab"
+                    class="mgmt-chip tab"
+                    class:active={statusFilter === BuyState.DELETED}
+                    aria-selected={statusFilter === BuyState.DELETED}
+                    on:click={() => setStatusTab(BuyState.DELETED)}
+                >
                     <Icon icon={XCircle} size={18} ariaLabel="Rechazadas" />
-                    {rejected} rechazadas
-                </span>
+                    {counts.rejected} rechazadas
+                </button>
                 {#if isRefreshing}
                     <span class="mgmt-chip" aria-label="Sincronizando">
                         <LoadingSpinner size={16} label="Sincronizando" subtle />
@@ -114,6 +157,7 @@
                 {/if}
             </div>
         </header>
+
         <section class="mgmt-card">
             <div class="filters">
                 <label class="filter-field search">
@@ -130,10 +174,11 @@
                     </select>
                 </label>
             </div>
+
             {#if isInitialLoading}
                 <SkeletonTiles count={6} columns={2} />
             {:else if filteredItems.length === 0}
-                <p class="mgmt-muted">No hay ventas registradas.</p>
+                <p class="mgmt-muted">{emptyMessage}</p>
             {:else}
                 <div class="sales-grid">
                     {#each filteredItems as sale (sale.id)}
@@ -150,7 +195,7 @@
                                         </div>
                                         <div class="sale-sub">
                                             <span class="pill {saleStateClass(sale.verified)}">
-                                                {saleStateText(sale.verified)}
+                                                {saleStateLabel(sale.verified)}
                                             </span>
                                             <span class="dot">•</span>
                                             <span class="muted">{new Date(sale.date).toLocaleString()}</span>
@@ -165,7 +210,6 @@
                                 </div>
                             </button>
 
-                            <!-- Tooltip Estilizado -->
                             <div class="custom-tooltip">
                                 <div class="tooltip-header">
                                     <Icon icon={Inbox} size={14} ariaLabel="Productos" />
@@ -201,10 +245,37 @@
 
     h2 {
         margin: 0;
-        font-size: 1.0rem;
+        font-size: 1rem;
         letter-spacing: -0.01em;
         font-weight: 790;
     }
+
+    .status-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .mgmt-chip.tab {
+        cursor: pointer;
+        border: 1px solid var(--md-sys-color-outline-variant);
+        background: transparent;
+        font: inherit;
+        color: inherit;
+        transition: background-color 140ms ease, border-color 140ms ease;
+    }
+
+    .mgmt-chip.tab:hover {
+        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 40%, transparent);
+    }
+
+    .mgmt-chip.tab.active {
+        border-color: var(--md-sys-color-primary);
+        background: color-mix(in srgb, var(--md-sys-color-primary) 18%, transparent);
+        font-weight: 800;
+    }
+
     .sales-grid {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -264,15 +335,15 @@
         gap: 12px;
         box-shadow: 0 14px 34px color-mix(in srgb, black 30%, transparent);
         transition: border-color 0.2s ease, background-color 0.2s ease;
+        cursor: pointer;
     }
 
     .sale-card:hover {
         border-color: color-mix(in srgb, var(--md-sys-color-primary) 35%, var(--md-sys-color-outline-variant));
         background: color-mix(in srgb, var(--md-sys-color-primary) 10%, var(--md-sys-color-surface) 88%);
-        z-index: 2; /* Para que al flotar quede por encima */
+        z-index: 2;
     }
 
-    /* Animación del tooltip */
     .sale-card-wrapper:hover .custom-tooltip {
         opacity: 1;
         visibility: visible;
@@ -339,19 +410,19 @@
     .pill.verified {
         border-color: color-mix(in srgb, #22c55e 35%, var(--md-sys-color-outline-variant));
         background: color-mix(in srgb, #22c55e 15%, transparent);
-        color: #4ade80; /* Verde brillante para visibilidad */
+        color: #4ade80;
     }
 
     .pill.unverified {
         border-color: color-mix(in srgb, #f97316 38%, var(--md-sys-color-outline-variant));
         background: color-mix(in srgb, #f97316 15%, transparent);
-        color: #fb923c; /* Naranja claro */
+        color: #fb923c;
     }
 
     .pill.rejected {
         border-color: color-mix(in srgb, #ef4444 38%, var(--md-sys-color-outline-variant));
         background: color-mix(in srgb, #ef4444 15%, transparent);
-        color: #f87171; /* Rojo claro */
+        color: #f87171;
     }
 
     .muted {
@@ -363,7 +434,6 @@
         opacity: 0.7;
     }
 
-    /* Tooltip Premium Styles */
     .custom-tooltip {
         position: absolute;
         top: calc(100% + 8px);
@@ -376,12 +446,12 @@
         border: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 40%, transparent);
         border-radius: 14px;
         padding: 12px;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05) inset;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
         z-index: 50;
         opacity: 0;
         visibility: hidden;
         transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s ease 0.2s;
-        pointer-events: none; /* Que no interrumpa el clic ni el hover del botón original */
+        pointer-events: none;
     }
 
     .tooltip-header {
@@ -445,9 +515,9 @@
         .sales-grid {
             grid-template-columns: 1fr;
         }
-        
+
         .custom-tooltip {
-            display: none; /* Escondemos el tooltip en mobile ya que no hay 'hover' real (tap abre el detalle) */
+            display: none;
         }
     }
 </style>
