@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
     import { onDestroy, onMount } from "svelte";
     import { fade } from "svelte/transition";
     import type { NavBackStackEntry } from "../../../../lib/navigation/NavBackStackEntry";
@@ -9,6 +9,10 @@
     import { authContainer } from "../../../feature/auth/di/auth.container";
     import { sessionStore } from "../../../feature/auth/presentation/viewmodel/session.store";
     import { normalizeBusinessRole, type BusinessRole } from "../../../feature/auth/domain/entity/BusinessRole";
+    import {
+        canAccessRoute,
+        getFirstAllowedRoute,
+    } from "../../../feature/auth/domain/config/RoleConfig";
     import CategoryManagement from "../../../feature/category/presentation/routes/CategoryManagement.svelte";
     import ProductManagement from "../../../feature/product/presentation/routes/ProductManagement.svelte";
     import { categoryStore } from "../../../feature/category/presentation/viewmodel/category.store";
@@ -71,31 +75,25 @@
         { label: "Ajustes", path: settings.path, icon: Settings }
     ];
 
-    const roleAccess: Record<BusinessRole, string[]> = {
-        owner: [dashboard.path, support.path, supportDetail.path, users.path, product.path, category.path, sales.path, salesDetail.path, promo.path, settings.path, reservation.path],
-        admin: [dashboard.path, support.path, supportDetail.path, users.path, product.path, category.path, sales.path, salesDetail.path, promo.path, settings.path, reservation.path],
-        sales: [dashboard.path, support.path, supportDetail.path, sales.path, salesDetail.path, reservation.path],
-        viewer: [dashboard.path, support.path, supportDetail.path]
-    };
-
+    /** Core1 3.1: única fuente = RoleConfig.ROLE_ROUTE_ACCESS */
     function canAccess(path: string): boolean {
-        return roleAccess[currentRole]?.includes(path) ?? false;
+        return canAccessRoute(currentRole, path);
     }
 
     function firstAllowedPath(role: BusinessRole): string {
-        return roleAccess[role]?.[0] ?? dashboard.path;
+        return getFirstAllowedRoute(role);
     }
 
     const internalStackStore = internalNavController._getStackStore();
     $: internalStack = $internalStackStore;
     $: currentPath = internalStack.at(-1)?.route ?? dashboard.path;
-    // IMPORTANTE: Se referencia `currentRole` directamente para que Svelte
-    // detecte la dependencia reactiva y re-evalúe cuando el rol cambie.
-    // Usar canAccess() aquí oculta la dependencia al compilador de Svelte.
-    $: visibleItems = items.filter((item) => roleAccess[currentRole]?.includes(item.path) ?? false);
-    $: if (currentRole && currentPath && !canAccess(currentPath)) {
+    // currentRole en el filtro para reactividad Svelte
+    $: visibleItems = items.filter((item) => canAccessRoute(currentRole, item.path));
+    $: if (currentRole && currentPath && !canAccessRoute(currentRole, currentPath)) {
         const allowedPath = firstAllowedPath(currentRole);
         if (allowedPath !== currentPath) {
+            logger.info(`[NestedNav] 3.1 ruta bloqueada path=${currentPath} role=${currentRole} → ${allowedPath}`);
+            toastStore.error("Tu rol no tiene acceso a esta sección.");
             internalNavController.navigate(allowedPath);
         }
     }
@@ -110,7 +108,7 @@
     let queuedSales = false;
 
     function go(path: string) {
-        if (!canAccess(path)) {
+        if (!canAccessRoute(currentRole, path)) {
             toastStore.error("Tu rol no tiene acceso a esta sección.");
             sidebarOpen = false;
             return;
@@ -119,7 +117,6 @@
         sidebarOpen = false;
     }
 
-    // 🔄 Refrescar rol sin desloguearse (útil cuando cambias el rol en AppWrite)
     async function refreshUserRole() {
         try {
             logger.info("[NestedNav] Refrescando rol del usuario...");
@@ -133,7 +130,7 @@
                 toastStore.success(`✅ Rol actualizado a: ${newRole}`);
 
                 const allowedPath = firstAllowedPath(currentRole);
-                if (!canAccess(currentPath)) {
+                if (!canAccessRoute(currentRole, currentPath)) {
                     internalNavController.navigate(allowedPath);
                 }
             } else {
@@ -160,7 +157,6 @@
             .then((u) => {
                 currentRole = normalizeBusinessRole(u.role);
 
-                // 🔍 DIAGNÓSTICO: Si el rol es null, mostrar advertencia
                 if (u.role === null || u.role === undefined) {
                     logger.warn(
                         "[NestedNav] Usuario sin rol configurado. Labels:",
@@ -182,7 +178,8 @@
                 }
 
                 const allowedPath = firstAllowedPath(currentRole);
-                if (!canAccess(currentPath)) {
+                if (!canAccessRoute(currentRole, currentPath)) {
+                    logger.info(`[NestedNav] 3.1 entrada bloqueada → ${allowedPath}`);
                     internalNavController.navigate(allowedPath);
                 }
             })
@@ -627,7 +624,6 @@
         }
     }
 
-    /* Tablet: rail compacto (solo iconos) */
     @media (min-width: 861px) and (max-width: 1100px) {
         .nested-shell {
             grid-template-columns: 84px 1fr;
@@ -686,4 +682,3 @@
         background: transparent;
     }
 </style>
-
