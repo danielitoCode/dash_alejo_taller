@@ -6,18 +6,17 @@ import {GetProductByIdCaseUse} from "../domain/caseuse/GetProductByIdCaseUse";
 import {SaveProductCaseUse} from "../domain/caseuse/SaveProductCaseUse";
 import {DeleteProductCaseUse} from "../domain/caseuse/DeleteProductCaseUse";
 import {UpdateProductPriceCaseUse} from "../domain/caseuse/UpdateProductPriceCaseUse";
+import {UpdateProductCatalogCaseUse} from "../domain/caseuse/UpdateProductCatalogCaseUse";
 
-// Database instance
 const database = infrastructureContainer.appwrite.databases
 
-// Data
 const productNetRepository = new ProductNetRepository(database)
 const productOfflineFirstRepository = new ProductOfflineFirstRepository(productNetRepository)
 
-// Domain
 const getAllProductsCaseUse = new GetAllProductCaseUse(productOfflineFirstRepository)
 const deletedProductCaseUse = new DeleteProductCaseUse(productOfflineFirstRepository)
 const getProductByIdCaseUse = new GetProductByIdCaseUse(productOfflineFirstRepository)
+const updateProductCatalogCaseUse = new UpdateProductCatalogCaseUse(productOfflineFirstRepository)
 const modifyProductPriceCaseUse = new UpdateProductPriceCaseUse(productOfflineFirstRepository)
 const saveProductCaseUse = new SaveProductCaseUse(productOfflineFirstRepository)
 
@@ -30,6 +29,7 @@ export const productContainer = {
         getAll: getAllProductsCaseUse,
         getById: getProductByIdCaseUse,
         create: saveProductCaseUse,
+        updateCatalog: updateProductCatalogCaseUse,
         updatePrice: modifyProductPriceCaseUse,
         delete: deletedProductCaseUse
     }

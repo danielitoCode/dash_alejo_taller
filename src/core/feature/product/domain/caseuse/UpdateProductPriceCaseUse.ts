@@ -1,12 +1,22 @@
-import type {ProductOfflineFirstRepository} from "../../data/repository/product.offline-first.repository";
-import type {Product} from "../entity/Product";
-import type {ProductRepository} from "../repository/product.repository";
+import type { Product } from "../entity/Product"
+import type { ProductRepository } from "../repository/product.repository"
+import { UpdateProductCatalogCaseUse } from "./UpdateProductCatalogCaseUse"
 
+/**
+ * Actualiza precio (y resto de campos del product pasado) pasando por
+ * la misma validación 2.2: existence >= reserved re-leído.
+ */
 export class UpdateProductPriceCaseUse {
-    constructor(private readonly productRepository: ProductRepository) {}
-    async execute(newPrice: number, product: Product): Promise<void>  {
-        if(newPrice <= 0) throw new Error("Price must be greater than 0");
-        product.price = newPrice
-        await this.productRepository.update(product.id,product)
+    private readonly catalogUpdate: UpdateProductCatalogCaseUse
+
+    constructor(private readonly productRepository: ProductRepository) {
+        this.catalogUpdate = new UpdateProductCatalogCaseUse(productRepository)
+    }
+
+    async execute(newPrice: number, product: Product): Promise<void> {
+        await this.catalogUpdate.execute({
+            ...product,
+            price: newPrice,
+        })
     }
 }

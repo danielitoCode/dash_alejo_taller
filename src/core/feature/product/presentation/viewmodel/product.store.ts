@@ -118,6 +118,17 @@ function createProductStore() {
         })
     }
 
+    /** Edición de catálogo (2.2): valida existence >= reserved re-leído. */
+    async function updateCatalog(product: Product): Promise<void> {
+        await runSaving(async () => {
+            await productContainer.useCases.updateCatalog.execute(product)
+            await syncAll()
+            const synced = await productContainer.useCases.getById.execute(product.id)
+            update((state) => ({...state, selected: synced}))
+        })
+    }
+
+    /** Compat: precio + resto de campos vía la misma validación 2.2. */
     async function updatePrice(product: Product, newPrice: number): Promise<void> {
         await runSaving(async () => {
             await productContainer.useCases.updatePrice.execute(newPrice, product)
@@ -130,7 +141,6 @@ function createProductStore() {
     async function removeById(id: string): Promise<void> {
         await runSaving(async () => {
             await productContainer.useCases.delete.execute(id)
-            // If the item deleted was the only one on the page, and page > 1, go back one page
             let newPage = 1
             update((state) => {
                 const totalPages = Math.ceil((state.total - 1) / state.pageSize)
@@ -164,6 +174,7 @@ function createProductStore() {
         prevPage,
         syncById,
         create,
+        updateCatalog,
         updatePrice,
         removeById,
         clearError,
