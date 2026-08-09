@@ -1,6 +1,7 @@
 # Alineación dash ↔ AlejoTaller (Core 1)
 
-**Fecha:** 2026-08-09
+**Fecha:** 2026-08-09  
+**Reglas congeladas:** ver [`CANONICAL_RULES_FREEZE.md`](./CANONICAL_RULES_FREEZE.md) (**tarea 0.1 hecha**).
 
 ## Actores del ecosistema
 
@@ -22,7 +23,8 @@
 | Currency | Se muestra la del documento `Sale`; no forzar USD en UI admin |
 | Autoridad stock | Appwrite; cache Dexie solo para UI |
 
-Fuente: `AlejoTaller/.policies/warehouse/WAREHOUSE_POLICY.md`, `.../sale/SALE_POLICY.md`.
+Fuente canónica: `AlejoTaller/.policies/warehouse`, `AlejoTaller/.policies/sale`.  
+Resumen operativo dash: [`CANONICAL_RULES_FREEZE.md`](./CANONICAL_RULES_FREEZE.md).
 
 ## Gaps conocidos del dash (baseline pre-alineación)
 
@@ -30,7 +32,7 @@ Fuente: `AlejoTaller/.policies/warehouse/WAREHOUSE_POLICY.md`, `.../sale/SALE_PO
 2. Verificación de venta en dash puede no usar el mismo camino atómico que operador/clientes.
 3. Realtime de stock/sale en clientes migró a Appwrite; dash no está obligado a suscribirse en Core 1, pero **sí** a no escribir estados inconsistentes.
 4. Último commit de producto ~2026-07-01; políticas AlejoTaller evolucionaron en agosto 2026.
-5. `.env` versionado en el repo (deuda de seguridad).
+5. `.env` versionado en el repo (deuda de seguridad) — **tarea 0.2**.
 
 ## Competencia del panel vs operador
 

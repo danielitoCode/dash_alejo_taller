@@ -3,6 +3,14 @@
 **Última actualización:** 2026-08-09  
 **Veredicto desarrollo:** **parcial** — app usable (auth, catálogo, ventas, promos, support) pero **desalineada** respecto al soft-hold / reserved / Realtime / currency de AlejoTaller Core 1.
 
+## Fase 0 — Baseline alineación
+
+| Tarea | Estado | Evidencia |
+|-------|--------|-----------|
+| **0.1** Congelar reglas canónicas | **Hecho** | [`CANONICAL_RULES_FREEZE.md`](./CANONICAL_RULES_FREEZE.md) |
+| **0.2** Higiene secretos (`.env` / `.npm-cache`) | Pendiente | — |
+| **0.3** Inventario de archivos a tocar | Pendiente | — |
+
 ## Resumen de alcance
 
 | Área | Estado desarrollo | Notas |
@@ -15,8 +23,8 @@
 | Currency en detalle de venta | Pendiente | Debe mostrar moneda del pedido (paridad operador) |
 | Soft-hold respect | Pendiente | Panel no debe pisar `reserved` al editar existence a ciegas |
 | Realtime stock/sale | Pendiente | Clientes ya usan Appwrite RT; dash aún orientado a flujos legacy/Pusher support |
-| Secretos / `.env` en repo | Deuda | Core 1 exige higiene mínima |
-| QA checklist | Documentado | Ejecución pendiente |
+| Secretos / `.env` en repo | Deuda | Core 1 exige higiene mínima (tarea **0.2**) |
+| QA checklist | Documentado | Ejecución **después** de alineación código |
 
 ## Micro-tareas Core 1 (checklist desarrollo)
 
