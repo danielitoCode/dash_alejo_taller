@@ -2,6 +2,10 @@ import type { Functions } from "appwrite";
 import type { AdminNetRepository } from "../../domain/repository/admin.net.repository";
 import type { User } from "../../domain/entity/User";
 import { ENV } from "../../../../infrastructure/env";
+import {
+    normalizeAppwriteLabels,
+    resolveBusinessRole,
+} from "../../domain/config/RoleConfig";
 
 type UsersFunctionResult = {
     success?: boolean;
@@ -41,23 +45,16 @@ export class AdminNetManagerImpl implements AdminNetRepository {
         return result as T;
     }
 
+    /** Core1 3.3: rol desde labels Appwrite (ROLE_LABELS / jerarquía). */
     private mapAppwriteUser(raw: any): User {
-        const labels: string[] = Array.isArray(raw?.labels)
-            ? raw.labels.filter((v: any) => typeof v === "string")
-            : [];
+        const labels = normalizeAppwriteLabels(raw?.labels);
         const prefs = raw?.prefs && typeof raw.prefs === "object" ? raw.prefs : {};
 
-        const roleFromLabels = labels.includes("owner")
-            ? "owner"
-            : labels.includes("admin")
-              ? "admin"
-              : labels.includes("sales")
-                ? "sales"
-                : labels.includes("viewer")
-                  ? "viewer"
-                  : null;
-
-        const role = roleFromLabels ?? (typeof prefs?.role === "string" ? prefs.role : null);
+        const role = resolveBusinessRole({
+            labels,
+            prefsRole: typeof prefs?.role === "string" ? prefs.role : null,
+            role: typeof raw?.role === "string" ? raw.role : null,
+        });
 
         return {
             id: String(raw?.$id ?? raw?.id ?? ""),
@@ -70,7 +67,7 @@ export class AdminNetManagerImpl implements AdminNetRepository {
             verification: Boolean(raw?.emailVerification ?? raw?.email_verification ?? false),
             role,
             status: typeof raw?.status === "boolean" ? raw.status : undefined,
-            labels
+            labels,
         };
     }
 
@@ -93,17 +90,22 @@ export class AdminNetManagerImpl implements AdminNetRepository {
             email: params.email,
             phone: params.phone,
             password: params.password,
-            labels: params.labels
+            labels: params.labels ? normalizeAppwriteLabels(params.labels) : undefined
         });
 
         return this.mapAppwriteUser(result.user);
     }
 
     async updateUser(params: { userId: string; patch: Record<string, unknown> }): Promise<User> {
+        const patch = { ...params.patch };
+        if (Array.isArray(patch.labels)) {
+            patch.labels = normalizeAppwriteLabels(patch.labels);
+        }
+
         const result = await this.exec<{ success: boolean; user: any }>({
             action: "update",
             userId: params.userId,
-            ...params.patch
+            ...patch
         });
 
         return this.mapAppwriteUser(result.user);

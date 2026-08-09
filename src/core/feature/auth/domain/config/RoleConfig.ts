@@ -1,8 +1,10 @@
 /**
  * Configuración centralizada de roles y permisos (panel back-office).
+ * Core1 3.3: ROLE_LABELS es la única fuente de verdad labels ↔ BusinessRole.
  */
 
 import type { BusinessRole } from "../entity/BusinessRole";
+import { normalizeBusinessRole } from "../entity/BusinessRole";
 
 export const ADMIN_ROLES: BusinessRole[] = ["admin", "owner"];
 
@@ -51,6 +53,10 @@ export const ROLE_ROUTE_ACCESS: Record<BusinessRole, string[]> = {
     ]
 };
 
+/**
+ * Labels Appwrite por rol de negocio.
+ * Al crear/actualizar usuarios gestionados se usan exactamente estos arrays.
+ */
 export const ROLE_LABELS: Record<BusinessRole, string[]> = {
     owner: ["owner", "admin"],
     admin: ["admin"],
@@ -87,7 +93,50 @@ export function getFirstAllowedRoute(role: BusinessRole | null | undefined): str
 }
 
 export function getRoleLabels(role: BusinessRole): string[] {
-    return ROLE_LABELS[role];
+    return [...ROLE_LABELS[role]];
+}
+
+/** Normaliza labels Appwrite a minúsculas sin vacíos. */
+export function normalizeAppwriteLabels(labels: unknown): string[] {
+    if (!Array.isArray(labels)) return [];
+    return labels
+        .map((l) => (typeof l === "string" ? l.toLowerCase().trim() : ""))
+        .filter(Boolean);
+}
+
+/**
+ * Deriva BusinessRole desde labels Appwrite (prioridad = ROLE_HIERARCHY).
+ * Ej: ["admin","owner"] → owner.
+ */
+export function businessRoleFromLabels(labels: unknown): BusinessRole | null {
+    const normalized = normalizeAppwriteLabels(labels);
+    if (normalized.length === 0) return null;
+    for (const role of ROLE_HIERARCHY) {
+        if (normalized.includes(role)) return role;
+    }
+    return null;
+}
+
+/**
+ * Resolución canónica de rol para panel:
+ * 1) labels Appwrite
+ * 2) role / prefs.role explícito
+ * 3) viewer por defecto
+ */
+export function resolveBusinessRole(input: {
+    labels?: unknown;
+    role?: unknown;
+    prefsRole?: unknown;
+}): BusinessRole {
+    const fromLabels = businessRoleFromLabels(input.labels);
+    if (fromLabels) return fromLabels;
+
+    const explicit = input.role ?? input.prefsRole;
+    if (explicit !== null && explicit !== undefined && String(explicit).trim() !== "") {
+        return normalizeBusinessRole(explicit);
+    }
+
+    return "viewer";
 }
 
 export function getRoleDescription(role: BusinessRole): string {
@@ -107,25 +156,14 @@ export function compareRoles(roleA: BusinessRole, roleB: BusinessRole): number {
     return 0;
 }
 
-/**
- * Un manager solo puede gestionar roles de menor o igual jerarquía.
- * Core1 3.2.
- */
 export function canManageRole(managerRole: BusinessRole, targetRole: BusinessRole): boolean {
     return compareRoles(managerRole, targetRole) >= 0;
 }
 
-/** Roles que el manager puede asignar (crear o cambiar). */
 export function assignableRoles(managerRole: BusinessRole): BusinessRole[] {
     return ROLE_HIERARCHY.filter((r) => canManageRole(managerRole, r));
 }
 
-/**
- * Valida asignación de rol (alta o cambio).
- * - Debe poder asignar el rol destino.
- * - Si el usuario ya tiene un rol, debe poder gestionar ese rol actual
- *   (no tocar cuentas de mayor jerarquía).
- */
 export function assertCanAssignRole(
     managerRole: BusinessRole,
     newRole: BusinessRole,
@@ -154,6 +192,9 @@ export default {
     canAccessRoute,
     getFirstAllowedRoute,
     getRoleLabels,
+    normalizeAppwriteLabels,
+    businessRoleFromLabels,
+    resolveBusinessRole,
     getRoleDescription,
     getRoleColor,
     compareRoles,

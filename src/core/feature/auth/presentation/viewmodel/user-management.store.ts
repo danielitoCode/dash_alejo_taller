@@ -2,11 +2,11 @@ import { derived, writable } from "svelte/store";
 import { authContainer } from "../../di/auth.container";
 import type { User } from "../../domain/entity/User";
 import type { BusinessRole } from "../../domain/entity/BusinessRole";
-import { normalizeBusinessRole } from "../../domain/entity/BusinessRole";
 import {
     assertCanAssignRole,
     assignableRoles,
     getRoleLabels,
+    resolveBusinessRole,
 } from "../../domain/config/RoleConfig";
 
 export type { BusinessRole };
@@ -27,7 +27,6 @@ interface UserManagementState {
     loading: boolean;
     saving: boolean;
     error: string | null;
-    /** Rol del staff autenticado (para UI 3.2). */
     managerRole: BusinessRole | null;
 }
 
@@ -39,17 +38,19 @@ const initialState: UserManagementState = {
     managerRole: null,
 };
 
-function mapRole(role: unknown): BusinessRole {
-    return normalizeBusinessRole(role);
-}
-
 function mapDomainUserToManagedUser(user: User): ManagedBusinessUser {
+    // Core1 3.3: prioriza labels Appwrite sobre role string suelto
+    const role = resolveBusinessRole({
+        labels: user.labels,
+        role: user.role,
+    });
+
     return {
         id: user.id,
         name: user.name || user.email,
         email: user.email,
         photoUrl: user.photo_url || "",
-        role: mapRole(user.role),
+        role,
         blocked: user.status === false,
         verified: Boolean(user.verification),
         passwordResetRequested: false,
@@ -70,7 +71,10 @@ function createUserManagementStore() {
     async function resolveManagerRole(): Promise<BusinessRole> {
         if (snapshot.managerRole) return snapshot.managerRole;
         const u = await authContainer.useCases.accounts.getCurrentUser();
-        const role = normalizeBusinessRole(u.role);
+        const role = resolveBusinessRole({
+            labels: (u as any).labels,
+            role: u.role,
+        });
         update((state) => ({ ...state, managerRole: role }));
         return role;
     }
@@ -161,7 +165,6 @@ function createUserManagementStore() {
 
         await runSaving(async () => {
             const managerRole = await resolveManagerRole();
-            // No bloquear usuarios de mayor jerarquía
             assertCanAssignRole(managerRole, current.role, current.role);
 
             const nextBlocked = !current.blocked;
