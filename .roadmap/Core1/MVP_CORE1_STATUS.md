@@ -1,31 +1,28 @@
 # Core 1 — Estado MVP Back-office
 
 **Última actualización:** 2026-08-09  
-**Veredicto:** Fase 1–2 catálogo hechas; **3.1 gates de ruta** hechos.
+**Veredicto:** **3.1 y 3.2** hechos.
 
 ## Fase 3 — Auth staff
 
 | Tarea | Estado | Evidencia |
 |-------|--------|-----------|
-| **3.1** Rutas vs `ROLE_ROUTE_ACCESS` | **Hecho** | Shell usa `canAccessRoute` / `getFirstAllowedRoute`; sin matriz duplicada; tests unitarios |
-| **3.2** UserManagement + canManageRole | Pendiente |
-| **3.3** Labels Appwrite | Pendiente |
-| **3.4** Sin sesión visitante tienda | Base (login staff) |
+| **3.1** Rutas vs ROLE_ROUTE_ACCESS | **Hecho** | NestedNav + tests |
+| **3.2** UserManagement + canManageRole | **Hecho** | store assert + UI filtrada + tests |
+| **3.3** Labels Appwrite | Parcial | `getRoleLabels` en create/setRole |
+| **3.4** Sin visitante tienda | Base login staff |
 
-## Tests 3.1
+## 3.2 comportamiento
+
+- Alta / cambio de rol: `assertCanAssignRole(manager, newRole, currentTarget?)`
+- UI: select de roles solo con `assignableRoles(manager)`
+- Bloqueo y reset password: no toca usuarios de mayor jerarquía
+- Labels vía `getRoleLabels` (no matriz inline)
 
 ```bash
 npm run test:unit
-# RoleConfig.routes.unit.test.ts
 ```
-
-## Fases previas
-
-| Área | Estado |
-|------|--------|
-| 0.x baseline | Hecho |
-| 1–2 stock catálogo + tests | Hecho |
 
 ## Siguiente
 
-**3.2** UserManagement respeta `canManageRole` en UI y acciones.
+**3.3** formalizar labels en toda la cadena / **Fase 4** currency en ventas.

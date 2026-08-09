@@ -3,6 +3,13 @@ import { authContainer } from "../../di/auth.container";
 import type { User } from "../../domain/entity/User";
 import type { BusinessRole } from "../../domain/entity/BusinessRole";
 import { normalizeBusinessRole } from "../../domain/entity/BusinessRole";
+import {
+    assertCanAssignRole,
+    assignableRoles,
+    getRoleLabels,
+} from "../../domain/config/RoleConfig";
+
+export type { BusinessRole };
 
 export interface ManagedBusinessUser {
     id: string;
@@ -20,13 +27,16 @@ interface UserManagementState {
     loading: boolean;
     saving: boolean;
     error: string | null;
+    /** Rol del staff autenticado (para UI 3.2). */
+    managerRole: BusinessRole | null;
 }
 
 const initialState: UserManagementState = {
     items: [],
     loading: false,
     saving: false,
-    error: null
+    error: null,
+    managerRole: null,
 };
 
 function mapRole(role: unknown): BusinessRole {
@@ -51,21 +61,29 @@ function normalizeError(error: unknown): string {
 }
 
 function createUserManagementStore() {
-    const {subscribe, update} = writable<UserManagementState>(initialState);
+    const { subscribe, update } = writable<UserManagementState>(initialState);
     let snapshot: UserManagementState = initialState;
     subscribe((s) => (snapshot = s));
     let loadUsersInFlight: Promise<void> | null = null;
     let lastSearch = "";
 
+    async function resolveManagerRole(): Promise<BusinessRole> {
+        if (snapshot.managerRole) return snapshot.managerRole;
+        const u = await authContainer.useCases.accounts.getCurrentUser();
+        const role = normalizeBusinessRole(u.role);
+        update((state) => ({ ...state, managerRole: role }));
+        return role;
+    }
+
     async function runSaving<T>(task: () => Promise<T>): Promise<T> {
-        update((state) => ({...state, saving: true, error: null}));
+        update((state) => ({ ...state, saving: true, error: null }));
         try {
             return await task();
         } catch (error) {
-            update((state) => ({...state, error: normalizeError(error)}));
+            update((state) => ({ ...state, error: normalizeError(error) }));
             throw error;
         } finally {
-            update((state) => ({...state, saving: false}));
+            update((state) => ({ ...state, saving: false }));
         }
     }
 
@@ -82,6 +100,7 @@ function createUserManagementStore() {
     }
 
     async function syncAll(): Promise<void> {
+        await resolveManagerRole();
         await loadUsers(lastSearch);
     }
 
@@ -92,11 +111,10 @@ function createUserManagementStore() {
 
         loadUsersInFlight = runLoading(async () => {
             lastSearch = (search ?? "").trim();
+            await resolveManagerRole();
             const res = await authContainer.useCases.accounts.getAllUserCaseUse(lastSearch);
             const users: User[] = res.users;
-
             const managedUsers: ManagedBusinessUser[] = users.map((u) => mapDomainUserToManagedUser(u));
-
             update((state) => ({ ...state, items: managedUsers }));
         }).finally(() => {
             loadUsersInFlight = null;
@@ -105,22 +123,18 @@ function createUserManagementStore() {
         return loadUsersInFlight;
     }
 
-    async function createUser(payload: Pick<ManagedBusinessUser, "name" | "email" | "role"> & { password: string }): Promise<void> {
+    async function createUser(
+        payload: Pick<ManagedBusinessUser, "name" | "email" | "role"> & { password: string }
+    ): Promise<void> {
         await runSaving(async () => {
-            const labels =
-                payload.role === "owner"
-                    ? ["owner", "admin"]
-                    : payload.role === "admin"
-                      ? ["admin"]
-                      : payload.role === "sales"
-                        ? ["sales"]
-                        : ["viewer"];
+            const managerRole = await resolveManagerRole();
+            assertCanAssignRole(managerRole, payload.role);
 
             await authContainer.useCases.accounts.adminCreateUser({
                 name: payload.name,
                 email: payload.email,
                 password: payload.password,
-                labels
+                labels: getRoleLabels(payload.role),
             });
 
             await loadUsers(lastSearch);
@@ -129,42 +143,56 @@ function createUserManagementStore() {
 
     async function setRole(id: string, role: BusinessRole): Promise<void> {
         await runSaving(async () => {
-            const labels =
-                role === "owner"
-                    ? ["owner", "admin"]
-                    : role === "admin"
-                      ? ["admin"]
-                      : role === "sales"
-                        ? ["sales"]
-                        : ["viewer"];
+            const managerRole = await resolveManagerRole();
+            const current = snapshot.items.find((u) => u.id === id);
+            assertCanAssignRole(managerRole, role, current?.role ?? null);
 
-            await authContainer.useCases.accounts.adminUpdateLabels(id, labels);
-            update((state) => ({ ...state, items: state.items.map((u) => (u.id === id ? { ...u, role } : u)) }));
+            await authContainer.useCases.accounts.adminUpdateLabels(id, getRoleLabels(role));
+            update((state) => ({
+                ...state,
+                items: state.items.map((u) => (u.id === id ? { ...u, role } : u)),
+            }));
         });
     }
 
     async function toggleBlocked(id: string): Promise<void> {
         const current = snapshot.items.find((u) => u.id === id);
         if (!current) return;
-        const nextBlocked = !current.blocked;
 
         await runSaving(async () => {
+            const managerRole = await resolveManagerRole();
+            // No bloquear usuarios de mayor jerarquía
+            assertCanAssignRole(managerRole, current.role, current.role);
+
+            const nextBlocked = !current.blocked;
             await authContainer.useCases.accounts.adminUpdateStatus(id, !nextBlocked);
             update((state) => ({
                 ...state,
-                items: state.items.map((u) => (u.id === id ? { ...u, blocked: nextBlocked } : u))
+                items: state.items.map((u) => (u.id === id ? { ...u, blocked: nextBlocked } : u)),
             }));
         });
     }
 
     async function requestPasswordReset(id: string, newPassword: string): Promise<void> {
         await runSaving(async () => {
+            const current = snapshot.items.find((u) => u.id === id);
+            if (!current) throw new Error("Usuario no encontrado");
+            const managerRole = await resolveManagerRole();
+            assertCanAssignRole(managerRole, current.role, current.role);
+
             await authContainer.useCases.accounts.adminUpdatePassword(id, newPassword);
             update((state) => ({
                 ...state,
-                items: state.items.map((u) => (u.id === id ? { ...u, passwordResetRequested: true } : u))
+                items: state.items.map((u) =>
+                    u.id === id ? { ...u, passwordResetRequested: true } : u
+                ),
             }));
         });
+    }
+
+    function getAssignableRoles(): BusinessRole[] {
+        const manager = snapshot.managerRole ?? "viewer";
+        return assignableRoles(manager);
     }
 
     const hasUsers = derived({ subscribe }, ($state) => $state.items.length > 0);
@@ -177,7 +205,9 @@ function createUserManagementStore() {
         setRole,
         toggleBlocked,
         loadUsers,
-        requestPasswordReset
+        requestPasswordReset,
+        getAssignableRoles,
+        resolveManagerRole,
     };
 }
 

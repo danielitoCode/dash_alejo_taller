@@ -1,11 +1,18 @@
-﻿<script lang="ts">
+<script lang="ts">
     import { onMount } from "svelte";
     import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
     import LoadingSpinner from "../../../../infrastructure/presentation/components/LoadingSpinner.svelte";
     import SkeletonList from "../../../../infrastructure/presentation/components/SkeletonList.svelte";
     import { logger } from "../../../../infrastructure/presentation/util/logger.service";
     import { toastStore } from "../../../../infrastructure/presentation/viewmodel/toast.store";
-    import { userManagementStore, type BusinessRole } from "../viewmodel/user-management.store";
+    import {
+        canManageRole,
+        assignableRoles,
+    } from "../../domain/config/RoleConfig";
+    import {
+        userManagementStore,
+        type BusinessRole,
+    } from "../viewmodel/user-management.store";
     import { BadgeCheck, KeyRound, Lock, Search, Unlock, UserPlus, Users } from "lucide-svelte";
 
     let name = "";
@@ -15,31 +22,67 @@
     let query = "";
     let searchTimer: number | null = null;
 
+    $: managerRole = $userManagementStore.managerRole ?? "viewer";
+    $: rolesForCreate = assignableRoles(managerRole);
+    $: if (!rolesForCreate.includes(role) && rolesForCreate.length > 0) {
+        role = rolesForCreate[rolesForCreate.length - 1]; // preferir el de menor privilegio por defecto
+    }
+
+    function rolesForUser(targetRole: BusinessRole): BusinessRole[] {
+        // Opciones: las que el manager puede asignar; si el target es superior, solo lectura del actual
+        if (!canManageRole(managerRole, targetRole)) {
+            return [targetRole];
+        }
+        return assignableRoles(managerRole);
+    }
+
+    function canTouchUser(targetRole: BusinessRole): boolean {
+        return canManageRole(managerRole, targetRole);
+    }
+
     async function createUser() {
         if (!name.trim() || !email.trim() || password.length < 6) return;
+        if (!canManageRole(managerRole, role)) {
+            toastStore.error(`Tu rol (${managerRole}) no puede crear usuarios ${role}.`);
+            return;
+        }
         try {
             toastStore.info("Creando usuario...");
-            await userManagementStore.createUser({ name: name.trim(), email: email.trim(), password, role });
+            await userManagementStore.createUser({
+                name: name.trim(),
+                email: email.trim(),
+                password,
+                role,
+            });
             toastStore.success("Usuario creado.");
             name = "";
             email = "";
             password = "";
-            role = "viewer";
+            role = rolesForCreate[rolesForCreate.length - 1] ?? "viewer";
         } catch (e: any) {
             logger.error(e?.message ?? e, e?.stack);
             toastStore.error(e instanceof Error ? e.message : "No se pudo crear el usuario.");
         }
     }
 
-    function handleRoleChange(userId: string, event: Event) {
+    function handleRoleChange(userId: string, currentRole: BusinessRole, event: Event) {
         const select = event.currentTarget as HTMLSelectElement | null;
         if (!select) return;
+        const next = select.value as BusinessRole;
+
+        if (!canManageRole(managerRole, currentRole) || !canManageRole(managerRole, next)) {
+            toastStore.error("No puedes cambiar el rol de este usuario.");
+            select.value = currentRole;
+            return;
+        }
+
         userManagementStore
-            .setRole(userId, select.value as BusinessRole)
+            .setRole(userId, next)
             .then(() => toastStore.success("Rol actualizado."))
             .catch((e) => {
                 logger.error(e?.message ?? e, e?.stack);
                 toastStore.error(e instanceof Error ? e.message : "No se pudo actualizar el rol.");
+                select.value = currentRole;
             });
     }
 
@@ -60,12 +103,19 @@
     }
 
     $: filtered = items;
-
-    $: canSubmit = name.trim().length >= 2 && email.trim().length >= 5 && password.length >= 6;
+    $: canSubmit =
+        name.trim().length >= 2 &&
+        email.trim().length >= 5 &&
+        password.length >= 6 &&
+        canManageRole(managerRole, role);
     $: isRefreshing = $userManagementStore.loading && items.length > 0;
     $: isInitialLoading = $userManagementStore.loading && items.length === 0;
 
-    async function toggleBlocked(userId: string) {
+    async function toggleBlocked(userId: string, targetRole: BusinessRole) {
+        if (!canTouchUser(targetRole)) {
+            toastStore.error("No puedes bloquear/desbloquear este usuario.");
+            return;
+        }
         try {
             toastStore.info("Actualizando estado...", 1200);
             await userManagementStore.toggleBlocked(userId);
@@ -76,7 +126,11 @@
         }
     }
 
-    async function resetPassword(userId: string) {
+    async function resetPassword(userId: string, targetRole: BusinessRole) {
+        if (!canTouchUser(targetRole)) {
+            toastStore.error("No puedes resetear el password de este usuario.");
+            return;
+        }
         const newPassword = window.prompt("Nuevo password temporal (mínimo 6 caracteres):");
         if (!newPassword || newPassword.trim().length < 6) return;
         try {
@@ -95,7 +149,9 @@
         <div class="mgmt-toolbar">
             <div>
                 <h1 class="mgmt-title">Usuarios</h1>
-                <p class="mgmt-subtitle">Crea usuarios internos, asigna roles y gestiona accesos de forma segura.</p>
+                <p class="mgmt-subtitle">
+                    Solo puedes asignar roles de jerarquía menor o igual a la tuya ({managerRole}).
+                </p>
             </div>
 
             <div class="mgmt-meta">
@@ -137,10 +193,9 @@
                 <label class="mgmt-field">
                     <span>Rol</span>
                     <select class="mgmt-select" bind:value={role}>
-                        <option value="owner">owner</option>
-                        <option value="admin">admin</option>
-                        <option value="sales">sales</option>
-                        <option value="viewer">viewer</option>
+                        {#each rolesForCreate as r}
+                            <option value={r}>{r}</option>
+                        {/each}
                     </select>
                 </label>
 
@@ -191,6 +246,7 @@
                 {/if}
 
                 {#each filtered as user (user.id)}
+                    {@const touch = canTouchUser(user.role)}
                     <article class="mgmt-row" aria-label={user.name}>
                         <div style="display:grid; grid-template-columns:58px 1fr; gap:12px; align-items:center">
                             {#if user.photoUrl}
@@ -206,7 +262,7 @@
                                         <span class="mgmt-muted" style="font-weight:700"> · bloqueado</span>
                                     {/if}
                                 </div>
-                <p class="mgmt-row-sub">{user.email}</p>
+                                <p class="mgmt-row-sub">{user.email}</p>
                                 <p class="mgmt-row-sub">
                                     <span class="mgmt-chip" style="padding:4px 10px">
                                         <Icon icon={BadgeCheck} size={16} ariaLabel="Verificación" />
@@ -219,20 +275,36 @@
                         <div class="mgmt-row-actions">
                             <label class="mgmt-field" style="margin:0; min-width: 160px">
                                 <span style="display:none">Rol</span>
-                                <select class="mgmt-select" value={user.role} on:change={(event) => handleRoleChange(user.id, event)}>
-                                    <option value="owner">owner</option>
-                                    <option value="admin">admin</option>
-                                    <option value="sales">sales</option>
-                                    <option value="viewer">viewer</option>
+                                <select
+                                    class="mgmt-select"
+                                    value={user.role}
+                                    disabled={!touch}
+                                    on:change={(event) => handleRoleChange(user.id, user.role, event)}
+                                >
+                                    {#each rolesForUser(user.role) as r}
+                                        <option value={r}>{r}</option>
+                                    {/each}
                                 </select>
                             </label>
 
-                            <button class="mgmt-btn ghost" on:click={() => toggleBlocked(user.id)}>
-                                <Icon icon={user.blocked ? Unlock : Lock} size={18} ariaLabel={user.blocked ? "Desbloquear" : "Bloquear"} />
+                            <button
+                                class="mgmt-btn ghost"
+                                disabled={!touch}
+                                on:click={() => toggleBlocked(user.id, user.role)}
+                            >
+                                <Icon
+                                    icon={user.blocked ? Unlock : Lock}
+                                    size={18}
+                                    ariaLabel={user.blocked ? "Desbloquear" : "Bloquear"}
+                                />
                                 {user.blocked ? "Desbloquear" : "Bloquear"}
                             </button>
 
-                            <button class="mgmt-btn ghost" on:click={() => resetPassword(user.id)}>
+                            <button
+                                class="mgmt-btn ghost"
+                                disabled={!touch}
+                                on:click={() => resetPassword(user.id, user.role)}
+                            >
                                 <Icon icon={KeyRound} size={18} ariaLabel="Solicitar cambio de password" />
                                 Reset password
                             </button>
@@ -243,6 +315,3 @@
         </section>
     </div>
 </section>
-
-
-
