@@ -1,4 +1,4 @@
-﻿*,
+*,
 *::before,
 *::after {
     box-sizing: border-box;
@@ -33,6 +33,9 @@
 
     --md-sys-color-surface: #ffffff;
     --md-sys-color-on-surface: #1a1c19;
+    --md-sys-color-surface-dim: #e8ebe6;
+    --md-sys-color-surface-container-high: #eef0eb;
+    --md-sys-color-surface-container-highest: #e6e9e3;
 
     --md-sys-color-surface-variant: #e0e3dd;
     --md-sys-color-on-surface-variant: #44483e;
@@ -42,6 +45,10 @@
 
     --md-sys-color-error: #ba1a1a;
     --md-sys-color-on-error: #ffffff;
+    --md-sys-color-error-container: #ffdad6;
+    --md-sys-color-on-error-container: #410002;
+
+    --md-sys-color-scrim: #000000;
 
     color: var(--md-sys-color-on-background);
     background-color: var(--md-sys-color-background);
@@ -68,6 +75,9 @@
 
         --md-sys-color-surface: #1a1c19;
         --md-sys-color-on-surface: #e2e3de;
+        --md-sys-color-surface-dim: #121412;
+        --md-sys-color-surface-container-high: #252824;
+        --md-sys-color-surface-container-highest: #30332f;
 
         --md-sys-color-surface-variant: #44483e;
         --md-sys-color-on-surface-variant: #c4c8be;
@@ -77,6 +87,10 @@
 
         --md-sys-color-error: #ffb4ab;
         --md-sys-color-on-error: #690005;
+        --md-sys-color-error-container: #93000a;
+        --md-sys-color-on-error-container: #ffdad6;
+
+        --md-sys-color-scrim: #000000;
     }
 }
 
@@ -86,14 +100,46 @@ body {
     padding: 0;
     min-width: 320px;
     min-height: 100vh;
+    color: var(--md-sys-color-on-background);
+    background-color: var(--md-sys-color-background);
+}
+
+/*
+ * Contraste tema claro/oscuro:
+ * Los <button> nativos usan color de sistema (a menudo negro) y Lucide
+ * pinta con currentColor → iconos y títulos ilegibles sobre fondo oscuro.
+ */
+button {
+    color: inherit;
+    font: inherit;
+}
+
+button strong,
+button b,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+strong,
+b {
+    color: inherit;
+}
+
+svg {
+    color: inherit;
+    stroke: currentColor;
+    fill: none;
 }
 
 #app {
     height: 100dvh;
     margin: 0;
+    color: var(--md-sys-color-on-background);
 }
 
-/* Management pages (Productos / CategorÃ­as / Usuarios / Promos) */
+/* Management pages (Productos / Categorías / Usuarios / Promos) */
 .mgmt-page,
 .mgmt-container {
     --mgmt-max-width: 1220px;
@@ -107,6 +153,7 @@ body {
     display: grid;
     gap: var(--mgmt-page-gap);
     align-content: start;
+    color: var(--md-sys-color-on-background);
 }
 
 .mgmt-header,
@@ -130,6 +177,7 @@ body {
     line-height: 1.08;
     letter-spacing: -0.02em;
     font-weight: 900;
+    color: var(--md-sys-color-on-background);
 }
 
 .mgmt-subtitle,
@@ -181,6 +229,7 @@ body {
     border-radius: 20px;
     box-shadow: 0 10px 24px color-mix(in srgb, var(--md-sys-color-outline) 16%, transparent);
     padding: var(--mgmt-card-padding);
+    color: var(--md-sys-color-on-surface);
 }
 
 .mgmt-card-title {
@@ -188,6 +237,7 @@ body {
     font-size: 1.08rem;
     letter-spacing: -0.01em;
     font-weight: 850;
+    color: var(--md-sys-color-on-surface);
 }
 
 .mgmt-field {
@@ -294,6 +344,7 @@ body {
     gap: 10px;
     align-items: center;
     background: color-mix(in srgb, var(--md-sys-color-surface) 88%, transparent);
+    color: var(--md-sys-color-on-surface);
     transition: border-color 160ms ease, box-shadow 160ms ease, transform 120ms ease;
 }
 
@@ -315,6 +366,7 @@ body {
 .mgmt-row-title {
     font-weight: 800;
     letter-spacing: -0.01em;
+    color: var(--md-sys-color-on-surface);
 }
 
 .mgmt-row-sub {
@@ -393,10 +445,10 @@ body {
         gap: 8px;
     }
 }
+
 .mgmt-input:focus-visible,
 .mgmt-select:focus-visible,
 .mgmt-btn:focus-visible {
     outline: 3px solid color-mix(in srgb, var(--md-sys-color-primary) 45%, transparent);
     outline-offset: 2px;
 }
-

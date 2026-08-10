@@ -70,11 +70,13 @@
                     {#each pendingReservations as sale (sale.id)}
                         <button class="reservation-card" type="button" on:click={() => openDetail(sale.id)}>
                             <div class="reservation-main">
-                                <strong>Reserva #{sale.id.slice(0, 8)}</strong>
+                                <strong class="reservation-id">Reserva #{sale.id.slice(0, 8)}</strong>
                                 <small>Cliente: {resolveUserName(sale.userId)} · Total: ${sale.amount.toFixed(2)}</small>
                                 <small>Fecha: {new Date(sale.date).toLocaleString()} · {sale.products.length} items</small>
                             </div>
-                            <Icon icon={ChevronRight} size={16} ariaLabel="Abrir" />
+                            <span class="chevron" aria-hidden="true">
+                                <Icon icon={ChevronRight} size={16} ariaLabel="Abrir" />
+                            </span>
                         </button>
                     {/each}
                 {/if}
@@ -93,6 +95,7 @@
         padding: 0 12px;
         margin-bottom: 12px;
         background: color-mix(in srgb, var(--md-sys-color-surface) 92%, transparent);
+        color: var(--md-sys-color-on-surface);
     }
 
     .search-field input {
@@ -101,8 +104,13 @@
         border: 0;
         outline: 0;
         background: transparent;
-        color: inherit;
+        color: var(--md-sys-color-on-surface);
         font: inherit;
+    }
+
+    .search-field input::placeholder {
+        color: var(--md-sys-color-on-surface-variant);
+        opacity: 0.85;
     }
 
     .reservation-list {
@@ -121,6 +129,8 @@
         align-items: center;
         gap: 12px;
         background: color-mix(in srgb, var(--md-sys-color-surface) 94%, transparent);
+        color: var(--md-sys-color-on-surface);
+        cursor: pointer;
     }
 
     .reservation-card:hover {
@@ -132,10 +142,22 @@
         display: grid;
         gap: 4px;
         min-width: 0;
+        color: inherit;
+    }
+
+    .reservation-id {
+        color: var(--md-sys-color-on-surface);
+        font-weight: 800;
+        letter-spacing: -0.01em;
     }
 
     .reservation-main small {
         display: block;
-        color: color-mix(in srgb, var(--md-sys-color-on-background) 72%, transparent);
+        color: var(--md-sys-color-on-surface-variant);
+    }
+
+    .chevron {
+        color: var(--md-sys-color-on-surface-variant);
+        flex-shrink: 0;
     }
 </style>
