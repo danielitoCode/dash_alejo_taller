@@ -1,32 +1,29 @@
 # Core 1 — Estado MVP Back-office
 
 **Última actualización:** 2026-08-10  
-**Veredicto:** **Fase 7.1 — alineación de código CERRADA.**  
-Pendiente operativo: smoke 6.2 → QA formal.
+**Veredicto:** Alineación código **7.1** cerrada. **7.2** gate pre-QA publicado.  
+Ejecución smoke + QA formal pendientes.
 
-## Resumen ejecutivo
-
-| Capa | Estado |
+| Hito | Estado |
 |------|--------|
-| Implementación 0 → 6.4 | ✓ |
-| Exit alineación **7.1** | ✓ [`PHASE_7_1_ALIGNMENT_EXIT.md`](./PHASE_7_1_ALIGNMENT_EXIT.md) |
-| Smoke 6.2 ejecución | ☐ |
-| QA checklist formal | ☐ |
+| Código 0 → 6.4 | ✓ |
+| 7.1 Exit alineación | ✓ |
+| 7.2 Pre-QA gate (doc) | ✓ · ejecución ☐ |
+| Smoke 6.2 | ☐ |
+| QA formal | ☐ |
+| **Core 1 dash cerrado** | ☐ |
 
-## Fases
+## Documentos clave
 
-| Fase | Estado |
-|------|--------|
-| 0.x Freeze / secretos / inventario | Hecho |
-| 1–2 Stock + catálogo | Hecho |
-| 3 Roles | Hecho |
-| 4 Ventas lectura | Hecho |
-| 5 Confirm/reject stock | Hecho |
-| 6.1–6.4 Coherencia + cache + UI | Hecho |
-| **7.1 Exit alineación** | **Hecho** |
+| Doc | Uso |
+|-----|-----|
+| [`PHASE_7_1_ALIGNMENT_EXIT.md`](./PHASE_7_1_ALIGNMENT_EXIT.md) | Cierre implementación |
+| [`PHASE_7_2_PRE_QA_GATE.md`](./PHASE_7_2_PRE_QA_GATE.md) | Orden: unit → smoke → QA |
+| [`SMOKE_6_2.md`](./SMOKE_6_2.md) | Smoke tienda → dash |
+| [`QA_CORE1_CHECK_plan.md`](./QA_CORE1_CHECK_plan.md) | Checklist formal |
 
 ```bash
-npm run test:unit
+npm run test:unit && npm run check && npm run build
 ```
 
-**Siguiente:** [`SMOKE_6_2.md`](./SMOKE_6_2.md) → [`QA_CORE1_CHECK_plan.md`](./QA_CORE1_CHECK_plan.md).
+**Siguiente:** ejecutar Gate A–C de 7.2; luego QA formal.

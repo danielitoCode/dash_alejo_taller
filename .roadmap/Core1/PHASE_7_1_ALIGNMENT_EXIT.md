@@ -5,7 +5,9 @@
 **Contrato vigente:** [`CANONICAL_RULES_FREEZE.md`](./CANONICAL_RULES_FREEZE.md)
 
 > **Qué cierra 7.1:** el trabajo de implementación para que el dash respete las mismas reglas de stock/venta que tienda y operador.  
-> **Qué no cierra 7.1:** ejecución del smoke 6.2 en staging ni el checklist QA formal (siguientes pasos operativos).
+> **Qué no cierra 7.1:** ejecución del smoke 6.2 ni el checklist QA formal.
+
+**Siguiente:** [`PHASE_7_2_PRE_QA_GATE.md`](./PHASE_7_2_PRE_QA_GATE.md).
 
 ---
 
@@ -26,69 +28,26 @@
 | 11 | Tests unitarios de políticas stock/roles/sale | `src/test/**/*.unit.test.ts` |
 | 12 | Smoke documentado | [`SMOKE_6_2.md`](./SMOKE_6_2.md) |
 
-**Veredicto 7.1:** alineación de código **ACEPTADA** para pasar a verificación operativa.
+**Veredicto 7.1:** alineación de código **ACEPTADA**.
 
 ---
 
-## 2. Mapa de fases cumplidas
-
-| Fase | Contenido | Estado |
-|------|-----------|--------|
-| 0.x | Freeze, secretos, inventario | Hecho |
-| 1–2 | Modelo stock + validaciones catálogo | Hecho |
-| 3 | Auth staff / gates | Hecho |
-| 4 | Ventas lectura + currency | Hecho |
-| 5 | Confirm / reject + stock | Hecho |
-| 6.1–6.4 | Coherencia, smoke doc, Dexie, UI | Hecho |
-| **7.1** | **Exit alineación** | **Hecho** |
-
----
-
-## 3. Fuera de alcance Core 1 dash (no reabrir en alineación)
+## 2. Fuera de alcance Core 1 dash
 
 | Tema | Destino |
 |------|---------|
 | `stock_movements` formales | Core 2 |
-| Function Appwrite transaccional confirm+stock | Core 2 / compartida con operador |
+| Function Appwrite transaccional | Core 2 |
 | Realtime obligatorio en dash | Core 2 (opcional) |
-| Merge monorepo | Después de Core 1 formal (post-QA) |
-| SaleType DISCOUNT/GIFT desde panel | Core 2 / operador primario |
+| Merge monorepo | Post-QA Core 1 |
+| SaleType DISCOUNT/GIFT desde panel | Operador / Core 2 |
 
 ---
 
-## 4. Puerta siguiente (operativa)
-
-```text
-7.1 ALIGNMENT EXIT (código)  ✓
-        │
-        ▼
-Ejecutar SMOKE_6_2.md en staging     ← tú / equipo
-        │
-        ▼
-QA_CORE1_CHECK_plan.md en verde      ← cierre formal Core 1 dash
-        │
-        ▼
-Core 2 / monorepo (opcional)
-```
-
-### Comandos mínimos pre-smoke
-
-```bash
-npm run test:unit
-npm run check   # si existe en package.json
-npm run build
-```
-
----
-
-## 5. Firma de cierre 7.1
+## 3. Firma 7.1
 
 | Campo | Valor |
 |-------|--------|
 | Alineación código vs freeze | **Completa** |
-| Bloqueadores conocidos de código | Ninguno documentado en 7.1 |
-| Bloqueador operativo | Smoke 6.2 sin ejecutar |
-| Listo para QA formal | **Sí**, tras smoke en verde |
-
-**Fin de la serie de implementación Core 1 del panel.**  
-Cualquier cambio de semántica de stock de aquí en adelante requiere **revisar el freeze**, no improvisar en UI.
+| Bloqueadores de código | Ninguno en 7.1 |
+| Listo para gate 7.2 | **Sí** |

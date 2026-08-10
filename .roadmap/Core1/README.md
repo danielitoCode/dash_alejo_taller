@@ -1,34 +1,30 @@
-# Core 1 — Back-office alineado (Auth staff + Catálogo + Ventas + Soft-hold)
+# Core 1 — Back-office alineado
 
-**Estado:** **Alineación de código CERRADA (7.1).** Smoke y QA formal pendientes.  
-**Criterio de cierre formal del núcleo:** checklist `QA_CORE1_CHECK_plan.md` en verde + smoke 6.2 ejecutado.
+**Estado:** Código alineado (**7.1**). Gate pre-QA (**7.2**) listo. Smoke/QA pendientes.  
+**Cierre formal del núcleo:** Gates 7.2 A+C en PASS + `QA_CORE1_CHECK_plan.md` en verde.
 
 **Última actualización:** 2026-08-10
 
-## Fases de implementación
+## Fases
 
 | Bloque | Estado |
 |--------|--------|
-| 0.x Freeze + secretos + inventario | **Hecho** |
-| 1.x–2.x Modelo stock + catálogo | **Hecho** |
-| 3.x Auth staff / gates | **Hecho** |
-| 4.x Ventas lectura + currency | **Hecho** |
-| 5.x Confirm / reject + stock | **Hecho** |
-| 6.1–6.4 Coherencia / smoke doc / Dexie / UI | **Hecho** |
-| **7.1 Exit alineación** | **Hecho** → [`PHASE_7_1_ALIGNMENT_EXIT.md`](./PHASE_7_1_ALIGNMENT_EXIT.md) |
+| 0.x–6.4 Implementación | **Hecho** |
+| 7.1 Exit alineación | **Hecho** |
+| 7.2 Pre-QA gate | **Doc listo** · ejecución ☐ |
 
 ## Índice
 
 | Archivo | Descripción |
 |---------|-------------|
 | [CANONICAL_RULES_FREEZE.md](./CANONICAL_RULES_FREEZE.md) | Reglas no negociables |
-| [PHASE_7_1_ALIGNMENT_EXIT.md](./PHASE_7_1_ALIGNMENT_EXIT.md) | **Cierre alineación código** |
-| [CODE_INVENTORY_0_3.md](./CODE_INVENTORY_0_3.md) | Mapa de archivos |
-| [SMOKE_6_2.md](./SMOKE_6_2.md) | Smoke cruzado pre-QA |
-| [PHASE_6_3.md](./PHASE_6_3.md) | Espejo Dexie |
-| [PHASE_6_4.md](./PHASE_6_4.md) | Reactividad UI |
-| [QA_CORE1_CHECK_plan.md](./QA_CORE1_CHECK_plan.md) | QA post-alineación |
+| [PHASE_7_1_ALIGNMENT_EXIT.md](./PHASE_7_1_ALIGNMENT_EXIT.md) | Cierre alineación código |
+| [PHASE_7_2_PRE_QA_GATE.md](./PHASE_7_2_PRE_QA_GATE.md) | **Puerta pre-QA** |
+| [SMOKE_6_2.md](./SMOKE_6_2.md) | Smoke cruzado |
+| [QA_CORE1_CHECK_plan.md](./QA_CORE1_CHECK_plan.md) | QA formal |
 | [MVP_CORE1_STATUS.md](./MVP_CORE1_STATUS.md) | Estado |
-| [ALIGNMENT_WITH_ALEJOTALLER.md](./ALIGNMENT_WITH_ALEJOTALLER.md) | Paridad ecosistema |
+| [CODE_INVENTORY_0_3.md](./CODE_INVENTORY_0_3.md) | Inventario |
+| [PHASE_6_3.md](./PHASE_6_3.md) / [PHASE_6_4.md](./PHASE_6_4.md) | Cache + UI |
+| [ALIGNMENT_WITH_ALEJOTALLER.md](./ALIGNMENT_WITH_ALEJOTALLER.md) | Ecosistema |
 
 **Políticas:** `.policies/auth`, `sale`, `warehouse`, `product`, `panel`
