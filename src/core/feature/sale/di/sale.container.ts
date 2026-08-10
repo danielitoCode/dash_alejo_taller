@@ -1,28 +1,33 @@
-import {infrastructureContainer} from "../../../infrastructure/di/infrastructure.container";
-import {SaleNetRepository} from "../data/repository/sale.net.repository";
-import {SaleOfflineFirstRepository} from "../data/repository/sale.offline-first.repository";
-import {GetAllProductCaseUse} from "../../product/domain/caseuse/GetAllProductCaseUse";
-import {GetSalesCaseUse} from "../domain/caseuse/GetSalesCaseUse";
+import { infrastructureContainer } from "../../../infrastructure/di/infrastructure.container";
+import { SaleNetRepository } from "../data/repository/sale.net.repository";
+import { SaleOfflineFirstRepository } from "../data/repository/sale.offline-first.repository";
+import { GetSalesCaseUse } from "../domain/caseuse/GetSalesCaseUse";
 import { UpdateSaleVerifiedCaseUse } from "../domain/caseuse/UpdateSaleVerifiedCaseUse";
+import { ConfirmSaleFromPanelCaseUse } from "../domain/caseuse/ConfirmSaleFromPanelCaseUse";
+import ProductNetRepository from "../../product/data/repository/product.net.repository";
 
-// Infrastructure instance
-const netDatabases= infrastructureContainer.appwrite.databases
+const netDatabases = infrastructureContainer.appwrite.databases;
 
-// Data
-const saleNetRepository = new SaleNetRepository(netDatabases)
-const saleOfflineFirstRepository = new SaleOfflineFirstRepository(saleNetRepository)
+const saleNetRepository = new SaleNetRepository(netDatabases);
+const saleOfflineFirstRepository = new SaleOfflineFirstRepository(saleNetRepository);
+const productNetRepository = new ProductNetRepository(netDatabases);
 
-// Domain
-const getSalesCaseUse = new GetSalesCaseUse(saleOfflineFirstRepository)
-const updateSaleVerifiedCaseUse = new UpdateSaleVerifiedCaseUse(saleOfflineFirstRepository)
+const getSalesCaseUse = new GetSalesCaseUse(saleOfflineFirstRepository);
+const updateSaleVerifiedCaseUse = new UpdateSaleVerifiedCaseUse(saleOfflineFirstRepository);
+const confirmSaleFromPanelCaseUse = new ConfirmSaleFromPanelCaseUse(
+    saleOfflineFirstRepository,
+    productNetRepository
+);
 
 export const saleContainer = {
     repositories: {
         net: saleNetRepository,
-        offlineFirst: saleOfflineFirstRepository
+        offlineFirst: saleOfflineFirstRepository,
     },
     useCases: {
         getAll: getSalesCaseUse,
-        updateVerified: updateSaleVerifiedCaseUse
-    }
-}
+        /** @deprecated Prefer confirmFromPanel / rejectFromPanel (Fase 5) — no aplica stock. */
+        updateVerified: updateSaleVerifiedCaseUse,
+        confirmFromPanel: confirmSaleFromPanelCaseUse,
+    },
+};

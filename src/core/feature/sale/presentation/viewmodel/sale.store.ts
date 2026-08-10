@@ -1,60 +1,62 @@
-import type {Sale} from "../../domain/entity/Sale";
-import {derived, writable} from "svelte/store";
-import {saleContainer} from "../../di/sale.container";
+import type { Sale } from "../../domain/entity/Sale";
+import { derived, writable } from "svelte/store";
+import { saleContainer } from "../../di/sale.container";
 import { logger } from "../../../../infrastructure/presentation/util/logger.service";
 
 interface SaleState {
-    items: Sale[]
-    loading: boolean
-    error: string | null
+    items: Sale[];
+    loading: boolean;
+    error: string | null;
 }
 
 const initialState: SaleState = {
     items: [],
     loading: false,
-    error: null
-}
+    error: null,
+};
 
 function normalizeError(error: unknown): string {
-    return error instanceof Error ? error.message : "Unexpected error"
+    return error instanceof Error ? error.message : "Unexpected error";
 }
 
 function createSaleStore() {
-    const {subscribe, update} = writable<SaleState>(initialState)
+    const { subscribe, update } = writable<SaleState>(initialState);
+    let snapshot: SaleState = initialState;
+    subscribe((s) => (snapshot = s));
 
     async function syncAll(): Promise<void> {
-        logger.info("Sync sales from storage")
-        update((state) => ({...state, loading: true, error: null}))
+        logger.info("Sync sales from storage");
+        update((state) => ({ ...state, loading: true, error: null }));
         try {
-            const sales = await saleContainer.useCases.getAll.execute()
+            const sales = await saleContainer.useCases.getAll.execute();
             logger.log({
                 scope: "sale.store.syncAll",
                 count: sales.length,
-                firstSaleId: sales[0]?.id ?? null
-            })
-
-            update((state) => {
-                return {...state, items: sales};
-            })
+                firstSaleId: sales[0]?.id ?? null,
+            });
+            update((state) => ({ ...state, items: sales }));
         } catch (error) {
             logger.error({
                 scope: "sale.store.syncAll",
-                message: error instanceof Error ? error.message : String(error)
-            })
-            update((state) => ({...state, error: normalizeError(error)}))
-            throw error
+                message: error instanceof Error ? error.message : String(error),
+            });
+            update((state) => ({ ...state, error: normalizeError(error) }));
+            throw error;
         } finally {
-            update((state) => ({...state, loading: false}))
+            update((state) => ({ ...state, loading: false }));
         }
     }
 
+    /**
+     * @deprecated Core1 5.1+: usar confirmSale (aplica stock). No usar para VERIFIED/DELETED.
+     */
     async function setVerified(id: string, verified: string): Promise<void> {
         update((state) => ({ ...state, loading: true, error: null }));
         try {
             const updated = await saleContainer.useCases.updateVerified.execute(id, verified);
             update((state) => ({
                 ...state,
-                items: state.items.map((s) => (s.id === id ? updated : s))
+                items: state.items.map((s) => (s.id === id ? updated : s)),
             }));
         } catch (error: any) {
             logger.error(error?.message ?? error, error?.stack);
@@ -65,24 +67,45 @@ function createSaleStore() {
         }
     }
 
+    /** Core1 5.1 — confirm con stock = operador. */
+    async function confirmSale(id: string): Promise<Sale> {
+        update((state) => ({ ...state, loading: true, error: null }));
+        try {
+            const snapshotSale = snapshot.items.find((s) => s.id === id) ?? null;
+            const updated = await saleContainer.useCases.confirmFromPanel.execute(id, snapshotSale);
+            update((state) => ({
+                ...state,
+                items: state.items.map((s) => (s.id === id ? updated : s)),
+            }));
+            return updated;
+        } catch (error: any) {
+            logger.error(error?.message ?? error, error?.stack);
+            update((state) => ({ ...state, error: normalizeError(error) }));
+            throw error;
+        } finally {
+            update((state) => ({ ...state, loading: false }));
+        }
+    }
+
     function clearError(): void {
-        update((state) => ({...state, error: null}))
+        update((state) => ({ ...state, error: null }));
     }
 
     function reset(): void {
-        update(() => initialState)
+        update(() => initialState);
     }
 
-    const hasData = derived({subscribe}, ($state) => $state.items.length > 0)
+    const hasData = derived({ subscribe }, ($state) => $state.items.length > 0);
 
     return {
         subscribe,
         hasData,
         syncAll,
         setVerified,
+        confirmSale,
         clearError,
-        reset
-    }
+        reset,
+    };
 }
 
-export const saleStore = createSaleStore()
+export const saleStore = createSaleStore();
