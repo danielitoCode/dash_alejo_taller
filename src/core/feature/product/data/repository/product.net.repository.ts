@@ -8,6 +8,7 @@ import {
     nextStockAfterReject,
 } from "../../../sale/domain/policy/StockDecisionMath";
 import { logger } from "../../../../infrastructure/presentation/util/logger.service";
+import { db } from "../../../../infrastructure/di/dexie.db";
 
 const COLLECTION_ID = "product";
 
@@ -54,7 +55,10 @@ class ProductNetRepository {
     /**
      * Paridad con `AppwriteOperatorStockRepository.applyDeltas`:
      * re-read remoto → clamp → update existence/reserved.
-     * Autoridad: Appwrite (no Dexie).
+     * Autoridad: Appwrite.
+     *
+     * Core1 6.3: tras mutar remoto, espeja el documento en Dexie para que el
+     * panel offline-first no muestre reserved/existence obsoletos hasta un syncAll.
      */
     async applyStockDeltas(
         productId: string,
@@ -75,7 +79,7 @@ class ProductNetRepository {
             );
         }
 
-        await this.databases.updateDocument<ProductDTO>(
+        const updated = await this.databases.updateDocument<ProductDTO>(
             this.databaseId,
             COLLECTION_ID,
             productId,
@@ -84,6 +88,18 @@ class ProductNetRepository {
                 reserved: next.reserved,
             } as Partial<ProductDTO>
         );
+
+        // 6.3 — espejo local (best-effort; no bloquea si Dexie falla)
+        try {
+            await db.products.put(updated);
+            logger.info(
+                `[stock][6.3] dexie mirror productId=${productId} existence=${next.existence} reserved=${next.reserved}`
+            );
+        } catch (e: any) {
+            logger.warn(
+                `[stock][6.3] dexie mirror failed productId=${productId}: ${e?.message ?? e}`
+            );
+        }
 
         logger.info(
             `[stock] apply productId=${productId} confirmed=${opts.confirmed} qty=${qty} ` +
