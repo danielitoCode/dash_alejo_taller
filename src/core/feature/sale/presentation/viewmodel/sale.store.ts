@@ -48,7 +48,7 @@ function createSaleStore() {
     }
 
     /**
-     * @deprecated Core1 5.1+: usar confirmSale (aplica stock). No usar para VERIFIED/DELETED.
+     * @deprecated Core1 5.x: usar confirmSale / rejectSale (aplican stock).
      */
     async function setVerified(id: string, verified: string): Promise<void> {
         update((state) => ({ ...state, loading: true, error: null }));
@@ -87,6 +87,26 @@ function createSaleStore() {
         }
     }
 
+    /** Core1 5.2 — reject: solo libera reserved. */
+    async function rejectSale(id: string): Promise<Sale> {
+        update((state) => ({ ...state, loading: true, error: null }));
+        try {
+            const snapshotSale = snapshot.items.find((s) => s.id === id) ?? null;
+            const updated = await saleContainer.useCases.rejectFromPanel.execute(id, snapshotSale);
+            update((state) => ({
+                ...state,
+                items: state.items.map((s) => (s.id === id ? updated : s)),
+            }));
+            return updated;
+        } catch (error: any) {
+            logger.error(error?.message ?? error, error?.stack);
+            update((state) => ({ ...state, error: normalizeError(error) }));
+            throw error;
+        } finally {
+            update((state) => ({ ...state, loading: false }));
+        }
+    }
+
     function clearError(): void {
         update((state) => ({ ...state, error: null }));
     }
@@ -103,6 +123,7 @@ function createSaleStore() {
         syncAll,
         setVerified,
         confirmSale,
+        rejectSale,
         clearError,
         reset,
     };

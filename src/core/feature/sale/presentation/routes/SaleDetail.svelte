@@ -20,6 +20,7 @@
         ShieldCheck,
         Truck,
         User,
+        XCircle,
     } from "lucide-svelte";
     import { userManagementStore } from "../../../auth/presentation/viewmodel/user-management.store";
     import { productStore } from "../../../product/presentation/viewmodel/product.store";
@@ -30,10 +31,12 @@
     const saleId = navBackStackEntry?.args?.id ?? "";
     let loading = false;
     let confirming = false;
+    let rejecting = false;
 
     $: sale = saleId ? $saleStore.items.find((s) => s.id === saleId) ?? null : null;
     $: user = sale ? $userManagementStore.items.find((u) => u.id === sale.userId) : null;
-    $: canConfirm = sale?.verified === BuyState.UNVERIFIED && !confirming;
+    $: busy = confirming || rejecting;
+    $: canDecide = sale?.verified === BuyState.UNVERIFIED && !busy;
 
     onMount(() => {
         if (!saleId) return;
@@ -105,6 +108,31 @@
         }
     }
 
+    async function onReject() {
+        if (!sale || sale.verified !== BuyState.UNVERIFIED) return;
+        const ok = window.confirm(
+            "Rechazar esta venta (DELETED)?\n\n" +
+                "Semántica operador:\n" +
+                "• reserved -= qty por línea\n" +
+                "• existence NO cambia\n\n" +
+                "El soft-hold se libera y el stock vuelve a estar disponible."
+        );
+        if (!ok) return;
+
+        rejecting = true;
+        try {
+            toastStore.info("Rechazando venta y liberando reserved…", 2000);
+            await saleStore.rejectSale(sale.id);
+            await productStore.syncAll().catch(() => {});
+            toastStore.success("Venta rechazada (DELETED). Reserved liberado.");
+        } catch (e: any) {
+            logger.error(e?.message ?? e, e?.stack);
+            toastStore.error(e instanceof Error ? e.message : "No se pudo rechazar la venta.");
+        } finally {
+            rejecting = false;
+        }
+    }
+
     $: currencyCode = sale?.currency?.trim() || null;
     $: linesTotal = sale
         ? sale.products.reduce((acc, p) => acc + saleLineTotal(p), 0)
@@ -121,7 +149,7 @@
             <div>
                 <h1 class="mgmt-h1">Detalle de venta</h1>
                 <p class="mgmt-muted">
-                    Supervisión · confirmación con semántica de stock idéntica al operador
+                    Supervisión · confirm/reject con semántica de stock idéntica al operador
                 </p>
             </div>
         </div>
@@ -183,7 +211,7 @@
                             </span>
                             <span class="meta-item">
                                 <Icon icon={ShieldCheck} size={14} ariaLabel="Operación" />
-                                Confirm: existence−=qty y reserved−=qty (paridad operador)
+                                Confirm: existence−=qty + reserved−=qty · Reject: solo reserved−=qty
                             </span>
                         </div>
                     </div>
@@ -203,23 +231,34 @@
                         {/if}
                     </div>
 
-                    {#if canConfirm}
-                        <button
-                            class="mgmt-btn primary confirm-btn"
-                            type="button"
-                            disabled={confirming}
-                            on:click={onConfirm}
-                        >
-                            <Icon icon={CheckCircle2} size={18} ariaLabel="Confirmar" />
-                            {confirming ? "Confirmando…" : "Confirmar venta"}
-                        </button>
+                    {#if canDecide}
+                        <div class="decision-actions">
+                            <button
+                                class="mgmt-btn primary confirm-btn"
+                                type="button"
+                                disabled={busy}
+                                on:click={onConfirm}
+                            >
+                                <Icon icon={CheckCircle2} size={18} ariaLabel="Confirmar" />
+                                {confirming ? "Confirmando…" : "Confirmar"}
+                            </button>
+                            <button
+                                class="mgmt-btn danger reject-btn"
+                                type="button"
+                                disabled={busy}
+                                on:click={onReject}
+                            >
+                                <Icon icon={XCircle} size={18} ariaLabel="Rechazar" />
+                                {rejecting ? "Rechazando…" : "Rechazar"}
+                            </button>
+                        </div>
                     {:else if sale.verified === BuyState.VERIFIED}
                         <button class="mgmt-btn ghost" type="button" disabled>
                             Ya confirmada
                         </button>
                     {:else if sale.verified === BuyState.DELETED}
                         <button class="mgmt-btn ghost" type="button" disabled>
-                            Rechazada (no confirmable)
+                            Ya rechazada
                         </button>
                     {/if}
                 </div>
@@ -353,10 +392,33 @@
         max-width: 220px;
     }
 
-    .confirm-btn {
+    .decision-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-end;
+    }
+
+    .confirm-btn,
+    .reject-btn {
         display: inline-flex;
         align-items: center;
         gap: 8px;
+    }
+
+    .mgmt-btn.danger {
+        border: 1px solid color-mix(in srgb, #ef4444 45%, var(--md-sys-color-outline-variant));
+        background: color-mix(in srgb, #ef4444 18%, transparent);
+        color: #fca5a5;
+        border-radius: 12px;
+        padding: 10px 14px;
+        cursor: pointer;
+        font-weight: 700;
+    }
+
+    .mgmt-btn.danger:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
     }
 
     .pill {
@@ -467,6 +529,9 @@
         .currency-note {
             justify-self: start;
             text-align: left;
+        }
+        .decision-actions {
+            justify-content: flex-start;
         }
     }
 </style>

@@ -4,6 +4,7 @@ import { SaleOfflineFirstRepository } from "../data/repository/sale.offline-firs
 import { GetSalesCaseUse } from "../domain/caseuse/GetSalesCaseUse";
 import { UpdateSaleVerifiedCaseUse } from "../domain/caseuse/UpdateSaleVerifiedCaseUse";
 import { ConfirmSaleFromPanelCaseUse } from "../domain/caseuse/ConfirmSaleFromPanelCaseUse";
+import { RejectSaleFromPanelCaseUse } from "../domain/caseuse/RejectSaleFromPanelCaseUse";
 import ProductNetRepository from "../../product/data/repository/product.net.repository";
 
 const netDatabases = infrastructureContainer.appwrite.databases;
@@ -18,6 +19,10 @@ const confirmSaleFromPanelCaseUse = new ConfirmSaleFromPanelCaseUse(
     saleOfflineFirstRepository,
     productNetRepository
 );
+const rejectSaleFromPanelCaseUse = new RejectSaleFromPanelCaseUse(
+    saleOfflineFirstRepository,
+    productNetRepository
+);
 
 export const saleContainer = {
     repositories: {
@@ -29,5 +34,6 @@ export const saleContainer = {
         /** @deprecated Prefer confirmFromPanel / rejectFromPanel (Fase 5) — no aplica stock. */
         updateVerified: updateSaleVerifiedCaseUse,
         confirmFromPanel: confirmSaleFromPanelCaseUse,
+        rejectFromPanel: rejectSaleFromPanelCaseUse,
     },
 };

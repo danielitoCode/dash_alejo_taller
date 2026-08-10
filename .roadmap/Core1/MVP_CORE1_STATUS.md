@@ -1,27 +1,29 @@
 # Core 1 — Estado MVP Back-office
 
 **Última actualización:** 2026-08-10  
-**Veredicto:** Fase 4 completa; **5.1 Confirm con stock** hecho.
+**Veredicto:** **5.1 + 5.2** confirm/reject con stock = operador.
 
 ## Fase 5 — Escritura stock
 
 | Tarea | Estado | Evidencia |
 |-------|--------|-----------|
-| **5.1** Confirm VERIFIED + stock | **Hecho** | `ConfirmSaleFromPanelCaseUse` + `applyStockDeltas` + UI |
-| **5.2** Reject DELETED + release reserved | Pendiente |
-| **5.3** Idempotencia / UI dialogs | Parcial (confirm idempotente + dialog) |
+| **5.1** Confirm VERIFIED + stock | **Hecho** | `ConfirmSaleFromPanelCaseUse` |
+| **5.2** Reject DELETED + release reserved | **Hecho** | `RejectSaleFromPanelCaseUse` + UI |
+| **5.3** Idempotencia / hardening | Parcial (ambos flujos idempotentes) |
 
-## 5.1 semántica (paridad operador)
+## Semántica (paridad operador)
 
 | Acción | existence | reserved |
 |--------|-----------|----------|
 | Confirm UNVERIFIED → VERIFIED | `-= qty` | `-= qty` |
-| Ya VERIFIED | sin cambio | sin cambio |
-| DELETED | no se confirma | — |
+| Reject UNVERIFIED → DELETED | sin cambio | `-= qty` |
+| Ya VERIFIED / DELETED | sin re-aplicar stock | |
 
-- Re-read Appwrite por producto antes de mutar (como `AppwriteOperatorStockRepository`)
-- Orden: stock → `buy_state=VERIFIED`
-- `setVerified` deprecado para no saltarse stock
+## UI
+
+- `SaleDetail`: botones Confirmar / Rechazar solo en `UNVERIFIED`
+- Diálogos con texto de política de stock
+- Re-sync productos tras decisión
 
 ```bash
 npm run test:unit
@@ -29,4 +31,4 @@ npm run test:unit
 
 ## Siguiente
 
-**5.2** `RejectSaleFromPanelCaseUse` (solo `reserved -= qty`).
+Smoke E2E tienda → dash confirm/reject, o cierre checklist QA Core1 del panel.
