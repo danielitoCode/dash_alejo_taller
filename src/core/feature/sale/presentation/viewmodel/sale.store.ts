@@ -1,6 +1,7 @@
 import type { Sale } from "../../domain/entity/Sale";
 import { derived, writable } from "svelte/store";
 import { saleContainer } from "../../di/sale.container";
+import { productStore } from "../../../product/presentation/viewmodel/product.store";
 import { logger } from "../../../../infrastructure/presentation/util/logger.service";
 
 interface SaleState {
@@ -17,6 +18,11 @@ const initialState: SaleState = {
 
 function normalizeError(error: unknown): string {
     return error instanceof Error ? error.message : "Unexpected error";
+}
+
+function productIdsFromSale(sale: Sale | null | undefined): string[] {
+    if (!sale?.products?.length) return [];
+    return sale.products.map((p) => p.productId).filter(Boolean);
 }
 
 function createSaleStore() {
@@ -67,7 +73,7 @@ function createSaleStore() {
         }
     }
 
-    /** Core1 5.1 — confirm con stock = operador. */
+    /** Core1 5.1 + 6.4 — confirm + refresh stock en productStore. */
     async function confirmSale(id: string): Promise<Sale> {
         update((state) => ({ ...state, loading: true, error: null }));
         try {
@@ -77,6 +83,10 @@ function createSaleStore() {
                 ...state,
                 items: state.items.map((s) => (s.id === id ? updated : s)),
             }));
+            // 6.4 — UI de catálogo refleja existence/reserved sin esperar navegación
+            await productStore
+                .refreshStockForProducts(productIdsFromSale(snapshotSale ?? updated))
+                .catch((e) => logger.warn(`[sale.store][6.4] refresh after confirm: ${e}`));
             return updated;
         } catch (error: any) {
             logger.error(error?.message ?? error, error?.stack);
@@ -87,7 +97,7 @@ function createSaleStore() {
         }
     }
 
-    /** Core1 5.2 — reject: solo libera reserved. */
+    /** Core1 5.2 + 6.4 — reject + refresh stock. */
     async function rejectSale(id: string): Promise<Sale> {
         update((state) => ({ ...state, loading: true, error: null }));
         try {
@@ -97,6 +107,9 @@ function createSaleStore() {
                 ...state,
                 items: state.items.map((s) => (s.id === id ? updated : s)),
             }));
+            await productStore
+                .refreshStockForProducts(productIdsFromSale(snapshotSale ?? updated))
+                .catch((e) => logger.warn(`[sale.store][6.4] refresh after reject: ${e}`));
             return updated;
         } catch (error: any) {
             logger.error(error?.message ?? error, error?.stack);

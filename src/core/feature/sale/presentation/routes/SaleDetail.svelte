@@ -24,6 +24,7 @@
     } from "lucide-svelte";
     import { userManagementStore } from "../../../auth/presentation/viewmodel/user-management.store";
     import { productStore } from "../../../product/presentation/viewmodel/product.store";
+    import { availableStock } from "../../../product/domain/entity/Product";
 
     export let navController: NavController;
     export let navBackStackEntry: NavBackStackEntry<{ id?: string }>;
@@ -62,6 +63,12 @@
         return product?.name ?? "Producto desconocido";
     }
 
+    function resolveAvailable(productId: string): string {
+        const product = $productStore.items.find((p) => p.id === productId);
+        if (!product) return "—";
+        return String(availableStock(product));
+    }
+
     function saleStateClass(state: BuyState): string {
         if (state === BuyState.UNVERIFIED) return "unverified";
         if (state === BuyState.DELETED) return "rejected";
@@ -97,9 +104,9 @@
         confirming = true;
         try {
             toastStore.info("Confirmando venta y actualizando stock…", 2000);
+            // 6.4: saleStore.confirmSale ya refresca productStore de los productos afectados
             await saleStore.confirmSale(sale.id);
-            await productStore.syncAll().catch(() => {});
-            toastStore.success("Venta confirmada (VERIFIED). Stock actualizado.");
+            toastStore.success("Venta confirmada (VERIFIED). Stock actualizado en panel.");
         } catch (e: any) {
             logger.error(e?.message ?? e, e?.stack);
             toastStore.error(e instanceof Error ? e.message : "No se pudo confirmar la venta.");
@@ -123,8 +130,7 @@
         try {
             toastStore.info("Rechazando venta y liberando reserved…", 2000);
             await saleStore.rejectSale(sale.id);
-            await productStore.syncAll().catch(() => {});
-            toastStore.success("Venta rechazada (DELETED). Reserved liberado.");
+            toastStore.success("Venta rechazada (DELETED). Reserved liberado en panel.");
         } catch (e: any) {
             logger.error(e?.message ?? e, e?.stack);
             toastStore.error(e instanceof Error ? e.message : "No se pudo rechazar la venta.");
@@ -149,7 +155,7 @@
             <div>
                 <h1 class="mgmt-h1">Detalle de venta</h1>
                 <p class="mgmt-muted">
-                    Supervisión · confirm/reject con semántica de stock idéntica al operador
+                    Supervisión · confirm/reject con semántica de stock idéntica al operador · UI reactiva (6.4)
                 </p>
             </div>
         </div>
@@ -283,6 +289,8 @@
                                 <span>Unit: {formatSaleMoney(p.price, currencyCode)}</span>
                                 <span class="dot">•</span>
                                 <span>Línea: {formatSaleMoney(saleLineTotal(p), currencyCode)}</span>
+                                <span class="dot">•</span>
+                                <span class="avail">available ahora: {resolveAvailable(p.productId)}</span>
                             </div>
                         </div>
                     {:else}
@@ -505,6 +513,11 @@
         align-items: center;
         color: color-mix(in srgb, var(--md-sys-color-on-background) 72%, transparent);
         font-size: 0.88rem;
+    }
+
+    .avail {
+        font-weight: 700;
+        color: color-mix(in srgb, var(--md-sys-color-primary) 85%, var(--md-sys-color-on-background));
     }
 
     .muted {
