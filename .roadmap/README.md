@@ -11,7 +11,10 @@ Este roadmap sigue el mismo estilo de entrega por núcleos que el monorepo
 | [`Core1/`](./Core1/) | Alineación con Core 1 de AlejoTaller: roles staff, catálogo con `existence`/`reserved`/`available`, ventas UNVERIFIED→VERIFIED/DELETED sin romper soft-hold, currency del pedido, QA checklist back-office |
 | [`Core2/`](./Core2/) | Movimientos de stock formales, ajustes de inventario desde panel, reportes, observabilidad, endurecimiento de secretos/deploy, posible integración monorepo |
 
-**Estado Core 1 (2026-08-10):** alineación de **código** cerrada ([`Core1/PHASE_7_1_ALIGNMENT_EXIT.md`](./Core1/PHASE_7_1_ALIGNMENT_EXIT.md)). Cierre formal del núcleo = smoke 6.2 + QA checklist en verde.
+**Estado Core 1 (2026-08-10):**
+- Código alineado (**7.1**)
+- Gate pre-QA (**7.2**) y **DoD (**7.3**)** documentados
+- Cierre formal del núcleo = DoD en [`Core1/PHASE_7_3_CORE1_DOD.md`](./Core1/PHASE_7_3_CORE1_DOD.md) tras smoke + QA en verde
 
 **Cómo usar**
 - Marca checkboxes `[x]` cuando verifiques en código o QA.
