@@ -9,7 +9,18 @@
     import { BuyState, DeliveryType } from "../../domain/entity/enums";
     import { saleLineTotal } from "../../domain/entity/Sale";
     import { saleStateLabel } from "../../domain/util/filterSalesByStatus";
-    import { ArrowLeft, BadgeDollarSign, Clock, Hash, Package, ShieldCheck, Truck, User } from "lucide-svelte";
+    import { formatSaleMoney } from "../../domain/util/formatSaleMoney";
+    import {
+        ArrowLeft,
+        BadgeDollarSign,
+        CheckCircle2,
+        Clock,
+        Hash,
+        Package,
+        ShieldCheck,
+        Truck,
+        User,
+    } from "lucide-svelte";
     import { userManagementStore } from "../../../auth/presentation/viewmodel/user-management.store";
     import { productStore } from "../../../product/presentation/viewmodel/product.store";
 
@@ -18,9 +29,11 @@
 
     const saleId = navBackStackEntry?.args?.id ?? "";
     let loading = false;
+    let confirming = false;
 
     $: sale = saleId ? $saleStore.items.find((s) => s.id === saleId) ?? null : null;
     $: user = sale ? $userManagementStore.items.find((u) => u.id === sale.userId) : null;
+    $: canConfirm = sale?.verified === BuyState.UNVERIFIED && !confirming;
 
     onMount(() => {
         if (!saleId) return;
@@ -52,24 +65,6 @@
         return "verified";
     }
 
-    function formatMoney(amount: number, currency: string | null | undefined): string {
-        const n = Number(amount) || 0;
-        const code = (currency || "").trim().toUpperCase();
-        if (code) {
-            try {
-                return new Intl.NumberFormat(undefined, {
-                    style: "currency",
-                    currency: code,
-                    maximumFractionDigits: 2,
-                }).format(n);
-            } catch {
-                return `${n.toFixed(2)} ${code}`;
-            }
-        }
-        // Sin currency en documento: no forzar USD; número + aviso
-        return n.toFixed(2);
-    }
-
     function deliveryLabel(d: DeliveryType | null | undefined): string {
         if (d === DeliveryType.PICKUP) return "Recogida (PICKUP)";
         if (d === DeliveryType.DELIVERY) return "Entrega (DELIVERY)";
@@ -82,6 +77,31 @@
             return new Date(iso).toLocaleString();
         } catch {
             return iso;
+        }
+    }
+
+    async function onConfirm() {
+        if (!sale || sale.verified !== BuyState.UNVERIFIED) return;
+        const ok = window.confirm(
+            "Confirmar esta venta (VERIFIED)?\n\n" +
+                "Se aplicará la misma semántica que el operador:\n" +
+                "• existence -= qty por línea\n" +
+                "• reserved -= qty por línea\n\n" +
+                "Esta acción es idempotente si ya está confirmada."
+        );
+        if (!ok) return;
+
+        confirming = true;
+        try {
+            toastStore.info("Confirmando venta y actualizando stock…", 2000);
+            await saleStore.confirmSale(sale.id);
+            await productStore.syncAll().catch(() => {});
+            toastStore.success("Venta confirmada (VERIFIED). Stock actualizado.");
+        } catch (e: any) {
+            logger.error(e?.message ?? e, e?.stack);
+            toastStore.error(e instanceof Error ? e.message : "No se pudo confirmar la venta.");
+        } finally {
+            confirming = false;
         }
     }
 
@@ -100,7 +120,9 @@
             </button>
             <div>
                 <h1 class="mgmt-h1">Detalle de venta</h1>
-                <p class="mgmt-muted">Supervisión · solo lectura del pedido del cliente</p>
+                <p class="mgmt-muted">
+                    Supervisión · confirmación con semántica de stock idéntica al operador
+                </p>
             </div>
         </div>
     </header>
@@ -161,7 +183,7 @@
                             </span>
                             <span class="meta-item">
                                 <Icon icon={ShieldCheck} size={14} ariaLabel="Operación" />
-                                Confirmación operativa: operador (o supervisión en Fase 5)
+                                Confirm: existence−=qty y reserved−=qty (paridad operador)
                             </span>
                         </div>
                     </div>
@@ -172,7 +194,7 @@
                         {saleStateLabel(sale.verified)}
                         <span class="pill-code">({sale.verified})</span>
                     </span>
-                    <div class="amount">{formatMoney(sale.amount, currencyCode)}</div>
+                    <div class="amount">{formatSaleMoney(sale.amount, currencyCode)}</div>
                     <div class="currency-note">
                         {#if currencyCode}
                             Moneda del documento: <strong>{currencyCode}</strong>
@@ -180,16 +202,33 @@
                             Sin <code>currency</code> en documento (no se fuerza USD)
                         {/if}
                     </div>
-                    <button class="mgmt-btn ghost" type="button" disabled>
-                        Vista de supervisión
-                    </button>
+
+                    {#if canConfirm}
+                        <button
+                            class="mgmt-btn primary confirm-btn"
+                            type="button"
+                            disabled={confirming}
+                            on:click={onConfirm}
+                        >
+                            <Icon icon={CheckCircle2} size={18} ariaLabel="Confirmar" />
+                            {confirming ? "Confirmando…" : "Confirmar venta"}
+                        </button>
+                    {:else if sale.verified === BuyState.VERIFIED}
+                        <button class="mgmt-btn ghost" type="button" disabled>
+                            Ya confirmada
+                        </button>
+                    {:else if sale.verified === BuyState.DELETED}
+                        <button class="mgmt-btn ghost" type="button" disabled>
+                            Rechazada (no confirmable)
+                        </button>
+                    {/if}
                 </div>
             </div>
 
             <div class="body">
                 <div class="body-head">
                     <h3>Líneas del pedido</h3>
-                    <span class="muted">Suma líneas: {formatMoney(linesTotal, currencyCode)}</span>
+                    <span class="muted">Suma líneas: {formatSaleMoney(linesTotal, currencyCode)}</span>
                 </div>
                 <div class="items">
                     {#each sale.products as p, idx (p.productId + "-" + idx)}
@@ -202,9 +241,9 @@
                                 <span class="qty">×{p.quantity}</span>
                             </div>
                             <div class="item-sub">
-                                <span>Unit: {formatMoney(p.price, currencyCode)}</span>
+                                <span>Unit: {formatSaleMoney(p.price, currencyCode)}</span>
                                 <span class="dot">•</span>
-                                <span>Línea: {formatMoney(saleLineTotal(p), currencyCode)}</span>
+                                <span>Línea: {formatSaleMoney(saleLineTotal(p), currencyCode)}</span>
                             </div>
                         </div>
                     {:else}
@@ -312,6 +351,12 @@
         text-align: right;
         color: color-mix(in srgb, var(--md-sys-color-on-background) 70%, transparent);
         max-width: 220px;
+    }
+
+    .confirm-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
     }
 
     .pill {

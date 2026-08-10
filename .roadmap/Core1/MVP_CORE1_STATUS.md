@@ -1,24 +1,32 @@
 # Core 1 — Estado MVP Back-office
 
-**Última actualización:** 2026-08-09  
-**Veredicto:** **Fase 4 lectura ventas completa (4.1–4.4)**.
+**Última actualización:** 2026-08-10  
+**Veredicto:** Fase 4 completa; **5.1 Confirm con stock** hecho.
 
-## Fase 4 — Ventas lectura
+## Fase 5 — Escritura stock
 
 | Tarea | Estado | Evidencia |
 |-------|--------|-----------|
-| **4.1** Filtros por estado | **Hecho** | Tabs + util |
-| **4.2** Detalle completo | **Hecho** | SaleDetail |
-| **4.3** Currency en UI | **Hecho** | formatSaleMoney |
-| **4.4** Origen solo lectura / no B2C create | **Hecho** | `BackofficeSalePolicy` + bloqueo `create` net/offline + UI |
+| **5.1** Confirm VERIFIED + stock | **Hecho** | `ConfirmSaleFromPanelCaseUse` + `applyStockDeltas` + UI |
+| **5.2** Reject DELETED + release reserved | Pendiente |
+| **5.3** Idempotencia / UI dialogs | Parcial (confirm idempotente + dialog) |
 
-## 4.4
+## 5.1 semántica (paridad operador)
 
-- Política: `assertBackofficeCannotCreateB2cSale()` siempre lanza
-- `SaleNetRepository.create` / `SaleOfflineFirstRepository.create` no llaman a Appwrite create
-- UI: chip “Origen: tienda cliente”; sin botón “Nueva venta”
-- Soft-hold solo en clientes AlejoTaller
+| Acción | existence | reserved |
+|--------|-----------|----------|
+| Confirm UNVERIFIED → VERIFIED | `-= qty` | `-= qty` |
+| Ya VERIFIED | sin cambio | sin cambio |
+| DELETED | no se confirma | — |
+
+- Re-read Appwrite por producto antes de mutar (como `AppwriteOperatorStockRepository`)
+- Orden: stock → `buy_state=VERIFIED`
+- `setVerified` deprecado para no saltarse stock
+
+```bash
+npm run test:unit
+```
 
 ## Siguiente
 
-**Fase 5** confirm/reject con semántica de stock idéntica al operador.
+**5.2** `RejectSaleFromPanelCaseUse` (solo `reserved -= qty`).
