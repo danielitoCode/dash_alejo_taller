@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "test:unit": "vitest run --project unit",
     "test:ui": "vitest run --project ui",
-    "test:integration": "vitest run --project integration"
+    "test:integration": "vitest run --project integration",
+    "ci": "npm run check && npm run test:unit && npm run build"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^6.2.1",
