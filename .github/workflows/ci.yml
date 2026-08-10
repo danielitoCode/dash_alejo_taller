@@ -1,5 +1,8 @@
 name: CI
 
+# Gate de calidad ligero (sin deploy). Útil como check required en branch protection.
+# El pipeline completo con deploy está en ci-and-deploy.yml.
+
 on:
   push:
     branches: [master]
@@ -16,37 +19,31 @@ jobs:
     name: Check · Unit tests · Build
     runs-on: ubuntu-latest
     timeout-minutes: 20
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
 
-      - name: Install dependencies
-        run: npm ci
+      - run: npm ci
 
-      - name: Typecheck (svelte-check + tsc)
+      - name: Typecheck
         run: npm run check
 
       - name: Unit tests
         run: npm run test:unit
 
-      - name: Production build
+      - name: Build
         run: npm run build
         env:
-          # Placeholders para que Vite empaquete sin secretos reales en CI.
-          # El deploy inyecta las VITE_* reales vía Vercel project env.
           VITE_APPWRITE_ENDPOINT: https://cloud.appwrite.io/v1
           VITE_APPWRITE_PROJECT_ID: ci-placeholder
           VITE_APPWRITE_DATABASE_ID: ci-placeholder
 
-      - name: Upload dist artifact
-        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/master'
+      - name: Upload dist
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         uses: actions/upload-artifact@v4
         with:
           name: dash-dist

@@ -1,54 +1,54 @@
 # CI / CD — `dash_alejo_taller`
 
-Complementa **Qodana** (calidad estática JetBrains) con comprobaciones de **tests, tipos y build**, y **despliegue Vercel**.
+Complementa **Qodana** con tests, typecheck, build y deploy a **Vercel**.
 
-## Workflows
+## Workflows activos
 
-| Archivo | Trigger | Qué hace |
-|---------|---------|----------|
-| `qodana_code_quality.yml` | push/PR `master` | Análisis Qodana (existente) |
-| `ci.yml` | push/PR `master` | `check` + `test:unit` + `build` + artifact `dist` |
-| `ci-and-deploy.yml` | push/PR `master` | Quality gate **y luego** deploy Vercel (preview en PR, prod en `master`) |
-| `deploy-vercel.yml` | push/PR `master` | Deploy Vercel standalone (opcional; preferir unificado) |
+| Workflow | Cuándo | Qué hace |
+|----------|--------|----------|
+| **Qodana** | push/PR `master` | Análisis estático (existente) |
+| **CI** | push/PR `master` | `check` + `test:unit` + `build` |
+| **CI and Deploy** | push/PR `master` | Mismo quality gate → Vercel (prod en `master`, preview en PR) |
+| **Deploy Vercel (manual)** | solo `workflow_dispatch` | Redeploy bajo demanda |
 
-Recomendación: en **Branch protection** de `master` exigir:
+### Branch protection (recomendado)
 
-- `CI / Check · Unit tests · Build` (job de `ci.yml`), **o**
-- `CI and Deploy / Quality gate`
+En GitHub → Settings → Branches → `master`:
 
-Qodana puede quedar como check informativo u obligatorio según tu plan.
+- Require status checks:
+  - `CI / Check · Unit tests · Build` **o** `CI and Deploy / Quality gate`
+  - (opcional) Qodana
+- Require PR before merge (si trabajas con PRs)
 
-## Secrets requeridos (Actions)
+## Secrets de Actions
 
-| Secret | Uso |
-|--------|-----|
-| `QODANA_TOKEN` | Ya usado por Qodana |
-| `VERCEL_TOKEN` | Token de Vercel (Account → Tokens) |
-| `VERCEL_ORG_ID` | Team/User id (`vercel link` / dashboard) |
-| `VERCEL_PROJECT_ID` | Project id del dash |
+| Secret | Obligatorio para |
+|--------|------------------|
+| `QODANA_TOKEN` | Qodana |
+| `VERCEL_TOKEN` | Deploy |
+| `VERCEL_ORG_ID` | Deploy |
+| `VERCEL_PROJECT_ID` | Deploy |
 
-### Variables de entorno de la app en Vercel
+Sin `VERCEL_*`, el **Quality gate sigue en verde** y el job de deploy se omite con warning.
 
-Configura en el **proyecto Vercel** (Production + Preview) las mismas claves que `.env.example` (`VITE_APPWRITE_*`, etc.). **No** pongas API keys de servidor en el frontend.
-
-## Comandos locales (equivalente al gate)
+### Cómo obtener IDs Vercel
 
 ```bash
-npm ci
-npm run check
-npm run test:unit
-npm run build
+npm i -g vercel
+vercel login
+vercel link   # en la raíz del repo
+# Lee .vercel/project.json → orgId, projectId
 ```
 
-Opcional en `package.json`:
+Token: Vercel Dashboard → Account Settings → Tokens.
+
+### Env de la app en Vercel
+
+En el proyecto Vercel (Production + Preview), define las `VITE_*` de `.env.example`. Nunca API keys de servidor en el frontend.
+
+## Local (mismo gate)
 
 ```bash
 npm run ci
+# equivalente a: check && test:unit && build
 ```
-
-## Nota sobre workflows duplicados
-
-Si activas **a la vez** `ci.yml` + `ci-and-deploy.yml` + `deploy-vercel.yml`, tendrás builds/deploy repetidos. Opciones:
-
-1. **Solo** `ci-and-deploy.yml` + Qodana (recomendado), o  
-2. `ci.yml` (required) + `deploy-vercel.yml` y desactivar el unificado.

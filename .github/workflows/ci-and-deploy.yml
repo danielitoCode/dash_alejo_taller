@@ -1,7 +1,8 @@
 name: CI and Deploy
 
-# Pipeline unificado: calidad obligatoria → deploy Vercel solo si pasa.
-# Complementa Qodana (análisis estático) sin reemplazarlo.
+# Quality gate obligatorio en push/PR a master.
+# Deploy Vercel solo si existen secrets; si no, el job se omite (no rompe el check de calidad).
+# Qodana sigue en workflow aparte.
 
 on:
   push:
@@ -55,11 +56,7 @@ jobs:
     needs: quality
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # Requiere secrets VERCEL_*; si faltan, el job falla de forma explícita.
-    if: |
-      always() &&
-      needs.quality.result == 'success' &&
-      (github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch')
+    if: needs.quality.result == 'success'
     permissions:
       contents: read
       deployments: write
@@ -68,35 +65,44 @@ jobs:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
+      - name: Check Vercel secrets
+        id: vercel_secrets
+        run: |
+          if [ -z "${{ secrets.VERCEL_TOKEN }}" ] || [ -z "${{ secrets.VERCEL_ORG_ID }}" ] || [ -z "${{ secrets.VERCEL_PROJECT_ID }}" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Secrets VERCEL_* no configurados. Quality gate OK; deploy omitido."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v4
+        if: steps.vercel_secrets.outputs.configured == 'true'
 
       - uses: actions/setup-node@v4
+        if: steps.vercel_secrets.outputs.configured == 'true'
         with:
           node-version: "22"
           cache: npm
 
-      - name: Require Vercel secrets
-        run: |
-          if [ -z "${{ secrets.VERCEL_TOKEN }}" ] || [ -z "${{ secrets.VERCEL_ORG_ID }}" ] || [ -z "${{ secrets.VERCEL_PROJECT_ID }}" ]; then
-            echo "::error::Faltan secrets VERCEL_TOKEN, VERCEL_ORG_ID o VERCEL_PROJECT_ID."
-            echo "Configúralos en Settings → Secrets and variables → Actions."
-            echo "Mientras tanto el Quality gate (check/tests/build) sí corre en ci.yml / este workflow."
-            exit 1
-          fi
-
-      - run: npm ci
+      - name: Install
+        if: steps.vercel_secrets.outputs.configured == 'true'
+        run: npm ci
 
       - name: Install Vercel CLI
+        if: steps.vercel_secrets.outputs.configured == 'true'
         run: npm install --global vercel@latest
 
       - name: Pull Vercel env
+        if: steps.vercel_secrets.outputs.configured == 'true'
         run: vercel pull --yes --environment=${{ github.event_name == 'pull_request' && 'preview' || 'production' }} --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Build on Vercel
+        if: steps.vercel_secrets.outputs.configured == 'true'
         run: vercel build ${{ github.event_name != 'pull_request' && '--prod' || '' }} --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Deploy
         id: deploy
+        if: steps.vercel_secrets.outputs.configured == 'true'
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             url=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
@@ -104,14 +110,18 @@ jobs:
             url=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
           fi
           echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Deployed: $url"
 
       - name: Comment PR preview
-        if: github.event_name == 'pull_request' && steps.deploy.outputs.url != ''
+        if: |
+          steps.vercel_secrets.outputs.configured == 'true' &&
+          github.event_name == 'pull_request' &&
+          steps.deploy.outputs.url != ''
         uses: actions/github-script@v7
         with:
           script: |
             const url = '${{ steps.deploy.outputs.url }}';
-            const body = `### Vercel Preview\n\n${url}\n\n_CI quality PASS → deploy automático_`;
+            const body = `### Vercel Preview\n\n${url}\n\n_Quality gate PASS → deploy automático_`;
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
