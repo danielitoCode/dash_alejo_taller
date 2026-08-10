@@ -1,26 +1,21 @@
 # Core 1 — Estado MVP Back-office
 
 **Última actualización:** 2026-08-10  
-**Veredicto:** Fases 1–5 + **6.1** (coherencia / no segundo hold). QA manual pendiente.
+**Veredicto:** Alineación de **código** Core 1 completa (0 → 6.1). **6.2** runbook publicado; ejecución manual pendiente. QA formal después.
 
-## Fase 6 — Coherencia
+## Fase 6 — Coherencia + smoke
 
 | Tarea | Estado | Evidencia |
 |-------|--------|-----------|
-| **6.1** No B2C create / no segundo hold / no verify sin stock | **Hecho** | Policy + CreateSale + UpdateSaleVerified guard + catalog write sin reserved |
-| 6.2 Smoke tienda → dash (manual) | Pendiente (post-alineación / pre-QA formal) |
+| **6.1** No B2C / no segundo hold / no verify sin stock | **Hecho** | Policy + guards + catalog write |
+| **6.2** Smoke tienda → dash | **Runbook listo** · ejecución ☐ | [`SMOKE_6_2.md`](./SMOKE_6_2.md) |
 
-### 6.1 garantías
+### Cómo cerrar la ejecución 6.2
 
-1. `create` net + offline-first → `assertBackofficeCannotCreateB2cSale`
-2. `CreateSaleFromPanelCaseUse` → siempre rechaza
-3. `UpdateSaleVerifiedCaseUse` **no** acepta VERIFIED/DELETED (forzar confirm/reject)
-4. `productToCatalogWriteDTO` omite `reserved` (no pisa soft-hold de tienda)
-5. UI Ventas/Reservas: solo supervisión; sin “nueva venta”
-
-```bash
-npm run test:unit
-```
+1. Seguir [`SMOKE_6_2.md`](./SMOKE_6_2.md) en staging.
+2. Marcar Camino A + B + negativos.
+3. Rellenar “Registro de ejecución” del propio runbook.
+4. Luego: [`QA_CORE1_CHECK_plan.md`](./QA_CORE1_CHECK_plan.md).
 
 ## Alineación Core 1 (código)
 
@@ -32,5 +27,10 @@ npm run test:unit
 | Ventas currency + filtros | ✓ |
 | Confirm/reject + stock | ✓ |
 | No origen B2C / no segundo hold | ✓ |
+| Smoke cruzado documentado | ✓ (ejecución pendiente) |
 
-**Siguiente:** cerrar alineación (opcional 6.2 smoke) y luego checklist QA.
+```bash
+npm run test:unit
+```
+
+**Siguiente (fuera de código):** ejecutar smoke 6.2 → QA formal.
