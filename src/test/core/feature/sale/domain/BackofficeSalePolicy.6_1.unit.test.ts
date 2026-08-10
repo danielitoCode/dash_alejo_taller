@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest"
+import { describe, it, expect, vi } from "vitest"
 import {
     assertBackofficeCannotCreateB2cSale,
     assertBackofficeCannotSoftHold,
@@ -26,8 +26,18 @@ describe("Core1 6.1 — coherencia / no segundo hold", () => {
         expect(() => assertBackofficeCannotSoftHold()).toThrow(BackofficeCannotSoftHoldError)
     })
 
+    it("assertNotTerminalBuyStateWithoutStockPath bloquea VERIFIED/DELETED", () => {
+        expect(() => assertNotTerminalBuyStateWithoutStockPath("VERIFIED")).toThrow(
+            BackofficeMustUseConfirmRejectError
+        )
+        expect(() => assertNotTerminalBuyStateWithoutStockPath("DELETED")).toThrow(
+            BackofficeMustUseConfirmRejectError
+        )
+        expect(() => assertNotTerminalBuyStateWithoutStockPath("UNVERIFIED")).not.toThrow()
+    })
+
     it("UpdateSaleVerified bloquea VERIFIED y DELETED", async () => {
-        const updateVerified = viFn()
+        const updateVerified = vi.fn()
         const repo: SaleRepository = {
             getAllSales: async () => [],
             create: async () => {
@@ -77,23 +87,3 @@ describe("Core1 6.1 — coherencia / no segundo hold", () => {
         expect(dto.existence).toBe(10)
     })
 })
-
-function viFn() {
-    const calls: unknown[][] = []
-    const fn = async (...args: unknown[]) => {
-        calls.push(args)
-        return {} as Sale
-    }
-    fn.mock = { calls }
-    ;(fn as any).not = {
-        toHaveBeenCalled: () => {
-            if (calls.length) throw new Error("expected not called")
-        },
-    }
-    // vitest-compatible spy-ish
-    return Object.assign(fn, {
-        get mock() {
-            return { calls }
-        },
-    }) as any
-}
