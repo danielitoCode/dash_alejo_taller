@@ -1,15 +1,16 @@
 # CI / CD — `dash_alejo_taller`
 
-Complementa **Qodana** con tests, typecheck, build y deploy a **Vercel**.
+Quality gate con typecheck, tests unitarios, build y deploy a **Vercel**.
 
 ## Workflows activos
 
 | Workflow | Cuándo | Qué hace |
 |----------|--------|----------|
-| **Qodana** | push/PR `master` | Análisis estático (existente) |
 | **CI** | push/PR `master` | `check` + `test:unit` + `build` |
 | **CI and Deploy** | push/PR `master` | Mismo quality gate → Vercel (prod en `master`, preview en PR) |
 | **Deploy Vercel (manual)** | solo `workflow_dispatch` | Redeploy bajo demanda |
+
+> Qodana se eliminó: exige `QODANA_TOKEN` / Qodana Cloud y no aportaba valor frente al quality gate actual.
 
 ### Branch protection (recomendado)
 
@@ -17,14 +18,12 @@ En GitHub → Settings → Branches → `master`:
 
 - Require status checks:
   - `CI / Check · Unit tests · Build` **o** `CI and Deploy / Quality gate`
-  - (opcional) Qodana
 - Require PR before merge (si trabajas con PRs)
 
 ## Secrets de Actions
 
 | Secret | Obligatorio para |
 |--------|------------------|
-| `QODANA_TOKEN` | Qodana |
 | `VERCEL_TOKEN` | Deploy |
 | `VERCEL_ORG_ID` | Deploy |
 | `VERCEL_PROJECT_ID` | Deploy |
