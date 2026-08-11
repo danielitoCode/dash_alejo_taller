@@ -7,6 +7,8 @@
     import { ENV } from "../../env";
     import { ExternalLink, ShieldCheck, TriangleAlert } from "lucide-svelte";
 
+    const isConfigured = infraStatusStore.isConfigured;
+
     let timer: number | null = null;
 
     function startPolling() {
@@ -43,7 +45,7 @@
     }
 </script>
 
-{#if !$infraStatusStore.isConfigured}
+{#if !$isConfigured}
     <section class="mgmt-card infra" aria-label="Infraestructura">
         <div class="infra-head">
             <div>
@@ -354,4 +356,3 @@
         }
     }
 </style>
-
