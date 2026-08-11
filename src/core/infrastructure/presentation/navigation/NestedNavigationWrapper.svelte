@@ -75,7 +75,6 @@
         { label: "Ajustes", path: settings.path, icon: Settings }
     ];
 
-    /** Core1 3.1: única fuente = RoleConfig.ROLE_ROUTE_ACCESS */
     function canAccess(path: string): boolean {
         return canAccessRoute(currentRole, path);
     }
@@ -87,7 +86,6 @@
     const internalStackStore = internalNavController._getStackStore();
     $: internalStack = $internalStackStore;
     $: currentPath = internalStack.at(-1)?.route ?? dashboard.path;
-    // currentRole en el filtro para reactividad Svelte
     $: visibleItems = items.filter((item) => canAccessRoute(currentRole, item.path));
     $: if (currentRole && currentPath && !canAccessRoute(currentRole, currentPath)) {
         const allowedPath = firstAllowedPath(currentRole);
@@ -138,7 +136,9 @@
                 toastStore.info(`El rol es: ${currentRole}`);
             }
         } catch (error) {
-            logger.error("[NestedNav] Error refrescando rol:", error);
+            const msg = error instanceof Error ? error.message : String(error);
+            const stack = error instanceof Error ? error.stack : undefined;
+            logger.error(`[NestedNav] Error refrescando rol: ${msg}`, stack);
             toastStore.error("Error al refrescar rol");
         }
     }
@@ -159,10 +159,7 @@
 
                 if (u.role === null || u.role === undefined) {
                     logger.warn(
-                        "[NestedNav] Usuario sin rol configurado. Labels:",
-                        u.labels ?? "[]",
-                        "Prefs.role:",
-                        (u as any)?.prefs?.role ?? "undefined"
+                        `[NestedNav] Usuario sin rol configurado. Labels: ${JSON.stringify(u.labels ?? [])} Prefs.role: ${String((u as any)?.prefs?.role ?? "undefined")}`
                     );
                     toastStore.error(
                         "⚠️ Tu cuenta no tiene rol configurado. Contacta al administrador. " +
