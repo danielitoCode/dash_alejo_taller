@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { NavController } from "../../../lib/navigation/NavController";
+    import type { NavController } from "../../../../lib/navigation/NavController";
 
     export let navController: NavController;
 
