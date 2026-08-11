@@ -74,11 +74,6 @@ function createProductStore() {
         });
     }
 
-    /**
-     * Core1 6.4 — refresca solo productos tocados por confirm/reject.
-     * Preferible a syncAll completo: re-lee Appwrite/Dexie (6.3 ya espejó)
-     * y actualiza items/selected en memoria para reactividad inmediata.
-     */
     async function refreshStockForProducts(productIds: string[]): Promise<void> {
         const unique = [...new Set(productIds.map((id) => String(id || "").trim()).filter(Boolean))];
         if (unique.length === 0) return;
@@ -102,10 +97,6 @@ function createProductStore() {
         }
     }
 
-    /**
-     * Parche en memoria cuando ya conocemos existence/reserved (post applyStockDeltas).
-     * No toca red; complementa 6.3 Dexie + 6.4 UI.
-     */
     function patchLocalStock(
         productId: string,
         stock: { existence: number; reserved: number }
@@ -186,6 +177,37 @@ function createProductStore() {
         });
     }
 
+    async function registerStockEntry(productId: string, quantity: number): Promise<Product> {
+        return await runSaving(async () => {
+            const updated = await productContainer.useCases.registerStockEntry.execute(
+                productId,
+                quantity
+            );
+            update((state) => ({
+                ...state,
+                items: state.items.map((item) => (item.id === updated.id ? updated : item)),
+                selected: state.selected?.id === updated.id ? updated : state.selected,
+            }));
+            try {
+                const { publishStockChanged } = await import(
+                    "../../../../infrastructure/data/alset-pulse/stock-pulse"
+                );
+                await publishStockChanged({
+                    productIds: [updated.id],
+                    reason: "entry",
+                    timestamp: new Date().toISOString(),
+                });
+            } catch (e: any) {
+                logger.warn(`[product.store] publish stock:changed: ${e?.message ?? e}`);
+            }
+            return updated;
+        });
+    }
+
+    async function handleStockChanged(productIds: string[]): Promise<void> {
+        await refreshStockForProducts(productIds);
+    }
+
     async function updatePrice(product: Product, newPrice: number): Promise<void> {
         await runSaving(async () => {
             await productContainer.useCases.updatePrice.execute(newPrice, product);
@@ -234,6 +256,8 @@ function createProductStore() {
         syncById,
         create,
         updateCatalog,
+        registerStockEntry,
+        handleStockChanged,
         updatePrice,
         removeById,
         clearError,
