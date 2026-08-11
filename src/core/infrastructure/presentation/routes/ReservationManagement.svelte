@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import type { NavController } from "../../../../../lib/navigation/NavController";
+    import type { NavController } from "../../../../lib/navigation/NavController";
     import Icon from "../components/Icon.svelte";
     import { saleStore } from "../../../feature/sale/presentation/viewmodel/sale.store";
     import { userManagementStore } from "../../../feature/auth/presentation/viewmodel/user-management.store";
