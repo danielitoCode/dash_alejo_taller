@@ -1,8 +1,8 @@
 # Core 2 — Backlog detallado (Back-office)
 
-**Última actualización:** 2026-08-12  
+**Última actualización:** 2026-08-13  
 **Plan maestro:** [`CORE2_IMPLEMENTATION_PLAN.md`](./CORE2_IMPLEMENTATION_PLAN.md)  
-**Finanzas:** [`FINANCE_MODEL_CORE2.md`](./FINANCE_MODEL_CORE2.md)
+**Finanzas:** [`FINANCE_MODEL_CORE2.md`](./FINANCE_MODEL_CORE2.md) — COGS = último costo
 
 Este archivo desglosa micro-tareas. El **avance oficial** se marca en el plan por fases.
 
@@ -16,7 +16,7 @@ Este archivo desglosa micro-tareas. El **avance oficial** se marca en el plan po
 - [ ] UI de movimientos y listado de facturas de entrada
 - [ ] Ajuste manual auditado (nunca `existence < reserved`) + fila `ajuste`
 - [ ] Devolución formal post-VERIFIED (si política 2.0 la incluye)
-- [ ] Al VERIFIED: revenue / COGS / margen (dash y/o operador)
+- [ ] Al VERIFIED: revenue / COGS (`last_unit_cost` × qty) / margen (dash y/o operador)
 
 ## 2.2 Reportes y supervisión
 
@@ -43,7 +43,7 @@ Este archivo desglosa micro-tareas. El **avance oficial** se marca en el plan po
 - [ ] Historial git limpio de `.env` si hubo fuga
 - [ ] Viewer: solo lectura en stock/ventas/movimientos/finanzas
 
-## 2.6 Reservas de taller (opcional MVP)
+## 2.6 Reservas de taller (incluida en MVP — 2026-08-13)
 
 - [ ] Collection + estados de cita
 - [ ] UI menú Reservas (dejar de ser placeholder)

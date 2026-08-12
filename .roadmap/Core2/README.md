@@ -1,10 +1,10 @@
 # Core 2 — Inventario formal, supervisión y endurecimiento (Back-office)
 
-**Estado:** planificado — implementación **no iniciada** (2026-08-12).  
+**Estado:** planificado — decisiones 2.0 de producto **cerradas** (2026-08-13); implementación no iniciada.  
 **Depende de:** Core 1 dash **cerrado** ([`../Core1/MVP_CORE1_STATUS.md`](../Core1/MVP_CORE1_STATUS.md)).  
 **Paridad ecosistema:** [`AlejoTaller/.roadmap/Core2/`](https://github.com/danielitoCode/AlejoTaller/tree/master/.roadmap/Core2)
 
-> Core 2 **no reescribe** el soft-hold de Core 1. Añade **finanzas** (factura de entrada con costos/proveedor, ingreso y margen al confirmar venta), traza (`stock_movements`), reportes económicos, seguridad y (opcional) agenda de **Reservas** de taller.
+> Core 2 **no reescribe** el soft-hold de Core 1. Añade **finanzas** (factura de entrada con costos/proveedor, ingreso y margen al confirmar venta; COGS = último costo), traza (`stock_movements`), reportes económicos, **reservas de taller**, seguridad.
 
 ## Índice
 
@@ -25,7 +25,7 @@
 | **2.2** | Confirm: `salida_venta` + ingreso/COGS | AlejoTaller (+ dash) |
 | **2.3** | Panel: **factura de entrada** + movimientos | **dash** |
 | **2.4** | Reportes económicos + cola UNVERIFIED | **dash** |
-| **2.5** | Reservas de taller (opcional MVP) | ambos |
+| **2.5** | Reservas de taller (**en MVP**) | ambos |
 | **2.6** | Seguridad, CI, DoD Core 2 | ambos |
 
 ## Cómo usar
