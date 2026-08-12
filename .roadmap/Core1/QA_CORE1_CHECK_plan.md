@@ -1,7 +1,7 @@
 # QA Core 1 — Checklist (~15 min)
 
 **Última actualización:** 2026-08-12  
-**Sesión marcada:** 2026-08-12 — PASS en §0, §1, §2, §3, §5, §7 (tareas Core1 validadas). Pendiente revalidar §4A/§4B y §6 en checklist formal si aún no se anotaron.  
+**Sesión marcada:** 2026-08-12 — PASS en §0–§5 y §7. Pendiente solo §6 (roles viewer) si se quiere checklist 100%.  
 **Objetivo:** marcar Core 1 como cerrado con un circuito real tienda → panel → stock.  
 **Contrato:** [`CANONICAL_RULES_FREEZE.md`](./CANONICAL_RULES_FREEZE.md)  
 **DoD formal:** [`PHASE_7_3_CORE1_DOD.md`](./PHASE_7_3_CORE1_DOD.md)  
@@ -31,7 +31,7 @@ Tienda (web/Android): ________
 Rol staff: ___________________
 productId: ___________________
 existence / reserved / available (base): ____ / ____ / ____
-Resultado final: PASS parcial (§1–§3, §5, §7) — pendiente explicitar §4A/§4B y §6 en sesión formal
+Resultado final: PASS Core1 stock/ventas (§1–§5, §7). Opcional §6 roles viewer.
 ```
 
 ---
@@ -96,11 +96,11 @@ Resultado final: PASS parcial (§1–§3, §5, §7) — pendiente explicitar §4
 1. **Confirmar** → acepta el diálogo  
 2. Comprueba:
 
-- [ ] Pasa a **confirmada**  
-- [ ] `existence −= qty`  
-- [ ] `reserved −= qty`  
-- [ ] Disponible coherente post-confirmación  
-- [ ] Toast de éxito  
+- [X] Pasa a **confirmada**  
+- [X] `existence −= qty`  
+- [X] `reserved −= qty`  
+- [X] Disponible coherente post-confirmación  
+- [X] Toast de éxito  
 
 ---
 
@@ -108,10 +108,10 @@ Resultado final: PASS parcial (§1–§3, §5, §7) — pendiente explicitar §4
 
 Repite §2 con otra qty (ej. **1**), luego **Rechazar**:
 
-- [ ] Estado **rechazada**  
-- [ ] `existence` **sin cambio**  
-- [ ] `reserved −= qty`  
-- [ ] Disponible recupera esa qty  
+- [X] Estado **rechazada**  
+- [X] `existence` **sin cambio**  
+- [X] `reserved −= qty`  
+- [X] Disponible recupera esa qty  
 
 ---
 
@@ -157,3 +157,11 @@ Sin recargar a mano (o con poco delay):
 - el pedido no aparece en **Ventas → Pendientes**.
 
 Anota al cerrar: **PASS / FAIL** + producto y qty usadas.
+
+---
+
+## Registro de cierre (sesión 2026-08-12)
+
+- **Core 1 circuito stock/ventas:** **PASS** (§1, §2, §3, §4A, §4B, §5).
+- **Extras validados:** §0, §7 (anónimos).
+- **Opcional abierto:** §6 roles viewer.
