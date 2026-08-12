@@ -21,6 +21,9 @@
     let role: BusinessRole = "viewer";
     let query = "";
     let searchTimer: number | null = null;
+    let purgeBusy = false;
+    let purgeLastMessage: string | null = null;
+    let purgeLastOk: boolean | null = null;
 
     $: managerRole = $userManagementStore.managerRole ?? "viewer";
     $: rolesForCreate = assignableRoles(managerRole);
@@ -146,29 +149,50 @@
 
     async function purgeAnonymous() {
         if (!canPurgeAnonymous) {
-            toastStore.error("Solo owner o admin pueden limpiar anónimos.");
+            toastStore.error("Solo owner o admin pueden limpiar anónimos.", 4000);
             return;
         }
+        if (purgeBusy) return;
+
         const ok = window.confirm(
             "¿Borrar en Appwrite todas las cuentas anónimas/visitante (sin email)?\n\n" +
                 "No afecta usuarios con correo. Esto libera cupo del plan (Users)."
         );
         if (!ok) return;
+
+        purgeBusy = true;
+        purgeLastMessage = null;
+        purgeLastOk = null;
+
         try {
-            toastStore.info("Limpiando anónimos…");
+            toastStore.info("Limpiando usuarios anónimos en Appwrite…", 4000);
             const result = await userManagementStore.purgeAnonymousUsers();
+
             if (result.found === 0) {
-                toastStore.info("No había usuarios anónimos.");
+                purgeLastOk = true;
+                purgeLastMessage = "No había usuarios anónimos que limpiar.";
+                toastStore.info(purgeLastMessage, 4500);
             } else if (result.failed === 0) {
-                toastStore.success(`Eliminados ${result.deleted} anónimos.`);
+                purgeLastOk = true;
+                purgeLastMessage = `Limpieza correcta: se eliminaron ${result.deleted} usuario(s) anónimo(s).`;
+                toastStore.success(purgeLastMessage, 5500);
+            } else if (result.deleted === 0) {
+                purgeLastOk = false;
+                purgeLastMessage = `Limpieza fallida: no se pudo eliminar ninguno de los ${result.found} anónimos encontrados.`;
+                toastStore.error(purgeLastMessage, 6000);
             } else {
-                toastStore.error(
-                    `Eliminados ${result.deleted} de ${result.found}. Fallaron ${result.failed}.`
-                );
+                purgeLastOk = false;
+                purgeLastMessage = `Limpieza parcial: eliminados ${result.deleted} de ${result.found}. Fallaron ${result.failed}.`;
+                toastStore.error(purgeLastMessage, 6000);
             }
         } catch (e: any) {
             logger.error(e?.message ?? e, e?.stack);
-            toastStore.error(e instanceof Error ? e.message : "No se pudo limpiar anónimos.");
+            purgeLastOk = false;
+            purgeLastMessage =
+                e instanceof Error ? e.message : "No se pudo completar la limpieza de anónimos.";
+            toastStore.error(`Error en la limpieza: ${purgeLastMessage}`, 6000);
+        } finally {
+            purgeBusy = false;
         }
     }
 </script>
@@ -193,11 +217,16 @@
                         class="mgmt-btn ghost"
                         type="button"
                         on:click={purgeAnonymous}
-                        disabled={$userManagementStore.saving || $userManagementStore.loading}
+                        disabled={purgeBusy || $userManagementStore.saving || $userManagementStore.loading}
                         title="Borrar en Appwrite cuentas sin email (sesiones anónimas)"
                     >
-                        <Icon icon={Trash2} size={18} ariaLabel="Limpiar anónimos" />
-                        Limpiar anónimos
+                        {#if purgeBusy}
+                            <LoadingSpinner size={18} label="Limpiando" subtle />
+                            Limpiando…
+                        {:else}
+                            <Icon icon={Trash2} size={18} ariaLabel="Limpiar anónimos" />
+                            Limpiar anónimos
+                        {/if}
                     </button>
                 {/if}
                 {#if isRefreshing}
@@ -208,6 +237,18 @@
                 {/if}
             </div>
         </div>
+
+        {#if purgeLastMessage}
+            <div
+                class="purge-banner"
+                class:ok={purgeLastOk === true}
+                class:bad={purgeLastOk === false}
+                role="status"
+                aria-live="polite"
+            >
+                {purgeLastMessage}
+            </div>
+        {/if}
     </header>
 
     <div class="mgmt-layout">
@@ -354,3 +395,25 @@
         </section>
     </div>
 </section>
+
+<style>
+    .purge-banner {
+        margin-top: 10px;
+        padding: 10px 14px;
+        border-radius: 12px;
+        font-size: 0.92rem;
+        font-weight: 650;
+        border: 1px solid var(--md-sys-color-outline-variant);
+        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 35%, transparent);
+        color: var(--md-sys-color-on-surface);
+    }
+    .purge-banner.ok {
+        border-color: color-mix(in srgb, var(--md-sys-color-primary) 45%, var(--md-sys-color-outline-variant));
+        background: color-mix(in srgb, var(--md-sys-color-primary) 14%, transparent);
+    }
+    .purge-banner.bad {
+        border-color: color-mix(in srgb, var(--md-sys-color-error) 45%, var(--md-sys-color-outline-variant));
+        background: color-mix(in srgb, var(--md-sys-color-error) 12%, transparent);
+        color: var(--md-sys-color-on-surface);
+    }
+</style>
