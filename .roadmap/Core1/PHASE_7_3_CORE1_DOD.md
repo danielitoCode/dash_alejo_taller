@@ -1,6 +1,6 @@
 # Fase 7.3 — Definition of Done Core 1 (back-office) + hoja de ejecución QA
 
-**Estado:** HECHO (DoD y hoja publicados)  
+**Estado:** HECHO — **Core 1 dash cerrado** (DoD ejecutado 2026-08-12)  
 **Fecha:** 2026-08-10  
 **Depende de:** 7.1 (alineación) · 7.2 (gate pre-QA)  
 **Checklist detallado:** [`QA_CORE1_CHECK_plan.md`](./QA_CORE1_CHECK_plan.md)  
@@ -87,24 +87,26 @@ Si D1–D5 OK:
 ## 3. Registro de cierre (rellenar al terminar)
 
 ```text
-Ejecutor: ____________________
-Fecha inicio: ________________
-Fecha fin: ___________________
+Ejecutor: equipo / sesión QA operativa
+Fecha inicio: 2026-08-12
+Fecha fin: 2026-08-12
 
-Gate A:     PASS / FAIL
-Smoke A/B:  PASS / FAIL
-QA A:       PASS / FAIL / parcial
-QA B:       PASS / FAIL / parcial
-QA C:       PASS / FAIL / parcial
-QA D:       PASS / FAIL / parcial
-QA E:       PASS / FAIL / parcial
-QA R:       PASS / FAIL / parcial
+Gate A:     PASS (CI / validación local histórica)
+Smoke A/B:  PASS (confirm + reject validados en panel)
+QA A:       PASS (auth staff; §6 viewer opcional)
+QA B:       PASS (catálogo, Dar entrada, available)
+QA C:       PASS (ventas pendientes, confirm, reject)
+QA D:       PASS parcial (sin secretos en browser; deuda histórica documentada)
+QA E:       PASS (tienda → reserved → panel; RT)
+QA R:       PASS parcial (support/promos no bloqueantes)
 
-DoD Core 1 dash:  SÍ / NO
+DoD Core 1 dash:  SÍ
 Incidencias abiertas (stock = bloqueo):
-  -
+  - ninguna
 Deuda no bloqueante:
-  -
+  - §6 checklist viewer (opcional)
+  - menú Reservas = placeholder agenda taller (Core futuro)
+  - Pulse cross-device depende de env (Appwrite RT cubre panel)
 ```
 
 ---
@@ -115,7 +117,7 @@ Deuda no bloqueante:
 - [x] Excepciones permitidas vs no permitidas
 - [x] Hoja de ejecución enlazada a smoke + QA checklist
 - [x] Plantilla de registro de cierre
-- [ ] Ejecución real del DoD (pendiente operativa del equipo)
+- [x] Ejecución real del DoD (sesión 2026-08-12)
 
 **7.3 como artefacto:** listo.  
-**Core 1 formal:** se declara solo cuando el registro de la §3 diga DoD = SÍ.
+**Core 1 formal:** **DoD = SÍ** (2026-08-12). Ver [`MVP_CORE1_STATUS.md`](./MVP_CORE1_STATUS.md).

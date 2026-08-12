@@ -1,7 +1,7 @@
 # QA Core 1 — Checklist (~15 min)
 
 **Última actualización:** 2026-08-12  
-**Sesión marcada:** 2026-08-12 — PASS en §0–§5 y §7. Pendiente solo §6 (roles viewer) si se quiere checklist 100%.  
+**Sesión marcada:** 2026-08-12 — PASS §0–§5 y §7. **Core 1 cerrado** (DoD). §6 viewer queda como deuda no bloqueante.  
 **Objetivo:** marcar Core 1 como cerrado con un circuito real tienda → panel → stock.  
 **Contrato:** [`CANONICAL_RULES_FREEZE.md`](./CANONICAL_RULES_FREEZE.md)  
 **DoD formal:** [`PHASE_7_3_CORE1_DOD.md`](./PHASE_7_3_CORE1_DOD.md)  
@@ -31,7 +31,7 @@ Tienda (web/Android): ________
 Rol staff: ___________________
 productId: ___________________
 existence / reserved / available (base): ____ / ____ / ____
-Resultado final: PASS Core1 stock/ventas (§1–§5, §7). Opcional §6 roles viewer.
+Resultado final: PASS — Core 1 dash cerrado (DoD 2026-08-12). Opcional §6 roles viewer.
 ```
 
 ---
@@ -165,3 +165,8 @@ Anota al cerrar: **PASS / FAIL** + producto y qty usadas.
 - **Core 1 circuito stock/ventas:** **PASS** (§1, §2, §3, §4A, §4B, §5).
 - **Extras validados:** §0, §7 (anónimos).
 - **Opcional abierto:** §6 roles viewer.
+
+### §6 pendiente no bloqueante
+
+- [ ] Viewer no puede mutar stock ni decisiones de venta  
+  _(No bloquea cierre Core 1; validar cuando haya cuenta viewer de prueba.)_
