@@ -37,32 +37,28 @@ const adminNetRepository = new AdminNetManagerImpl(functions)
 
 // Infraestructura futura:
 // este repositorio HTTP permite volver a un flujo server-assisted para Google
-// sin tocar la API pública del store.
+// sin tocar la API pública del contenedor. Hoy el login/registro MVP no lo usa.
 const googleAuthNetRepository = new GoogleAuthNetRepositoryImpl()
+
+// Servicio activo para reset de contraseña externo.
 const passwordResetNetRepository = new PasswordResetNetRepositoryImpl()
 
-// Use cases de cuenta.
+// Casos de uso del dominio.
 const createAccountCaseUse = new CreateAccountCaseUse(authNetRepository)
-const getCurrentUserCaseUse = new GetCurrentUserCaseUse(authNetRepository)
 const updateNameCaseUse = new UpdateNameCaseUse(authNetRepository)
 const updatePasswordCaseUse = new UpdatePasswordCaseUse(authNetRepository)
 const updatePhotoUrlCaseUse = new UpdatePhotoCaseUse(authNetRepository)
 const updatePhoneCaseUse = new UpdatePhoneCaseUse(authNetRepository)
 const updateRoleCaseUse = new UpdateRoleCaseUse(authNetRepository)
 const deleteUserCaseUse = new DeleteUserCaseUse(authNetRepository)
-const getAllUserCaseUse = new GetAllUsersCaseUse(adminNetRepository)
-
-// Use cases de sesión.
 const opeSessionCaseUse = new OpenSessionCaseUse(sessionNetManager)
 const closeSessionCaseUSe = new CloseSessionsCaseUSe(sessionNetManager)
-
-// Use cases Google / password reset.
-const linkGoogleAccountCaseUse = new LinkGoogleAccountCaseUse(sessionNetManager, googleAuthNetRepository)
+const getCurrentUserCaseUse = new GetCurrentUserCaseUse(authNetRepository)
+const getAllUserCaseUse = new GetAllUsersCaseUse(adminNetRepository)
+const linkGoogleAccountCaseUse = new LinkGoogleAccountCaseUse(authNetRepository, sessionNetManager)
 const exchangeGoogleCredentialCaseUse = new ExchangeGoogleCredentialCaseUse(googleAuthNetRepository)
 const requestPasswordResetCodeCaseUse = new RequestPasswordResetCodeCaseUse(passwordResetNetRepository)
 const confirmPasswordResetCodeCaseUse = new ConfirmPasswordResetCodeCaseUse(passwordResetNetRepository)
-
-// Use cases admin (gestión de usuarios del panel).
 const createManagedUserCaseUse = new CreateManagedUserCaseUse(adminNetRepository)
 const updateManagedUserLabelsCaseUse = new UpdateManagedUserLabelsCaseUse(adminNetRepository)
 const updateManagedUserStatusCaseUse = new UpdateManagedUserStatusCaseUse(adminNetRepository)
