@@ -206,6 +206,40 @@ function createUserManagementStore() {
         });
     }
 
+    /**
+     * Borra en Appwrite las cuentas anónimas/visitante (sin email).
+     * Útil en plan Free: el cupo de Users cuenta anónimos y, al llenarse, no se crean cuentas nuevas.
+     */
+    async function purgeAnonymousUsers(): Promise<{ deleted: number; failed: number; found: number }> {
+        return await runSaving(async () => {
+            const managerRole = await resolveManagerRole();
+            if (managerRole !== "owner" && managerRole !== "admin") {
+                throw new Error("Solo owner o admin pueden limpiar usuarios anónimos.");
+            }
+
+            const res = await authContainer.useCases.accounts.getAllUserCaseUse("");
+            const anonymous = res.users.filter((u) => isAnonymousOrGuestUser(u));
+            let deleted = 0;
+            let failed = 0;
+
+            for (const u of anonymous) {
+                if (!u.id) {
+                    failed += 1;
+                    continue;
+                }
+                try {
+                    await authContainer.useCases.accounts.adminDeleteUser(u.id);
+                    deleted += 1;
+                } catch {
+                    failed += 1;
+                }
+            }
+
+            await loadUsers(lastSearch);
+            return { deleted, failed, found: anonymous.length };
+        });
+    }
+
     function getAssignableRoles(): BusinessRole[] {
         const manager = snapshot.managerRole ?? "viewer";
         return assignableRoles(manager);
@@ -222,6 +256,7 @@ function createUserManagementStore() {
         toggleBlocked,
         loadUsers,
         requestPasswordReset,
+        purgeAnonymousUsers,
         getAssignableRoles,
         resolveManagerRole,
     };
