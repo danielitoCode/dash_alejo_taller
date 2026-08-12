@@ -82,15 +82,103 @@ export async function publishStockChanged(payload: StockChangedPayload): Promise
 
 export function parseStockChangedPayload(payload: unknown): StockChangedPayload | null {
     if (!payload || typeof payload !== "object") return null;
-    const data = payload as Partial<StockChangedPayload>;
-    const productIds = Array.isArray(data.productIds)
-        ? data.productIds.filter((id): id is string => typeof id === "string" && id.length > 0)
+    const data = payload as Partial<StockChangedPayload> & { data?: unknown };
+    // Algunos buses envuelven en { type, data }
+    const inner =
+        data.data && typeof data.data === "object" && !Array.isArray(data.productIds)
+            ? (data.data as Partial<StockChangedPayload>)
+            : data;
+    const productIds = Array.isArray(inner.productIds)
+        ? inner.productIds.filter((id): id is string => typeof id === "string" && id.length > 0)
         : [];
     if (productIds.length === 0) return null;
     return {
         productIds: [...new Set(productIds)],
-        reason: (data.reason as StockChangeReason) || "hold",
-        saleId: data.saleId ?? null,
-        timestamp: typeof data.timestamp === "string" ? data.timestamp : new Date().toISOString(),
+        reason: (inner.reason as StockChangeReason) || "hold",
+        saleId: inner.saleId ?? null,
+        timestamp: typeof inner.timestamp === "string" ? inner.timestamp : new Date().toISOString(),
+    };
+}
+
+/**
+ * Escucha cambios de stock: CustomEvent + BroadcastChannel (mismo origen)
+ * y canal Pulse/Pusher `stock-updates` (cross-device) si hay key/cluster.
+ */
+export function subscribeStockChanged(
+    handler: (payload: StockChangedPayload) => void
+): () => void {
+    const cleanups: Array<() => void> = [];
+
+    if (typeof window !== "undefined") {
+        const onLocal = (ev: Event) => {
+            const parsed = parseStockChangedPayload((ev as CustomEvent).detail);
+            if (parsed) handler(parsed);
+        };
+        window.addEventListener(STOCK_CHANGED_EVENT, onLocal);
+        cleanups.push(() => window.removeEventListener(STOCK_CHANGED_EVENT, onLocal));
+    }
+
+    if (typeof BroadcastChannel !== "undefined") {
+        try {
+            const bc = new BroadcastChannel(STOCK_BROADCAST_NAME);
+            bc.onmessage = (ev) => {
+                const msg = ev?.data;
+                if (!msg) return;
+                const parsed =
+                    parseStockChangedPayload(msg?.data ?? msg) ??
+                    (msg?.type === "stock:changed" ? parseStockChangedPayload(msg.data) : null);
+                if (parsed) handler(parsed);
+            };
+            cleanups.push(() => {
+                try {
+                    bc.close();
+                } catch {
+                    /* ignore */
+                }
+            });
+        } catch {
+            /* ignore */
+        }
+    }
+
+    // Pulse/Pusher (canal dedicado de stock, cross-device)
+    const key = ENV.pusherKey?.trim();
+    const cluster = ENV.pusherCluster?.trim();
+    if (key && cluster && typeof window !== "undefined") {
+        import("pusher-js")
+            .then(({ default: Pusher }) => {
+                const pusher = new Pusher(key, { cluster, forceTLS: true });
+                const channelName = getStockChannelName();
+                const channel = pusher.subscribe(channelName);
+                const onEvent = (payload: unknown) => {
+                    const parsed = parseStockChangedPayload(payload);
+                    if (parsed) handler(parsed);
+                };
+                channel.bind("stock:changed", onEvent);
+                channel.bind("stock-changed", onEvent);
+                cleanups.push(() => {
+                    try {
+                        channel.unbind("stock:changed", onEvent);
+                        channel.unbind("stock-changed", onEvent);
+                        pusher.unsubscribe(channelName);
+                        pusher.disconnect();
+                    } catch {
+                        /* ignore */
+                    }
+                });
+            })
+            .catch(() => {
+                /* pusher no disponible */
+            });
+    }
+
+    return () => {
+        for (const c of cleanups) {
+            try {
+                c();
+            } catch {
+                /* ignore */
+            }
+        }
     };
 }
