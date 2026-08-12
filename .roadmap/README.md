@@ -9,7 +9,7 @@ Este roadmap sigue el mismo estilo de entrega por núcleos que el monorepo
 | Directorio | Alcance | Estado |
 |------------|---------|--------|
 | [`Core1/`](./Core1/) | Soft-hold, catálogo, ventas UNVERIFIED→VERIFIED/DELETED, roles, QA | **Cerrado** (2026-08-12) |
-| [`Core2/`](./Core2/) | `stock_movements`, entrada/ajuste/devolución, reportes, seguridad, reservas (opc.) | **Planificado** |
+| [`Core2/`](./Core2/) | Finanzas (factura entrada + margen), `stock_movements`, reportes, seguridad, reservas (opc.) | **Planificado** |
 
 ## Core 1
 
@@ -22,6 +22,7 @@ Este roadmap sigue el mismo estilo de entrega por núcleos que el monorepo
 - **Plan por fases (checklist):** [`Core2/CORE2_IMPLEMENTATION_PLAN.md`](./Core2/CORE2_IMPLEMENTATION_PLAN.md)
 - Estado: [`Core2/MVP_CORE2_STATUS.md`](./Core2/MVP_CORE2_STATUS.md)
 - Políticas delta: [`Core2/POLICY_DELTAS_CORE2.md`](./Core2/POLICY_DELTAS_CORE2.md)
+- Finanzas: [`Core2/FINANCE_MODEL_CORE2.md`](./Core2/FINANCE_MODEL_CORE2.md)
 - Backlog: [`Core2/MVP_CORE2_BACKLOG.md`](./Core2/MVP_CORE2_BACKLOG.md)
 
 **Cómo usar**

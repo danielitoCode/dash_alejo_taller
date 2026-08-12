@@ -1,23 +1,28 @@
 # Core 2 — Backlog detallado (Back-office)
 
 **Última actualización:** 2026-08-12  
-**Plan maestro:** [`CORE2_IMPLEMENTATION_PLAN.md`](./CORE2_IMPLEMENTATION_PLAN.md)
+**Plan maestro:** [`CORE2_IMPLEMENTATION_PLAN.md`](./CORE2_IMPLEMENTATION_PLAN.md)  
+**Finanzas:** [`FINANCE_MODEL_CORE2.md`](./FINANCE_MODEL_CORE2.md)
 
 Este archivo desglosa micro-tareas. El **avance oficial** se marca en el plan por fases.
 
 ---
 
-## 2.1 Inventario formal (schema + panel)
+## 2.1 Inventario formal + finanzas (schema + panel)
 
-- [ ] UI de movimientos (`stock_movements`) alineada al schema AlejoTaller
-- [ ] Entrada de mercancía (+existence) con motivo y usuario staff + fila `entrada`
+- [ ] Schema: `supplier`, `purchase_entry`, `purchase_entry_line`, `stock_movements`, evento financiero de venta
+- [ ] UI **Registrar entrada** (modal factura multi-línea: búsqueda, qty, costo, proveedor, regalía)
+- [ ] Crear producto mínimo desde el flujo de entrada
+- [ ] UI de movimientos y listado de facturas de entrada
 - [ ] Ajuste manual auditado (nunca `existence < reserved`) + fila `ajuste`
 - [ ] Devolución formal post-VERIFIED (si política 2.0 la incluye)
+- [ ] Al VERIFIED: revenue / COGS / margen (dash y/o operador)
 
 ## 2.2 Reportes y supervisión
 
+- [ ] Resumen económico por periodo (ingresos, COGS, margen, costo entradas)
 - [ ] Alertas stock bajo / reserved alto prolongado
-- [ ] Export mínimo CSV de ventas por rango de fechas
+- [ ] Export CSV ventas confirmadas y/o entradas
 - [ ] Vista “cola UNVERIFIED” con antigüedad
 
 ## 2.3 Tiempo real y DX
@@ -36,7 +41,7 @@ Este archivo desglosa micro-tareas. El **avance oficial** se marca en el plan po
 - [ ] Auditoría de permisos Appwrite por rol
 - [ ] Workers solo con secrets en Cloudflare/Render
 - [ ] Historial git limpio de `.env` si hubo fuga
-- [ ] Viewer: solo lectura en stock/ventas/movimientos
+- [ ] Viewer: solo lectura en stock/ventas/movimientos/finanzas
 
 ## 2.6 Reservas de taller (opcional MVP)
 
