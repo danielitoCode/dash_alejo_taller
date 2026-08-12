@@ -1,51 +1,68 @@
+import {UserNetRepositoryImpl} from "../data/repository/user.net.repository";
 import {infrastructureContainer} from "../../../infrastructure/di/infrastructure.container";
-import {AuthNetRepository} from "../data/repository/user.net.repository";
-import {SessionNetManager} from "../data/repository/session.net.manager";
 import {CreateAccountCaseUse} from "../domain/caseuse/CreateAccountCaseUse";
-import {GetCurrentUserCaseUse} from "../domain/caseuse/GetCurrentUserCaseUse";
 import {UpdateNameCaseUse} from "../domain/caseuse/UpdateNameCaseUse";
 import {UpdatePasswordCaseUse} from "../domain/caseuse/UpdatePasswordCaseUse";
-import {UpdatePhotoUrlCaseUse} from "../domain/caseuse/UpdatePhotoUrlCaseUse";
-import {UpdatePhoneCaseUse} from "../domain/caseuse/UpdatePhoneCaseUse";
-import {UpdateRoleCaseUse} from "../domain/caseuse/UpdateRoleCaseUse";
 import {DeleteUserCaseUse} from "../domain/caseuse/DeleteUserCaseUse";
-import {GetAllUsersCaseUse} from "../domain/caseuse/GetAllUsersCaseUse";
+import {UpdateRoleCaseUse} from "../domain/caseuse/UpdateRoleCaseUse";
+import {UpdatePhotoCaseUse} from "../domain/caseuse/UpdatePhotoCaseUse";
+import {UpdatePhoneCaseUse} from "../domain/caseuse/UpdatePhoneCaseUse";
+import {SessionNetManagerImpl} from "../data/repository/session.net.manager";
 import {OpenSessionCaseUse} from "../domain/caseuse/OpenSessionCaseUse";
-import {CloseSessionCaseUse} from "../domain/caseuse/CloseSessionCaseUse";
+import {CloseSessionsCaseUSe} from "../domain/caseuse/CloseSessionsCaseUSe";
+import {GetCurrentUserCaseUse} from "../domain/caseuse/GetCurrentUserCaseUse";
 import {AdminNetManagerImpl} from "../data/repository/admin.repository";
-import {CreateManagedUserCaseUse} from "../domain/caseuse/CreateManagedUserCaseUse";
-import {UpdateManagedUserLabelsCaseUse} from "../domain/caseuse/UpdateManagedUserCaseUses";
-import {UpdateManagedUserStatusCaseUse} from "../domain/caseuse/UpdateManagedUserStatusCaseUse";
-import {UpdateManagedUserPasswordCaseUse} from "../domain/caseuse/UpdateManagedUserPasswordCaseUse";
-import {GoogleAuthNetRepository} from "../data/repository/google.auth.net.repository";
+import {GetAllUsersCaseUse} from "../domain/caseuse/GetAllUsersCaseUse";
 import {LinkGoogleAccountCaseUse} from "../domain/caseuse/LinkGoogleAccountCaseUse";
-import {ExchangeGoogleCredentialCaseUse} from "../domain/caseuse/ExchangeGoogleCredentialCaseUse";
-import {PasswordResetNetRepository} from "../data/repository/password-reset.net.repository";
-import {RequestPasswordResetCodeCaseUse} from "../domain/caseuse/RequestPasswordResetCodeCaseUse";
-import {ConfirmPasswordResetCodeCaseUse} from "../domain/caseuse/ConfirmPasswordResetCodeCaseUse";
+import { CreateManagedUserCaseUse } from "../domain/caseuse/CreateManagedUserCaseUse";
+import {
+    UpdateManagedUserLabelsCaseUse,
+    UpdateManagedUserPasswordCaseUse,
+    UpdateManagedUserStatusCaseUse
+} from "../domain/caseuse/UpdateManagedUserCaseUses";
+import { GoogleAuthNetRepositoryImpl } from "../data/repository/google-auth.repository";
+import { ExchangeGoogleCredentialCaseUse } from "../domain/caseuse/ExchangeGoogleCredentialCaseUse";
+import { PasswordResetNetRepositoryImpl } from "../data/repository/password-reset.repository";
+import { RequestPasswordResetCodeCaseUse } from "../domain/caseuse/RequestPasswordResetCodeCaseUse";
+import { ConfirmPasswordResetCodeCaseUse } from "../domain/caseuse/ConfirmPasswordResetCodeCaseUse";
 
-const account = infrastructureContainer.appwrite.account
+// Infraestructura Appwrite activa para el flujo MVP.
+const accounts = infrastructureContainer.appwrite.account
 const functions = infrastructureContainer.appwrite.functions
 
-const authNetRepository = new AuthNetRepository(account)
-const sessionNetManager = new SessionNetManager(account)
+// Repositorios activos del MVP.
+const authNetRepository = new UserNetRepositoryImpl(accounts)
+const sessionNetManager = new SessionNetManagerImpl(accounts)
 const adminNetRepository = new AdminNetManagerImpl(functions)
-const googleAuthNetRepository = new GoogleAuthNetRepository()
-const passwordResetNetRepository = new PasswordResetNetRepository()
 
+// Infraestructura futura:
+// este repositorio HTTP permite volver a un flujo server-assisted para Google
+// sin tocar la API pública del store.
+const googleAuthNetRepository = new GoogleAuthNetRepositoryImpl()
+const passwordResetNetRepository = new PasswordResetNetRepositoryImpl()
+
+// Use cases de cuenta.
 const createAccountCaseUse = new CreateAccountCaseUse(authNetRepository)
 const getCurrentUserCaseUse = new GetCurrentUserCaseUse(authNetRepository)
 const updateNameCaseUse = new UpdateNameCaseUse(authNetRepository)
 const updatePasswordCaseUse = new UpdatePasswordCaseUse(authNetRepository)
-const updatePhotoUrlCaseUse = new UpdatePhotoUrlCaseUse(authNetRepository)
+const updatePhotoUrlCaseUse = new UpdatePhotoCaseUse(authNetRepository)
 const updatePhoneCaseUse = new UpdatePhoneCaseUse(authNetRepository)
 const updateRoleCaseUse = new UpdateRoleCaseUse(authNetRepository)
 const deleteUserCaseUse = new DeleteUserCaseUse(authNetRepository)
 const getAllUserCaseUse = new GetAllUsersCaseUse(adminNetRepository)
+
+// Use cases de sesión.
 const opeSessionCaseUse = new OpenSessionCaseUse(sessionNetManager)
-const closeSessionCaseUSe = new CloseSessionCaseUse(sessionNetManager)
+const closeSessionCaseUSe = new CloseSessionsCaseUSe(sessionNetManager)
+
+// Use cases Google / password reset.
+const linkGoogleAccountCaseUse = new LinkGoogleAccountCaseUse(sessionNetManager, googleAuthNetRepository)
+const exchangeGoogleCredentialCaseUse = new ExchangeGoogleCredentialCaseUse(googleAuthNetRepository)
 const requestPasswordResetCodeCaseUse = new RequestPasswordResetCodeCaseUse(passwordResetNetRepository)
 const confirmPasswordResetCodeCaseUse = new ConfirmPasswordResetCodeCaseUse(passwordResetNetRepository)
+
+// Use cases admin (gestión de usuarios del panel).
 const createManagedUserCaseUse = new CreateManagedUserCaseUse(adminNetRepository)
 const updateManagedUserLabelsCaseUse = new UpdateManagedUserLabelsCaseUse(adminNetRepository)
 const updateManagedUserStatusCaseUse = new UpdateManagedUserStatusCaseUse(adminNetRepository)
