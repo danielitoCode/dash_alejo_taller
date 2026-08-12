@@ -37,9 +37,9 @@ Resultado final: PASS / FAIL
 
 ## 0. Preparación (1 min)
 
-- [ ] Backoffice abierto como **owner** o **admin**
-- [ ] Tienda web (o Android) lista para comprar
-- [ ] Anota un producto de prueba: **existencia**, **reserved**, **disponible** (`existence − reserved`)
+- [X] Backoffice abierto como **owner** o **admin**
+- [X] Tienda web (o Android) lista para comprar
+- [X] Anota un producto de prueba: **existencia**, **reserved**, **disponible** (`existence − reserved`)
 
 ---
 
@@ -50,9 +50,9 @@ Resultado final: PASS / FAIL
 3. Comprueba:
 
 - [ ] Toast de éxito  
-- [ ] `existence` sube exactamente esa cantidad  
-- [ ] `reserved` **no** cambia  
-- [ ] Disponible = existence − reserved  
+- [X] `existence` sube exactamente esa cantidad  
+- [X] `reserved` **no** cambia  
+- [X] Disponible = existence − reserved  
 
 **Fallo crítico:** setear `existence` en el formulario de editar como forma principal (debe ser delta vía **Dar entrada**).
 
