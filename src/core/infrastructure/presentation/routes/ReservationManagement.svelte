@@ -1,163 +1,98 @@
 <script lang="ts">
-    import { onMount } from "svelte";
     import type { NavController } from "../../../../lib/navigation/NavController";
     import Icon from "../components/Icon.svelte";
-    import { saleStore } from "../../../feature/sale/presentation/viewmodel/sale.store";
-    import { userManagementStore } from "../../../feature/auth/presentation/viewmodel/user-management.store";
-    import { BuyState } from "../../../feature/sale/domain/entity/enums";
-    import { salesDetail } from "../navigation/nested.router";
-    import { CalendarCheck2, ChevronRight, Inbox, Search } from "lucide-svelte";
+    import { CalendarCheck2, Clock, Wrench } from "lucide-svelte";
 
     export let navController: NavController;
-    let query = "";
-
-    onMount(() => {
-        saleStore.syncAll().catch(() => {});
-        userManagementStore.syncAll().catch(() => {});
-    });
-
-    function openDetail(id: string) {
-        navController.navigate(salesDetail.path, { id });
-    }
-
-    function resolveUserName(userId: string): string {
-        return $userManagementStore.items.find((user) => user.id === userId)?.name ?? "Usuario desconocido";
-    }
-
-    $: pendingReservations = $saleStore.items
-        .filter((sale) => sale.verified === BuyState.UNVERIFIED)
-        .filter((sale) => {
-            const q = query.trim().toLowerCase();
-            if (!q) return true;
-            return (
-                sale.id.toLowerCase().includes(q) ||
-                sale.userId.toLowerCase().includes(q) ||
-                resolveUserName(sale.userId).toLowerCase().includes(q)
-            );
-        })
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    // Reservado para Core futuro: turnos de reparación de equipos (no pedidos de tienda).
+    void navController;
 </script>
 
-<section class="mgmt-screen">
+<section class="mgmt-screen" aria-label="Reservas de taller">
     <div class="mgmt-container">
         <header class="mgmt-page-head">
             <div class="mgmt-page-title">
                 <h1 class="mgmt-h1">Reservas</h1>
-                <p class="mgmt-muted">Cola administrativa de pedidos pendientes de validación operativa</p>
+                <p class="mgmt-muted">
+                    Turnos para reparaciones de equipos en el taller. No gestiona pedidos de la tienda.
+                </p>
             </div>
             <div class="mgmt-chip-row">
                 <span class="mgmt-chip">
-                    <Icon icon={Inbox} size={18} ariaLabel="Pendientes" />
-                    {pendingReservations.length} pendientes
+                    <Icon icon={CalendarCheck2} size={18} ariaLabel="Agenda" />
+                    Agenda de taller
                 </span>
-                <span class="mgmt-chip">
-                    <Icon icon={CalendarCheck2} size={18} ariaLabel="Seguimiento" />
-                    Supervisión solamente
+                <span class="mgmt-chip muted-chip">
+                    <Icon icon={Clock} size={18} ariaLabel="Próximo" />
+                    Core futuro
                 </span>
             </div>
         </header>
 
-        <section class="mgmt-card">
-            <label class="search-field">
-                <Icon icon={Search} size={18} ariaLabel="Buscar" />
-                <input type="search" placeholder="Buscar por reserva o cliente..." bind:value={query} />
-            </label>
-
-            <div class="reservation-list">
-                {#if pendingReservations.length === 0}
-                    <p class="mgmt-muted">No hay reservas pendientes.</p>
-                {:else}
-                    {#each pendingReservations as sale (sale.id)}
-                        <button class="reservation-card" type="button" on:click={() => openDetail(sale.id)}>
-                            <div class="reservation-main">
-                                <strong class="reservation-id">Reserva #{sale.id.slice(0, 8)}</strong>
-                                <small>Cliente: {resolveUserName(sale.userId)} · Total: ${sale.amount.toFixed(2)}</small>
-                                <small>Fecha: {new Date(sale.date).toLocaleString()} · {sale.products.length} items</small>
-                            </div>
-                            <span class="chevron" aria-hidden="true">
-                                <Icon icon={ChevronRight} size={16} ariaLabel="Abrir" />
-                            </span>
-                        </button>
-                    {/each}
-                {/if}
+        <section class="mgmt-card placeholder-card">
+            <div class="placeholder-ico" aria-hidden="true">
+                <Icon icon={Wrench} size={28} ariaLabel="" />
             </div>
+            <h2 class="placeholder-title">Próximamente: citas de reparación</h2>
+            <p class="placeholder-body">
+                Aquí se programarán y supervisarán las reservas de turno de los clientes para diagnóstico y
+                reparación de equipos. Los pedidos de compra con stock reservado se gestionan en
+                <strong> Ventas → Pendientes</strong>.
+            </p>
+            <ul class="placeholder-list">
+                <li>Reserva de franja horaria en el taller</li>
+                <li>Cliente, equipo y tipo de servicio</li>
+                <li>Estados del turno (solicitado, confirmado, atendido…)</li>
+            </ul>
         </section>
     </div>
 </section>
 
 <style>
-    .search-field {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        border: 1px solid var(--md-sys-color-outline-variant);
-        border-radius: 14px;
-        padding: 0 12px;
-        margin-bottom: 12px;
-        background: color-mix(in srgb, var(--md-sys-color-surface) 92%, transparent);
-        color: var(--md-sys-color-on-surface);
+    .muted-chip {
+        opacity: 0.9;
+        border-style: dashed;
     }
 
-    .search-field input {
-        width: 100%;
-        height: 44px;
-        border: 0;
-        outline: 0;
-        background: transparent;
-        color: var(--md-sys-color-on-surface);
-        font: inherit;
-    }
-
-    .search-field input::placeholder {
-        color: var(--md-sys-color-on-surface-variant);
-        opacity: 0.85;
-    }
-
-    .reservation-list {
+    .placeholder-card {
         display: grid;
-        gap: 10px;
-    }
-
-    .reservation-card {
-        width: 100%;
-        text-align: left;
-        border: 1px solid var(--md-sys-color-outline-variant);
-        padding: 12px;
-        border-radius: 16px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
         gap: 12px;
-        background: color-mix(in srgb, var(--md-sys-color-surface) 94%, transparent);
-        color: var(--md-sys-color-on-surface);
-        cursor: pointer;
+        justify-items: start;
+        padding: 22px 20px;
+        max-width: 640px;
     }
 
-    .reservation-card:hover {
-        border-color: color-mix(in srgb, var(--md-sys-color-primary) 35%, var(--md-sys-color-outline-variant));
-        background: color-mix(in srgb, var(--md-sys-color-primary) 8%, var(--md-sys-color-surface) 92%);
-    }
-
-    .reservation-main {
+    .placeholder-ico {
+        width: 52px;
+        height: 52px;
+        border-radius: 16px;
         display: grid;
-        gap: 4px;
-        min-width: 0;
-        color: inherit;
+        place-items: center;
+        border: 1px solid var(--md-sys-color-outline-variant);
+        background: color-mix(in srgb, var(--md-sys-color-primary) 12%, transparent);
+        color: var(--md-sys-color-primary);
     }
 
-    .reservation-id {
-        color: var(--md-sys-color-on-surface);
-        font-weight: 800;
+    .placeholder-title {
+        margin: 0;
+        font-size: 1.15rem;
+        font-weight: 900;
         letter-spacing: -0.01em;
     }
 
-    .reservation-main small {
-        display: block;
-        color: var(--md-sys-color-on-surface-variant);
+    .placeholder-body {
+        margin: 0;
+        line-height: 1.45;
+        color: color-mix(in srgb, var(--md-sys-color-on-background) 82%, transparent);
+        font-size: 0.95rem;
     }
 
-    .chevron {
-        color: var(--md-sys-color-on-surface-variant);
-        flex-shrink: 0;
+    .placeholder-list {
+        margin: 4px 0 0;
+        padding-left: 1.15rem;
+        display: grid;
+        gap: 6px;
+        color: color-mix(in srgb, var(--md-sys-color-on-background) 78%, transparent);
+        font-size: 0.9rem;
     }
 </style>
