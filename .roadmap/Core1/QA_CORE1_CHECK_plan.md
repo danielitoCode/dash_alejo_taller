@@ -1,6 +1,7 @@
 # QA Core 1 — Checklist (~15 min)
 
 **Última actualización:** 2026-08-12  
+**Sesión marcada:** 2026-08-12 — PASS en §0, §1, §2, §3, §5, §7 (tareas Core1 validadas). Pendiente revalidar §4A/§4B y §6 en checklist formal si aún no se anotaron.  
 **Objetivo:** marcar Core 1 como cerrado con un circuito real tienda → panel → stock.  
 **Contrato:** [`CANONICAL_RULES_FREEZE.md`](./CANONICAL_RULES_FREEZE.md)  
 **DoD formal:** [`PHASE_7_3_CORE1_DOD.md`](./PHASE_7_3_CORE1_DOD.md)  
@@ -30,7 +31,7 @@ Tienda (web/Android): ________
 Rol staff: ___________________
 productId: ___________________
 existence / reserved / available (base): ____ / ____ / ____
-Resultado final: PASS / FAIL
+Resultado final: PASS parcial (§1–§3, §5, §7) — pendiente explicitar §4A/§4B y §6 en sesión formal
 ```
 
 ---
@@ -49,7 +50,7 @@ Resultado final: PASS / FAIL
 2. **Dar entrada** → cantidad **> 0** (ej. 5) → **Añadir**  
 3. Comprueba:
 
-- [ ] Toast de éxito  
+- [X] Toast de éxito  
 - [X] `existence` sube exactamente esa cantidad  
 - [X] `reserved` **no** cambia  
 - [X] Disponible = existence − reserved  
@@ -64,9 +65,9 @@ Resultado final: PASS / FAIL
 2. Completa el pedido hasta que quede **pendiente / reservado**  
 3. En **Productos** (backoffice o cliente tras RT):
 
-- [ ] `reserved` **+= qty**  
-- [ ] `existence` **igual**  
-- [ ] Disponible baja en **qty**  
+- [X] `reserved` **+= qty**  
+- [X] `existence` **igual**  
+- [X] Disponible baja en **qty**  
 
 **Fallo crítico:** se descuenta `existence` al pedir (eso es confirmación, no reserva).
 
@@ -77,14 +78,14 @@ Resultado final: PASS / FAIL
 1. **Ventas** → pestaña **Pendientes**  
 2. Comprueba:
 
-- [ ] El pedido aparece  
-- [ ] Tarjeta con acento **ámbar** / estado pendiente  
-- [ ] Nombre, monto, líneas razonables  
+- [X] El pedido aparece  
+- [X] Tarjeta con acento **ámbar** / estado pendiente  
+- [X] Nombre, monto, líneas razonables  
 
 3. Abre el detalle:
 
-- [ ] Resumen compacto + **Ver detalles** colapsable  
-- [ ] Botones **Confirmar** y **Rechazar**  
+- [X] Resumen compacto + **Ver detalles** colapsable  
+- [X] Botones **Confirmar** y **Rechazar**  
 
 **Nota:** el menú **Reservas** es agenda de taller (core futuro); **no** debe listar pedidos de tienda.
 
@@ -118,9 +119,9 @@ Repite §2 con otra qty (ej. **1**), luego **Rechazar**:
 
 Sin recargar a mano (o con poco delay):
 
-- [ ] Tras dar entrada, el listado de productos refleja el stock  
-- [ ] Tras confirm/reject, productos y ventas se actualizan  
-- [ ] Si hay otra pestaña del panel o la tienda abierta, el stock se alinea (Appwrite RT y, si aplica, Pulse)
+- [X] Tras dar entrada, el listado de productos refleja el stock  
+- [X] Tras confirm/reject, productos y ventas se actualizan  
+- [X] Si hay otra pestaña del panel o la tienda abierta, el stock se alinea (Appwrite RT y, si aplica, Pulse)
 
 ---
 
@@ -139,8 +140,8 @@ Sin recargar a mano (o con poco delay):
 
 ## 7. Usuarios anónimos (opcional, 1 min)
 
-- [ ] Listado **no** muestra emails vacíos  
-- [ ] **Limpiar anónimos** → toast + banner de resultado  
+- [X] Listado **no** muestra emails vacíos  
+- [X] **Limpiar anónimos** → toast + banner de resultado  
 
 ---
 
