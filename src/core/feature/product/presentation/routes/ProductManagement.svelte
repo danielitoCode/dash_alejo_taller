@@ -73,24 +73,35 @@
         if (!entryProduct) return;
         const qty = Math.floor(Number(entryQty) || 0);
         if (qty <= 0) {
-            toastStore.error("Indica una cantidad mayor que 0.");
+            toastStore.error("Indica una cantidad mayor que 0.", 4000);
             return;
         }
+        const productName = entryProduct.name || entryProduct.id;
+        const before = entryProduct.existence;
         entrySubmitting = true;
+        toastStore.info(`Registrando entrada de +${qty} en «${productName}»…`, 3500);
         try {
-            const before = entryProduct.existence;
             const updated = await productStore.registerStockEntry(entryProduct.id, qty);
-            toastStore.success(
-                `Entrada +${qty}: existence ${before} → ${updated.existence} (disp. ${availableStock(updated)})`
-            );
+            const after = updated?.existence ?? before + qty;
+            const avail =
+                typeof availableStock === "function" && updated
+                    ? availableStock(updated)
+                    : Math.max(0, after - (updated?.reserved ?? 0));
             if (editId === updated.id) {
                 editExistenceReadOnly = updated.existence;
                 reservedReadOnly = updated.reserved ?? 0;
             }
             closeEntry(true);
+            toastStore.success(
+                `Entrada registrada: +${qty} en «${productName}». Existencia ${before} → ${after} (disp. ${avail}).`,
+                5500
+            );
         } catch (e: any) {
             logger.error(e?.message ?? e, e?.stack);
-            toastStore.error(e instanceof Error ? e.message : "No se pudo registrar la entrada.");
+            toastStore.error(
+                e instanceof Error ? e.message : "No se pudo registrar la entrada de stock.",
+                6000
+            );
             entrySubmitting = false;
         }
     }
@@ -109,13 +120,13 @@
             status: draftStatus
         };
         try {
-            toastStore.info("Creando producto...");
+            toastStore.info("Creando producto...", 3000);
             await productStore.create(data);
-            toastStore.success("Producto creado.");
+            toastStore.success("Producto creado correctamente.", 4500);
             resetForm();
         } catch (e: any) {
             logger.error(e?.message ?? e, e?.stack);
-            toastStore.error(e instanceof Error ? e.message : "No se pudo crear el producto.");
+            toastStore.error(e instanceof Error ? e.message : "No se pudo crear el producto.", 5000);
         }
     }
 
@@ -159,7 +170,7 @@
             }
         }
         try {
-            toastStore.info("Guardando cambios...");
+            toastStore.info("Guardando cambios...", 2500);
             await productStore.updateCatalog({
                 ...old,
                 name: draftName.trim(),
@@ -171,11 +182,11 @@
                 categoryId: draftCategoryId,
                 status: draftStatus
             });
-            toastStore.success("Producto actualizado.");
+            toastStore.success("Producto actualizado.", 4000);
             resetForm();
         } catch (e: any) {
             logger.error(e?.message ?? e, e?.stack);
-            toastStore.error(e instanceof Error ? e.message : "No se pudo guardar el producto.");
+            toastStore.error(e instanceof Error ? e.message : "No se pudo guardar el producto.", 5000);
         }
     }
 
