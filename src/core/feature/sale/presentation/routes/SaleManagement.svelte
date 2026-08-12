@@ -106,7 +106,8 @@
             <div class="mgmt-page-title">
                 <h1 class="mgmt-h1">Ventas</h1>
                 <p class="mgmt-muted">
-                    Supervisión de pedidos originados en la tienda (web/Android). Este panel no crea ventas B2C.
+                    Pedidos de la tienda (web/Android): pendientes con stock reservado, confirmadas y
+                    rechazadas. Las citas de taller viven en Reservas (core futuro).
                 </p>
             </div>
             <div class="mgmt-chip-row status-tabs" role="tablist" aria-label="Filtrar por estado">
@@ -192,8 +193,14 @@
                 <div class="sales-grid">
                     {#each filteredItems as sale (sale.id)}
                         {@const code = saleCurrencyCode(sale.currency)}
+                        {@const isPending = sale.verified === BuyState.UNVERIFIED}
                         <div class="sale-card-wrapper">
-                            <button class="sale-card" type="button" on:click={() => openDetail(sale.id)}>
+                            <button
+                                class="sale-card"
+                                class:is-pending={isPending}
+                                type="button"
+                                on:click={() => openDetail(sale.id)}
+                            >
                                 <div class="sale-top">
                                     <div>
                                         <div class="sale-title">
@@ -365,6 +372,19 @@
         z-index: 2;
     }
 
+    .sale-card.is-pending {
+        border-color: color-mix(in srgb, #f59e0b 48%, var(--md-sys-color-outline-variant));
+        background: color-mix(in srgb, #f59e0b 12%, var(--md-sys-color-surface) 88%);
+        box-shadow:
+            0 14px 34px color-mix(in srgb, black 28%, transparent),
+            0 0 0 1px color-mix(in srgb, #f59e0b 22%, transparent);
+    }
+
+    .sale-card.is-pending:hover {
+        border-color: color-mix(in srgb, #f59e0b 62%, var(--md-sys-color-outline-variant));
+        background: color-mix(in srgb, #f59e0b 18%, var(--md-sys-color-surface) 82%);
+    }
+
     .sale-card-wrapper:hover .custom-tooltip {
         opacity: 1;
         visibility: visible;
@@ -443,9 +463,10 @@
     }
 
     .pill.unverified {
-        border-color: color-mix(in srgb, #f97316 38%, var(--md-sys-color-outline-variant));
-        background: color-mix(in srgb, #f97316 15%, transparent);
-        color: #fb923c;
+        border-color: color-mix(in srgb, #f59e0b 50%, var(--md-sys-color-outline-variant));
+        background: color-mix(in srgb, #f59e0b 22%, transparent);
+        color: #fbbf24;
+        box-shadow: 0 0 0 1px color-mix(in srgb, #f59e0b 18%, transparent);
     }
 
     .pill.rejected {
