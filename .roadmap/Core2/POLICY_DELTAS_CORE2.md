@@ -56,3 +56,16 @@ Campos mínimos: `product_id`, `type`, `quantity` (>0), `balance_after`, `reason
 | Entrada / ajuste / devolución | No | Sí (si se expone) | **Sí** |
 | Ver movimientos | No | Lectura | **Sí** |
 | Agenda reservas taller | Solicitar (futuro) | Operar | **Gobernar** |
+
+## 5. Finanzas (Core 2)
+
+| Evento | Stock | Dinero |
+|--------|-------|--------|
+| Registrar entrada (factura) | `existence +=` | Costo en `purchase_entry` (+ líneas) |
+| UNVERIFIED | `reserved +=` | **Sin** ingreso |
+| VERIFIED | consume existence/reserved | **Ingreso + COGS + margen** |
+| DELETED | release reserved | **Sin** ingreso |
+
+- Proveedor y referencia de factura son parte del documento de entrada (proveedor opcional si concepto regalía).
+- Crear producto en el flujo de entrada está permitido (datos mínimos).
+- Detalle: [`FINANCE_MODEL_CORE2.md`](./FINANCE_MODEL_CORE2.md)
