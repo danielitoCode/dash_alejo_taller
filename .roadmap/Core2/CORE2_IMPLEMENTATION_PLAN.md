@@ -1,7 +1,7 @@
 # Core 2 — Plan de implementación por fases (checklist)
 
 **Última actualización:** 2026-08-12  
-**Estado del plan:** publicado · ejecución **0%**  
+**Estado del plan:** publicado · ejecución **0%** · **finanzas (factura de entrada + margen)** incluidas  
 **Repos:** dash_alejo_taller + AlejoTaller (schema / operador)
 
 Marca `[x]` al completar. No avanzar de fase crítica de stock sin regresión verde del QA Core 1 (15 min).
@@ -27,87 +27,122 @@ Core 2 cerrado: NO
 
 - [x] Documentar plan por fases (este archivo)
 - [x] README + STATUS + POLICY_DELTAS en `.roadmap/Core2/`
+- [x] Modelo financiero propuesto ([`FINANCE_MODEL_CORE2.md`](./FINANCE_MODEL_CORE2.md))
+- [ ] **Aceptar** modelo financiero (factura de entrada + ingreso/COGS al VERIFIED)
 - [ ] Decisión producto: **Reservas de taller** ¿dentro del MVP Core 2? (SÍ / NO / 2.5)
 - [ ] Revisar y aceptar [`POLICY_DELTAS_CORE2.md`](./POLICY_DELTAS_CORE2.md) en ambos repos
 - [ ] Espejo mínimo de alcance en `AlejoTaller/.roadmap/Core2/` (enlace o copia de fases)
+- [ ] Definir valoración de costo al vender: último costo vs promedio simple (MVP)
 
-**Criterio de salida 2.0:** alcance firmado + políticas delta aceptadas.
+**Criterio de salida 2.0:** alcance firmado + políticas delta + modelo financiero aceptados.
 
 ---
 
-## Fase 2.1 — Schema `stock_movements` (AlejoTaller / Appwrite)
+## Fase 2.1 — Schema stock + finanzas (AlejoTaller / Appwrite)
 
-**Objetivo:** collection y contrato de datos listos para operador y dash.
+**Objetivo:** collections de movimientos y de entrada económica listas para operador y dash.
 
+### Movimientos de stock
 - [ ] Collection `stock_movements` creada en Appwrite (staging)
 - [ ] Campos: `product_id`, `type`, `quantity`, `balance_after`, `reason`, `user_id`, `sale_id?`, `created_at`
 - [ ] Enum `type`: `entrada` | `salida_venta` | `ajuste` | `devolucion`
 - [ ] Permisos: lectura staff/operador; escritura staff/operador (no cliente)
-- [ ] DTO + repo shared (o contrato documentado si dash no comparte código aún)
-- [ ] Documento de schema enlazado desde este plan
 
-**Criterio de salida 2.1:** se puede crear un movimiento de prueba desde consola/API con `balance_after` coherente.
+### Finanzas de entrada
+- [ ] Collection `supplier` (name, contact?, notes?)
+- [ ] Collection `purchase_entry` (cabecera: supplier_id?, reference?, entry_date, total_cost, currency, user_id, notes?)
+- [ ] Collection `purchase_entry_line` (entry_id, product_id, quantity, unit_cost, concept, line_cost)
+- [ ] Enum concepto línea: `purchase` | `royalty` | `other`
+
+### Finanzas de venta (al confirmar)
+- [ ] Collection `sale_finance_event` **o** campos acordados en confirmación (`sale_id`, `revenue`, `cogs`, `margin`, `user_id`, `at`)
+- [ ] DTO + repo / contrato documentado para dash
+- [ ] Documento de schema enlazado desde este plan ([`FINANCE_MODEL_CORE2.md`](./FINANCE_MODEL_CORE2.md))
+
+**Criterio de salida 2.1:** movimiento de prueba + cabecera/línea de entrada de prueba creados por API con totales coherentes.
 
 ---
 
-## Fase 2.2 — Operador: traza al VERIFIED (AlejoTaller)
+## Fase 2.2 — Operador / confirmación: traza stock + finanzas (AlejoTaller)
 
-**Objetivo:** al confirmar venta, además del soft-hold Core 1, registrar `salida_venta`.
+**Objetivo:** al confirmar venta, soft-hold Core 1 + `salida_venta` + reconocimiento de ingreso/COGS.
 
 - [ ] En flujo VERIFIED: escribir `stock_movements` tipo `salida_venta` por línea (o agregado documentado)
 - [ ] `balance_after` = `existence` tras el consume
 - [ ] `sale_id` + `user_id` (operador) rellenados
-- [ ] Idempotencia: segundo confirm no duplica movimiento ni stock
-- [ ] Reject/DELETED: sin `salida_venta` (solo release `reserved`, como Core 1)
-- [ ] Tests o smoke operador: confirm → movement visible
+- [ ] Registrar evento financiero: `revenue` (importe venta), `cogs` (según regla 2.0), `margin`
+- [ ] UNVERIFIED / reserved: **no** crea evento financiero
+- [ ] Idempotencia: segundo confirm no duplica movimiento ni eventos ni stock
+- [ ] Reject/DELETED: sin `salida_venta` ni ingreso (solo release `reserved`)
+- [ ] Tests o smoke: confirm → movement + finance event visibles
 
-**Criterio de salida 2.2:** confirm en operador deja traza; soft-hold sigue correcto.
+**Criterio de salida 2.2:** confirm deja traza de qty y de dinero; soft-hold sigue correcto.
 
 ---
 
-## Fase 2.3 — Panel: movimientos, entrada y ajuste (dash)
+## Fase 2.3 — Panel: factura de entrada, movimientos y ajuste (dash)
 
-**Objetivo:** el back-office opera inventario formal sin romper Core 1.
+**Objetivo:** el back-office registra entradas como **factura** (costos + stock) y mantiene ajustes auditados.
 
 ### 2.3.1 Lectura
 
 - [ ] Vista listado `stock_movements` (filtros: producto, tipo, rango fechas)
-- [ ] Detalle o chip de últimos movimientos en ficha de producto
+- [ ] Listado de facturas de entrada (`purchase_entry`) con proveedor y total
+- [ ] Detalle de una entrada: líneas, costos, productos
+- [ ] Chip de últimos movimientos / último costo en ficha de producto
 
-### 2.3.2 Entrada de mercancía
+### 2.3.2 Registrar entrada (UX principal — factura)
 
-- [ ] Flujo «Dar entrada» escribe `existence += qty` **y** movimiento `entrada`
-- [ ] Motivo + usuario staff obligatorios
-- [ ] Toast + listado actualizado (RT o refresh)
-- [ ] `reserved` no cambia
+- [ ] Botón global **Registrar entrada** (no solo por fila de producto)
+- [ ] Overlay/modal centrado a pantalla completa de contenido
+- [ ] Cabecera: título, proveedor (buscar/crear), referencia factura, fecha
+- [ ] Buscador de productos: nombre, ID, categoría
+- [ ] Cada resultado: qty, costo unitario, concepto (compra / regalía / otro), [Añadir]
+- [ ] Lista temporal de líneas (editar qty/costo, quitar línea)
+- [ ] Crear producto nuevo en el flujo (nombre mínimo + categoría opcional + precio venta opcional)
+- [ ] Confirmar: `existence +=` por línea + `stock_movements` `entrada` + `purchase_entry` + líneas
+- [ ] `reserved` no cambia; toast de éxito; cierre modal
+- [ ] Roles: owner/admin (sales según política; viewer no)
 
-### 2.3.3 Ajuste auditado
+### 2.3.3 Atajo Core 1 (opcional)
+
+- [ ] Mantener «Dar entrada» rápido en producto **o** redirigir al modal factura con producto preseleccionado
+- [ ] Si se mantiene atajo: igual debe generar movimiento + costo (costo 0 o obligatorio)
+
+### 2.3.4 Ajuste auditado
 
 - [ ] UI ajuste (alta/baja) con motivo
 - [ ] Validación: post-ajuste `existence >= reserved`
 - [ ] Movimiento tipo `ajuste` + `balance_after`
 - [ ] Roles: solo owner/admin (viewer no muta)
 
-### 2.3.4 Devolución (si política aceptada en 2.0)
+### 2.3.5 Devolución (si política aceptada en 2.0)
 
 - [ ] Desde venta VERIFIED o inventario: `existence += qty` + `devolucion`
 - [ ] Motivo obligatorio; no reabre soft-hold de la venta
+- [ ] Impacto financiero documentado (reversión COGS / no re-ingreso) si aplica
 
-**Criterio de salida 2.3:** entrada y ajuste usables en panel; QA Core 1 stock sigue PASS.
+**Criterio de salida 2.3:** se puede registrar una entrada multi-producto con proveedor y costos; stock y documento financiero coherentes; QA Core 1 stock PASS.
 
 ---
 
-## Fase 2.4 — Reportes y cola UNVERIFIED (dash)
+## Fase 2.4 — Reportes económicos, stock y cola UNVERIFIED (dash)
 
-**Objetivo:** supervisión operativa diaria.
+**Objetivo:** supervisión operativa **y** lectura económica básica.
 
+### Operación
 - [ ] Cola de ventas UNVERIFIED con **antigüedad** (ordenado por más viejo)
 - [ ] Alerta o badge de stock bajo (umbral configurable o fijo documentado)
 - [ ] Indicador de `reserved` alto / hold prolongado (regla documentada)
-- [ ] Export CSV mínimo de ventas por rango de fechas
 - [ ] RT / refresco de cola (reutilizar suscripción `sale` de Core 1)
 
-**Criterio de salida 2.4:** staff puede priorizar pedidos viejos y exportar un rango de ventas.
+### Economía (MVP)
+- [ ] Resumen por periodo: **ingresos** (solo VERIFIED), **costo de entradas**, **COGS**, **margen bruto**
+- [ ] Listado de entradas (facturas) filtrable por fecha / proveedor
+- [ ] Export CSV: ventas confirmadas y/o entradas por rango
+- [ ] UNVERIFIED **excluido** de ingresos
+
+**Criterio de salida 2.4:** staff prioriza pedidos viejos y ve un resumen económico mínimo coherente con confirmaciones y entradas.
 
 ---
 
@@ -150,10 +185,11 @@ Core 2 cerrado: NO
 **Criterio de salida 2.6 = DoD Core 2 (borrador):**
 
 1. `stock_movements` existe y registra al menos `entrada` y `salida_venta`.  
-2. Panel puede entrada + ajuste sin `existence < reserved`.  
-3. Soft-hold Core 1 sin regresión.  
-4. Si 2.5 activa: reservas separadas de ventas.  
-5. STATUS del repo marca **Core 2 cerrado**.
+2. Panel registra **factura de entrada** multi-línea (proveedor + costos) y ajusta stock sin `existence < reserved`.  
+3. Al VERIFIED se reconoce **ingreso/COGS/margen**; UNVERIFIED no mueve dinero.  
+4. Soft-hold Core 1 sin regresión.  
+5. Si 2.5 activa: reservas separadas de ventas.  
+6. STATUS del repo marca **Core 2 cerrado**.
 
 ---
 
