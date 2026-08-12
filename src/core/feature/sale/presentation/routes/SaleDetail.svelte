@@ -14,6 +14,7 @@
         ArrowLeft,
         BadgeDollarSign,
         CheckCircle2,
+        ChevronDown,
         Clock,
         Hash,
         Package,
@@ -33,6 +34,7 @@
     let loading = false;
     let confirming = false;
     let rejecting = false;
+    let showDetails = false;
 
     $: sale = saleId ? $saleStore.items.find((s) => s.id === saleId) ?? null : null;
     $: user = sale ? $userManagementStore.items.find((u) => u.id === sale.userId) : null;
@@ -49,67 +51,52 @@
         ])
             .catch((e) => {
                 logger.error(e?.message ?? e, e?.stack);
-                toastStore.error("No se pudo cargar el detalle de la venta.");
             })
-            .finally(() => (loading = false));
+            .finally(() => {
+                loading = false;
+            });
     });
 
-    function back() {
-        navController.popBackStack();
-    }
-
-    function resolveProduct(productId: string) {
-        const product = $productStore.items.find((p) => p.id === productId);
-        return product?.name ?? "Producto desconocido";
-    }
-
-    function resolveAvailable(productId: string): string {
-        const product = $productStore.items.find((p) => p.id === productId);
-        if (!product) return "—";
-        return String(availableStock(product));
-    }
-
-    function saleStateClass(state: BuyState): string {
-        if (state === BuyState.UNVERIFIED) return "unverified";
-        if (state === BuyState.DELETED) return "rejected";
-        return "verified";
-    }
-
-    function deliveryLabel(d: DeliveryType | null | undefined): string {
-        if (d === DeliveryType.PICKUP) return "Recogida (PICKUP)";
-        if (d === DeliveryType.DELIVERY) return "Entrega (DELIVERY)";
-        return "No indicado";
-    }
-
-    function formatIso(iso: string | undefined): string {
-        if (!iso) return "—";
+    function formatIso(value: string | number | Date | null | undefined): string {
+        if (value == null || value === "") return "—";
         try {
-            return new Date(iso).toLocaleString();
+            const d = value instanceof Date ? value : new Date(value);
+            if (Number.isNaN(d.getTime())) return String(value);
+            return d.toLocaleString();
         } catch {
-            return iso;
+            return String(value);
         }
     }
+
+    function deliveryLabel(d: DeliveryType | string | undefined): string {
+        if (d === DeliveryType.PICKUP || d === "PICKUP") return "Recogida (PICKUP)";
+        if (d === DeliveryType.DELIVERY || d === "DELIVERY") return "Entrega (DELIVERY)";
+        return String(d ?? "—");
+    }
+
+    function saleStateClass(state: BuyState | string): string {
+        if (state === BuyState.VERIFIED || state === "VERIFIED") return "ok";
+        if (state === BuyState.DELETED || state === "DELETED") return "bad";
+        return "pending";
+    }
+
+    $: currencyCode = (sale as any)?.currency ?? "";
 
     async function onConfirm() {
         if (!sale || sale.verified !== BuyState.UNVERIFIED) return;
         const ok = window.confirm(
             "Confirmar esta venta (VERIFIED)?\n\n" +
-                "Se aplicará la misma semántica que el operador:\n" +
                 "• existence -= qty por línea\n" +
-                "• reserved -= qty por línea\n\n" +
-                "Esta acción es idempotente si ya está confirmada."
+                "• reserved -= qty por línea\n"
         );
         if (!ok) return;
-
         confirming = true;
         try {
-            toastStore.info("Confirmando venta y actualizando stock…", 2000);
-            // 6.4: saleStore.confirmSale ya refresca productStore de los productos afectados
             await saleStore.confirmSale(sale.id);
             toastStore.success("Venta confirmada (VERIFIED). Stock actualizado en panel.");
         } catch (e: any) {
             logger.error(e?.message ?? e, e?.stack);
-            toastStore.error(e instanceof Error ? e.message : "No se pudo confirmar la venta.");
+            toastStore.error(e instanceof Error ? e.message : "No se pudo confirmar.");
         } finally {
             confirming = false;
         }
@@ -119,45 +106,33 @@
         if (!sale || sale.verified !== BuyState.UNVERIFIED) return;
         const ok = window.confirm(
             "Rechazar esta venta (DELETED)?\n\n" +
-                "Semántica operador:\n" +
                 "• reserved -= qty por línea\n" +
-                "• existence NO cambia\n\n" +
-                "El soft-hold se libera y el stock vuelve a estar disponible."
+                "• existence NO cambia\n\n"
         );
         if (!ok) return;
-
         rejecting = true;
         try {
-            toastStore.info("Rechazando venta y liberando reserved…", 2000);
             await saleStore.rejectSale(sale.id);
-            toastStore.success("Venta rechazada (DELETED). Reserved liberado en panel.");
+            toastStore.success("Venta rechazada (DELETED). Reserva liberada.");
         } catch (e: any) {
             logger.error(e?.message ?? e, e?.stack);
-            toastStore.error(e instanceof Error ? e.message : "No se pudo rechazar la venta.");
+            toastStore.error(e instanceof Error ? e.message : "No se pudo rechazar.");
         } finally {
             rejecting = false;
         }
     }
 
-    $: currencyCode = sale?.currency?.trim() || null;
-    $: linesTotal = sale
-        ? sale.products.reduce((acc, p) => acc + saleLineTotal(p), 0)
-        : 0;
+    $: lineSum =
+        sale?.products?.reduce((acc, p) => acc + saleLineTotal(p), 0) ?? 0;
 </script>
 
-<section class="mgmt-container">
-    <header class="mgmt-page-head">
-        <div class="mgmt-page-title">
-            <button class="mgmt-btn ghost" type="button" on:click={back}>
+<section class="mgmt-page sale-detail" aria-label="Detalle de venta">
+    <header class="mgmt-header">
+        <div class="mgmt-toolbar">
+            <button class="mgmt-btn ghost" type="button" on:click={() => navController.popBackStack()}>
                 <Icon icon={ArrowLeft} size={18} ariaLabel="Volver" />
                 Volver
             </button>
-            <div>
-                <h1 class="mgmt-h1">Detalle de venta</h1>
-                <p class="mgmt-muted">
-                    Supervisión · confirm/reject con semántica de stock idéntica al operador · UI reactiva (6.4)
-                </p>
-            </div>
         </div>
     </header>
 
@@ -180,46 +155,58 @@
                     <div class="ico">
                         <Icon icon={BadgeDollarSign} size={18} ariaLabel="Venta" />
                     </div>
-                    <div>
+                    <div class="title-text">
                         <h1>{user?.name ?? "Usuario desconocido"}</h1>
                         <p class="sub-line">
                             <Icon icon={User} size={14} ariaLabel="Email" />
                             {user?.email ?? "—"}
                         </p>
-                        <div class="meta">
-                            <span class="meta-item">
-                                <Icon icon={Hash} size={14} ariaLabel="Id venta" />
-                                <code class="id-full">{sale.id}</code>
-                            </span>
-                            <span class="meta-item">
-                                <Icon icon={User} size={14} ariaLabel="User id" />
-                                <code class="id-full">{sale.userId || "—"}</code>
-                            </span>
-                            <span class="meta-item">
-                                <Icon icon={Clock} size={14} ariaLabel="Fecha pedido" />
-                                Pedido: {formatIso(sale.date)}
-                            </span>
-                            <span class="meta-item">
-                                <Icon icon={Clock} size={14} ariaLabel="Creado" />
-                                Creado: {formatIso(sale.createdAtIso)}
-                            </span>
-                            <span class="meta-item">
-                                <Icon icon={Clock} size={14} ariaLabel="Actualizado" />
-                                Actualizado: {formatIso(sale.updatedAtIso)}
-                            </span>
-                            <span class="meta-item">
-                                <Icon icon={Package} size={14} ariaLabel="Items" />
-                                {sale.products.length} líneas
-                            </span>
-                            <span class="meta-item">
-                                <Icon icon={Truck} size={14} ariaLabel="Entrega" />
-                                {deliveryLabel(sale.deliveryType)}
-                            </span>
-                            <span class="meta-item">
-                                <Icon icon={ShieldCheck} size={14} ariaLabel="Operación" />
-                                Confirm: existence−=qty + reserved−=qty · Reject: solo reserved−=qty
-                            </span>
-                        </div>
+                        <p class="sub-line compact">
+                            <Icon icon={Package} size={14} ariaLabel="Items" />
+                            {sale.products.length} líneas
+                            <span class="dot">·</span>
+                            <Icon icon={Truck} size={14} ariaLabel="Entrega" />
+                            {deliveryLabel(sale.deliveryType)}
+                        </p>
+
+                        <button
+                            type="button"
+                            class="details-toggle"
+                            aria-expanded={showDetails}
+                            on:click={() => (showDetails = !showDetails)}
+                        >
+                            <Icon icon={ChevronDown} size={16} ariaLabel="" />
+                            {showDetails ? "Ocultar detalles" : "Ver detalles"}
+                        </button>
+
+                        {#if showDetails}
+                            <div class="meta" id="sale-extra-details">
+                                <span class="meta-item">
+                                    <Icon icon={Hash} size={14} ariaLabel="Id venta" />
+                                    <code class="id-full">{sale.id}</code>
+                                </span>
+                                <span class="meta-item">
+                                    <Icon icon={User} size={14} ariaLabel="User id" />
+                                    <code class="id-full">{sale.userId || "—"}</code>
+                                </span>
+                                <span class="meta-item">
+                                    <Icon icon={Clock} size={14} ariaLabel="Fecha pedido" />
+                                    Pedido: {formatIso(sale.date)}
+                                </span>
+                                <span class="meta-item">
+                                    <Icon icon={Clock} size={14} ariaLabel="Creado" />
+                                    Creado: {formatIso(sale.createdAtIso)}
+                                </span>
+                                <span class="meta-item">
+                                    <Icon icon={Clock} size={14} ariaLabel="Actualizado" />
+                                    Actualizado: {formatIso(sale.updatedAtIso)}
+                                </span>
+                                <span class="meta-item">
+                                    <Icon icon={ShieldCheck} size={14} ariaLabel="Operación" />
+                                    Confirm: existence−=qty + reserved−=qty · Reject: solo reserved−=qty
+                                </span>
+                            </div>
+                        {/if}
                     </div>
                 </div>
 
@@ -258,43 +245,33 @@
                                 {rejecting ? "Rechazando…" : "Rechazar"}
                             </button>
                         </div>
-                    {:else if sale.verified === BuyState.VERIFIED}
-                        <button class="mgmt-btn ghost" type="button" disabled>
-                            Ya confirmada
-                        </button>
-                    {:else if sale.verified === BuyState.DELETED}
-                        <button class="mgmt-btn ghost" type="button" disabled>
-                            Ya rechazada
-                        </button>
                     {/if}
                 </div>
             </div>
 
-            <div class="body">
-                <div class="body-head">
-                    <h3>Líneas del pedido</h3>
-                    <span class="muted">Suma líneas: {formatSaleMoney(linesTotal, currencyCode)}</span>
+            <div class="lines-section">
+                <div class="lines-head">
+                    <h2>Líneas del pedido</h2>
+                    <span class="lines-sum">Suma líneas: {formatSaleMoney(lineSum, currencyCode)}</span>
                 </div>
-                <div class="items">
-                    {#each sale.products as p, idx (p.productId + "-" + idx)}
-                        <div class="item">
-                            <div class="item-top">
-                                <div>
-                                    <strong>{resolveProduct(p.productId)}</strong>
-                                    <div class="product-id muted">id: <code>{p.productId}</code></div>
-                                </div>
-                                <span class="qty">×{p.quantity}</span>
+                <div class="lines">
+                    {#each sale.products as line (line.productId + String(line.quantity))}
+                        {@const product = $productStore.items.find((p) => p.id === line.productId)}
+                        {@const avail = product ? availableStock(product) : null}
+                        <article class="line-row">
+                            <div class="line-main">
+                                <div class="line-title">{line.name || product?.name || line.productId}</div>
+                                <p class="line-sub">ID: {line.productId}</p>
+                                <p class="line-sub">
+                                    Unidad: {formatSaleMoney(line.price, currencyCode)}
+                                    · Línea: {formatSaleMoney(saleLineTotal(line), currencyCode)}
+                                    {#if avail != null}
+                                        · <span class="avail">disponible ahora: {avail}</span>
+                                    {/if}
+                                </p>
                             </div>
-                            <div class="item-sub">
-                                <span>Unit: {formatSaleMoney(p.price, currencyCode)}</span>
-                                <span class="dot">•</span>
-                                <span>Línea: {formatSaleMoney(saleLineTotal(p), currencyCode)}</span>
-                                <span class="dot">•</span>
-                                <span class="avail">available ahora: {resolveAvailable(p.productId)}</span>
-                            </div>
-                        </div>
-                    {:else}
-                        <p class="muted">Sin productos en este pedido.</p>
+                            <div class="line-qty">×{line.quantity}</div>
+                        </article>
                     {/each}
                 </div>
             </div>
@@ -303,42 +280,39 @@
 </section>
 
 <style>
+    .sale-detail {
+        gap: 14px;
+    }
+
     .detail-card {
-        border-radius: 22px;
         border: 1px solid var(--md-sys-color-outline-variant);
-        background: color-mix(in srgb, var(--md-sys-color-surface) 92%, transparent);
-        box-shadow: 0 18px 44px color-mix(in srgb, black 35%, transparent);
-        overflow: hidden;
+        border-radius: 18px;
+        padding: 16px;
+        background: color-mix(in srgb, var(--md-sys-color-surface) 90%, transparent);
+        display: grid;
+        gap: 18px;
     }
 
     .head {
-        padding: 16px;
-        display: grid;
-        grid-template-columns: 1fr auto;
-        gap: 14px;
-        align-items: start;
-        border-bottom: 1px solid var(--md-sys-color-outline-variant);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        justify-content: space-between;
+        align-items: flex-start;
     }
 
     .title {
-        display: grid;
-        grid-template-columns: auto 1fr;
+        display: flex;
         gap: 12px;
-        align-items: start;
+        align-items: flex-start;
         min-width: 0;
+        flex: 1 1 240px;
     }
 
-    h1 {
+    .title h1 {
         margin: 0;
-        font-size: 1.35rem;
-        letter-spacing: -0.01em;
-        font-weight: 1000;
-    }
-
-    h3 {
-        margin: 0;
-        font-weight: 950;
-        letter-spacing: -0.01em;
+        font-size: 1.2rem;
+        font-weight: 900;
     }
 
     .sub-line {
@@ -346,7 +320,8 @@
         display: inline-flex;
         gap: 6px;
         align-items: center;
-        font-size: 0.92rem;
+        flex-wrap: wrap;
+        font-size: 0.9rem;
         color: color-mix(in srgb, var(--md-sys-color-on-background) 75%, transparent);
     }
 
@@ -358,6 +333,53 @@
         place-items: center;
         border: 1px solid var(--md-sys-color-outline-variant);
         background: color-mix(in srgb, var(--md-sys-color-surface-variant) 32%, transparent);
+        flex-shrink: 0;
+    }
+
+    .title-text {
+        min-width: 0;
+    }
+
+    .sub-line.compact {
+        display: inline-flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        margin-top: 4px;
+    }
+
+    .dot {
+        opacity: 0.55;
+    }
+
+    .details-toggle {
+        margin-top: 8px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid var(--md-sys-color-outline-variant);
+        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 28%, transparent);
+        color: var(--md-sys-color-on-surface);
+        border-radius: 999px;
+        padding: 6px 12px;
+        font: inherit;
+        font-size: 0.84rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background-color 140ms ease, border-color 140ms ease;
+    }
+
+    .details-toggle:hover {
+        border-color: color-mix(in srgb, var(--md-sys-color-outline) 40%, var(--md-sys-color-outline-variant));
+        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 42%, transparent);
+    }
+
+    .details-toggle :global(svg) {
+        transition: transform 160ms ease;
+    }
+
+    .details-toggle[aria-expanded="true"] :global(svg) {
+        transform: rotate(180deg);
     }
 
     .meta {
@@ -366,6 +388,10 @@
         gap: 8px;
         color: color-mix(in srgb, var(--md-sys-color-on-background) 78%, transparent);
         font-size: 0.86rem;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--md-sys-color-outline-variant);
+        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 18%, transparent);
     }
 
     .meta-item {
@@ -430,121 +456,124 @@
     }
 
     .pill {
-        font-size: 0.72rem;
-        font-weight: 900;
-        padding: 5px 10px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
         border-radius: 999px;
+        font-size: 0.82rem;
+        font-weight: 800;
         border: 1px solid var(--md-sys-color-outline-variant);
-        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 35%, transparent);
-        justify-self: end;
+    }
+
+    .pill.pending {
+        background: color-mix(in srgb, #f59e0b 18%, transparent);
+        border-color: color-mix(in srgb, #f59e0b 40%, var(--md-sys-color-outline-variant));
+        color: #fbbf24;
+    }
+
+    .pill.ok {
+        background: color-mix(in srgb, var(--md-sys-color-primary) 16%, transparent);
+        border-color: color-mix(in srgb, var(--md-sys-color-primary) 40%, var(--md-sys-color-outline-variant));
+    }
+
+    .pill.bad {
+        background: color-mix(in srgb, #ef4444 16%, transparent);
+        border-color: color-mix(in srgb, #ef4444 40%, var(--md-sys-color-outline-variant));
+        color: #fca5a5;
     }
 
     .pill-code {
         font-weight: 600;
         opacity: 0.85;
+        font-size: 0.75rem;
     }
 
-    .pill.verified {
-        border-color: color-mix(in srgb, #22c55e 35%, var(--md-sys-color-outline-variant));
-        background: color-mix(in srgb, #22c55e 12%, transparent);
-        color: #4ade80;
+    .lines-section {
+        display: grid;
+        gap: 10px;
+        border-top: 1px solid var(--md-sys-color-outline-variant);
+        padding-top: 14px;
     }
 
-    .pill.unverified {
-        border-color: color-mix(in srgb, #f97316 38%, var(--md-sys-color-outline-variant));
-        background: color-mix(in srgb, #f97316 12%, transparent);
-        color: #fb923c;
-    }
-
-    .pill.rejected {
-        border-color: color-mix(in srgb, #ef4444 38%, var(--md-sys-color-outline-variant));
-        background: color-mix(in srgb, #ef4444 12%, transparent);
-        color: #f87171;
-    }
-
-    .body {
-        padding: 16px;
-    }
-
-    .body-head {
+    .lines-head {
         display: flex;
         justify-content: space-between;
         align-items: baseline;
         gap: 12px;
-        margin-bottom: 10px;
         flex-wrap: wrap;
     }
 
-    .items {
-        display: grid;
-        gap: 10px;
+    .lines-head h2 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 850;
     }
 
-    .item {
-        border: 1px solid var(--md-sys-color-outline-variant);
-        background: color-mix(in srgb, var(--md-sys-color-surface) 90%, transparent);
-        border-radius: 18px;
-        padding: 12px;
-        display: grid;
-        gap: 6px;
+    .lines-sum {
+        font-size: 0.88rem;
+        font-weight: 700;
+        color: color-mix(in srgb, var(--md-sys-color-on-background) 80%, transparent);
     }
 
-    .item-top {
+    .lines {
+        display: grid;
+        gap: 8px;
+    }
+
+    .line-row {
         display: flex;
         justify-content: space-between;
-        gap: 10px;
+        gap: 12px;
         align-items: flex-start;
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid var(--md-sys-color-outline-variant);
+        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 14%, transparent);
     }
 
-    .product-id {
-        margin-top: 2px;
-        font-size: 0.78rem;
+    .line-main {
+        min-width: 0;
     }
 
-    .qty {
+    .line-title {
+        font-weight: 800;
+    }
+
+    .line-sub {
+        margin: 2px 0 0;
+        font-size: 0.84rem;
+        color: color-mix(in srgb, var(--md-sys-color-on-background) 72%, transparent);
+    }
+
+    .line-qty {
         font-weight: 900;
         white-space: nowrap;
     }
 
-    .item-sub {
-        display: inline-flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        align-items: center;
-        color: color-mix(in srgb, var(--md-sys-color-on-background) 72%, transparent);
-        font-size: 0.88rem;
-    }
-
     .avail {
-        font-weight: 700;
-        color: color-mix(in srgb, var(--md-sys-color-primary) 85%, var(--md-sys-color-on-background));
-    }
-
-    .muted {
-        color: inherit;
-        opacity: 0.9;
-    }
-
-    .dot {
-        opacity: 0.7;
+        color: color-mix(in srgb, var(--md-sys-color-primary) 85%, white);
+        font-weight: 650;
     }
 
     @media (max-width: 720px) {
-        .head {
-            grid-template-columns: 1fr;
-        }
         .right {
-            justify-items: start;
-            min-width: 0;
+            width: 100%;
+            justify-items: stretch;
         }
-        .amount,
-        .pill,
-        .currency-note {
-            justify-self: start;
-            text-align: left;
-        }
+
         .decision-actions {
-            justify-content: flex-start;
+            justify-content: stretch;
+        }
+
+        .decision-actions .mgmt-btn {
+            flex: 1;
+            justify-content: center;
+        }
+
+        .currency-note {
+            text-align: left;
+            max-width: none;
         }
     }
 </style>
