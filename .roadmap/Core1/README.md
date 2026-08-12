@@ -1,9 +1,9 @@
 # Core 1 — Back-office alineado
 
-**Estado:** Implementación y docs de cierre **7.1–7.3** listos.  
-**Cierre formal del núcleo:** DoD en [`PHASE_7_3_CORE1_DOD.md`](./PHASE_7_3_CORE1_DOD.md) = SÍ.
+**Estado:** **Core 1 dash cerrado** (2026-08-12).  
+**Cierre formal del núcleo:** DoD = **SÍ** — [`PHASE_7_3_CORE1_DOD.md`](./PHASE_7_3_CORE1_DOD.md) · [`MVP_CORE1_STATUS.md`](./MVP_CORE1_STATUS.md)
 
-**Última actualización:** 2026-08-10
+**Última actualización:** 2026-08-12
 
 ## Fases
 
@@ -11,8 +11,8 @@
 |--------|--------|
 | 0.x–6.4 Implementación | **Hecho** |
 | 7.1 Exit alineación | **Hecho** |
-| 7.2 Pre-QA gate | **Doc** · ejecución ☐ |
-| 7.3 DoD + hoja QA | **Doc** · DoD formal ☐ |
+| 7.2 Pre-QA gate | **Hecho** (validación operativa) |
+| 7.3 DoD + hoja QA | **Hecho** · DoD formal **SÍ** |
 
 ## Índice
 
