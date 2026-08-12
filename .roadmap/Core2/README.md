@@ -4,7 +4,7 @@
 **Depende de:** Core 1 dash **cerrado** ([`../Core1/MVP_CORE1_STATUS.md`](../Core1/MVP_CORE1_STATUS.md)).  
 **Paridad ecosistema:** [`AlejoTaller/.roadmap/Core2/`](https://github.com/danielitoCode/AlejoTaller/tree/master/.roadmap/Core2)
 
-> Core 2 **no reescribe** el soft-hold de Core 1. Añade traza (`stock_movements`), ajustes auditados, reportes, seguridad y (opcional en el mismo núcleo) agenda de **Reservas** de taller.
+> Core 2 **no reescribe** el soft-hold de Core 1. Añade **finanzas** (factura de entrada con costos/proveedor, ingreso y margen al confirmar venta), traza (`stock_movements`), reportes económicos, seguridad y (opcional) agenda de **Reservas** de taller.
 
 ## Índice
 
@@ -14,16 +14,17 @@
 | [MVP_CORE2_STATUS.md](./MVP_CORE2_STATUS.md) | Estado vivo del núcleo |
 | [MVP_CORE2_BACKLOG.md](./MVP_CORE2_BACKLOG.md) | Backlog detallado / micro-tareas |
 | [POLICY_DELTAS_CORE2.md](./POLICY_DELTAS_CORE2.md) | Qué se congela y qué se añade en políticas |
+| [FINANCE_MODEL_CORE2.md](./FINANCE_MODEL_CORE2.md) | **Factura de entrada, costos, ingreso/margen** |
 
 ## Fases (resumen)
 
 | Fase | Nombre | Repo principal |
 |------|--------|----------------|
 | **2.0** | Alcance y políticas delta | dash + AlejoTaller |
-| **2.1** | Schema `stock_movements` | AlejoTaller (Appwrite) → dash consume |
-| **2.2** | Operador: `salida_venta` al VERIFIED | AlejoTaller |
-| **2.3** | Panel: UI movimientos + entrada/ajuste | **dash** |
-| **2.4** | Reportes + cola UNVERIFIED | **dash** |
+| **2.1** | Schema stock + finanzas | AlejoTaller (Appwrite) → dash consume |
+| **2.2** | Confirm: `salida_venta` + ingreso/COGS | AlejoTaller (+ dash) |
+| **2.3** | Panel: **factura de entrada** + movimientos | **dash** |
+| **2.4** | Reportes económicos + cola UNVERIFIED | **dash** |
 | **2.5** | Reservas de taller (opcional MVP) | ambos |
 | **2.6** | Seguridad, CI, DoD Core 2 | ambos |
 
