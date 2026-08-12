@@ -57,6 +57,19 @@ function mapDomainUserToManagedUser(user: User): ManagedBusinessUser {
     };
 }
 
+/**
+ * Visitantes / anónimos de Appwrite (createAnonymousSession) no tienen email.
+ * El panel de gestión solo lista cuentas reales de negocio.
+ */
+function isAnonymousOrGuestUser(user: User): boolean {
+    const email = String(user.email ?? "").trim();
+    if (!email) return true;
+    // Defensa extra: sin email usable y sin nombre (sesión anónima típica)
+    const name = String(user.name ?? "").trim();
+    if (!name && !email.includes("@")) return true;
+    return false;
+}
+
 function normalizeError(error: unknown): string {
     return error instanceof Error ? error.message : "Unexpected error";
 }
@@ -117,7 +130,7 @@ function createUserManagementStore() {
             lastSearch = (search ?? "").trim();
             await resolveManagerRole();
             const res = await authContainer.useCases.accounts.getAllUserCaseUse(lastSearch);
-            const users: User[] = res.users;
+            const users: User[] = res.users.filter((u) => !isAnonymousOrGuestUser(u));
             const managedUsers: ManagedBusinessUser[] = users.map((u) => mapDomainUserToManagedUser(u));
             update((state) => ({ ...state, items: managedUsers }));
         }).finally(() => {
