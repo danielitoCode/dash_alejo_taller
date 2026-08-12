@@ -1,6 +1,6 @@
 # Core 2 — Plan de implementación por fases (checklist)
 
-**Última actualización:** 2026-08-12  
+**Última actualización:** 2026-08-13  
 **Estado del plan:** publicado · ejecución **0%** · **finanzas (factura de entrada + margen)** incluidas  
 **Repos:** dash_alejo_taller + AlejoTaller (schema / operador)
 
@@ -15,7 +15,7 @@ Marca `[x]` al completar. No avanzar de fase crítica de stock sin regresión ve
 ```text
 Inicio plan: 2026-08-12
 Ejecutor: ____________________
-Fase actual: 2.0
+Fase actual: 2.0 (decisiones producto cerradas → listo para 2.1)
 Core 2 cerrado: NO
 ```
 
@@ -28,11 +28,11 @@ Core 2 cerrado: NO
 - [x] Documentar plan por fases (este archivo)
 - [x] README + STATUS + POLICY_DELTAS en `.roadmap/Core2/`
 - [x] Modelo financiero propuesto ([`FINANCE_MODEL_CORE2.md`](./FINANCE_MODEL_CORE2.md))
-- [ ] **Aceptar** modelo financiero (factura de entrada + ingreso/COGS al VERIFIED)
-- [ ] Decisión producto: **Reservas de taller** ¿dentro del MVP Core 2? (SÍ / NO / 2.5)
-- [ ] Revisar y aceptar [`POLICY_DELTAS_CORE2.md`](./POLICY_DELTAS_CORE2.md) en ambos repos
+- [x] **Aceptar** modelo financiero (factura de entrada + ingreso/COGS al VERIFIED) — 2026-08-13
+- [x] Decisión producto: **Reservas de taller** dentro del MVP Core 2 — **SÍ**
+- [ ] Revisar y aceptar [`POLICY_DELTAS_CORE2.md`](./POLICY_DELTAS_CORE2.md) en ambos repos (espejo AlejoTaller pendiente)
 - [ ] Espejo mínimo de alcance en `AlejoTaller/.roadmap/Core2/` (enlace o copia de fases)
-- [ ] Definir valoración de costo al vender: último costo vs promedio simple (MVP)
+- [x] Valoración de costo al vender: **último costo** (`last_unit_cost`) — no promedio (evita distorsión/pérdidas ficticias)
 
 **Criterio de salida 2.0:** alcance firmado + políticas delta + modelo financiero aceptados.
 
@@ -56,6 +56,7 @@ Core 2 cerrado: NO
 
 ### Finanzas de venta (al confirmar)
 - [ ] Collection `sale_finance_event` **o** campos acordados en confirmación (`sale_id`, `revenue`, `cogs`, `margin`, `user_id`, `at`)
+- [ ] Campo producto `last_unit_cost` (base COGS)
 - [ ] DTO + repo / contrato documentado para dash
 - [ ] Documento de schema enlazado desde este plan ([`FINANCE_MODEL_CORE2.md`](./FINANCE_MODEL_CORE2.md))
 
@@ -70,7 +71,7 @@ Core 2 cerrado: NO
 - [ ] En flujo VERIFIED: escribir `stock_movements` tipo `salida_venta` por línea (o agregado documentado)
 - [ ] `balance_after` = `existence` tras el consume
 - [ ] `sale_id` + `user_id` (operador) rellenados
-- [ ] Registrar evento financiero: `revenue` (importe venta), `cogs` (según regla 2.0), `margin`
+- [ ] Registrar evento financiero: `revenue` (importe venta), `cogs` (= **último costo** × qty), `margin`
 - [ ] UNVERIFIED / reserved: **no** crea evento financiero
 - [ ] Idempotencia: segundo confirm no duplica movimiento ni eventos ni stock
 - [ ] Reject/DELETED: sin `salida_venta` ni ingreso (solo release `reserved`)
@@ -101,6 +102,7 @@ Core 2 cerrado: NO
 - [ ] Lista temporal de líneas (editar qty/costo, quitar línea)
 - [ ] Crear producto nuevo en el flujo (nombre mínimo + categoría opcional + precio venta opcional)
 - [ ] Confirmar: `existence +=` por línea + `stock_movements` `entrada` + `purchase_entry` + líneas
+- [ ] Actualizar `last_unit_cost` si concepto compra y unit_cost definible
 - [ ] `reserved` no cambia; toast de éxito; cierre modal
 - [ ] Roles: owner/admin (sales según política; viewer no)
 
@@ -146,9 +148,9 @@ Core 2 cerrado: NO
 
 ---
 
-## Fase 2.5 — Reservas de taller (opcional en MVP)
+## Fase 2.5 — Reservas de taller (incluida en MVP)
 
-> Marcar esta fase como **N/A** si en 2.0 se decide diferir.
+> Decisión 2026-08-13: **dentro del MVP Core 2**.
 
 - [ ] Collection `appointment` / `booking` (o nombre acordado) en Appwrite
 - [ ] Estados: al menos solicitada → confirmada → realizada | cancelada
@@ -188,7 +190,7 @@ Core 2 cerrado: NO
 2. Panel registra **factura de entrada** multi-línea (proveedor + costos) y ajusta stock sin `existence < reserved`.  
 3. Al VERIFIED se reconoce **ingreso/COGS/margen**; UNVERIFIED no mueve dinero.  
 4. Soft-hold Core 1 sin regresión.  
-5. Si 2.5 activa: reservas separadas de ventas.  
+5. Reservas de taller operativas y separadas de ventas B2C.  
 6. STATUS del repo marca **Core 2 cerrado**.
 
 ---
@@ -210,6 +212,6 @@ Core 2 cerrado: NO
 2.2  operador salida_venta     ⎫ pueden solaparse en parte
 2.3  dash movimientos/entrada ⎭
 2.4  reportes / cola
-2.5  reservas (si aplica)
+2.5  reservas (en MVP)
 2.6  seguridad + DoD
 ```
