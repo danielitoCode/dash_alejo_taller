@@ -13,7 +13,7 @@
         userManagementStore,
         type BusinessRole,
     } from "../viewmodel/user-management.store";
-    import { BadgeCheck, KeyRound, Lock, Search, Unlock, UserPlus, Users } from "lucide-svelte";
+    import { BadgeCheck, KeyRound, Lock, Search, Trash2, Unlock, UserPlus, Users } from "lucide-svelte";
 
     let name = "";
     let email = "";
@@ -25,11 +25,10 @@
     $: managerRole = $userManagementStore.managerRole ?? "viewer";
     $: rolesForCreate = assignableRoles(managerRole);
     $: if (!rolesForCreate.includes(role) && rolesForCreate.length > 0) {
-        role = rolesForCreate[rolesForCreate.length - 1]; // preferir el de menor privilegio por defecto
+        role = rolesForCreate[rolesForCreate.length - 1];
     }
 
     function rolesForUser(targetRole: BusinessRole): BusinessRole[] {
-        // Opciones: las que el manager puede asignar; si el target es superior, solo lectura del actual
         if (!canManageRole(managerRole, targetRole)) {
             return [targetRole];
         }
@@ -142,6 +141,36 @@
             toastStore.error(e instanceof Error ? e.message : "No se pudo actualizar el password.");
         }
     }
+
+    $: canPurgeAnonymous = managerRole === "owner" || managerRole === "admin";
+
+    async function purgeAnonymous() {
+        if (!canPurgeAnonymous) {
+            toastStore.error("Solo owner o admin pueden limpiar anónimos.");
+            return;
+        }
+        const ok = window.confirm(
+            "¿Borrar en Appwrite todas las cuentas anónimas/visitante (sin email)?\n\n" +
+                "No afecta usuarios con correo. Esto libera cupo del plan (Users)."
+        );
+        if (!ok) return;
+        try {
+            toastStore.info("Limpiando anónimos…");
+            const result = await userManagementStore.purgeAnonymousUsers();
+            if (result.found === 0) {
+                toastStore.info("No había usuarios anónimos.");
+            } else if (result.failed === 0) {
+                toastStore.success(`Eliminados ${result.deleted} anónimos.`);
+            } else {
+                toastStore.error(
+                    `Eliminados ${result.deleted} de ${result.found}. Fallaron ${result.failed}.`
+                );
+            }
+        } catch (e: any) {
+            logger.error(e?.message ?? e, e?.stack);
+            toastStore.error(e instanceof Error ? e.message : "No se pudo limpiar anónimos.");
+        }
+    }
 </script>
 
 <section class="mgmt-page" aria-label="Gestión de usuarios">
@@ -159,6 +188,18 @@
                     <Icon icon={Users} size={18} ariaLabel="Total" />
                     {filtered.length} / {items.length}
                 </span>
+                {#if canPurgeAnonymous}
+                    <button
+                        class="mgmt-btn ghost"
+                        type="button"
+                        on:click={purgeAnonymous}
+                        disabled={$userManagementStore.saving || $userManagementStore.loading}
+                        title="Borrar en Appwrite cuentas sin email (sesiones anónimas)"
+                    >
+                        <Icon icon={Trash2} size={18} ariaLabel="Limpiar anónimos" />
+                        Limpiar anónimos
+                    </button>
+                {/if}
                 {#if isRefreshing}
                     <span class="mgmt-chip" aria-label="Sincronizando">
                         <LoadingSpinner size={16} label="Sincronizando" subtle />
@@ -273,13 +314,13 @@
                         </div>
 
                         <div class="mgmt-row-actions">
-                            <label class="mgmt-field" style="margin:0; min-width: 160px">
-                                <span style="display:none">Rol</span>
+                            <label class="mgmt-field" style="margin:0; min-width:140px">
+                                <span class="mgmt-muted" style="display:none">Rol</span>
                                 <select
                                     class="mgmt-select"
                                     value={user.role}
-                                    disabled={!touch}
-                                    on:change={(event) => handleRoleChange(user.id, user.role, event)}
+                                    disabled={!touch || $userManagementStore.saving}
+                                    on:change={(e) => handleRoleChange(user.id, user.role, e)}
                                 >
                                     {#each rolesForUser(user.role) as r}
                                         <option value={r}>{r}</option>
@@ -289,24 +330,22 @@
 
                             <button
                                 class="mgmt-btn ghost"
-                                disabled={!touch}
+                                type="button"
+                                disabled={!touch || $userManagementStore.saving}
                                 on:click={() => toggleBlocked(user.id, user.role)}
                             >
-                                <Icon
-                                    icon={user.blocked ? Unlock : Lock}
-                                    size={18}
-                                    ariaLabel={user.blocked ? "Desbloquear" : "Bloquear"}
-                                />
+                                <Icon icon={user.blocked ? Unlock : Lock} size={18} ariaLabel="Bloqueo" />
                                 {user.blocked ? "Desbloquear" : "Bloquear"}
                             </button>
 
                             <button
                                 class="mgmt-btn ghost"
-                                disabled={!touch}
+                                type="button"
+                                disabled={!touch || $userManagementStore.saving}
                                 on:click={() => resetPassword(user.id, user.role)}
                             >
-                                <Icon icon={KeyRound} size={18} ariaLabel="Solicitar cambio de password" />
-                                Reset password
+                                <Icon icon={KeyRound} size={18} ariaLabel="Password" />
+                                Password
                             </button>
                         </div>
                     </article>
