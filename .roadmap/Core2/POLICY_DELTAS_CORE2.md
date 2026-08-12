@@ -1,6 +1,6 @@
 # Core 2 — Deltas de política (respecto a Core 1)
 
-**Fecha:** 2026-08-12  
+**Fecha:** 2026-08-13  
 **Fuente Core 1:** [`../Core1/CANONICAL_RULES_FREEZE.md`](../Core1/CANONICAL_RULES_FREEZE.md)  
 **Canónico ecosistema:** `AlejoTaller/.policies/warehouse`, `AlejoTaller/.policies/sale`
 
@@ -40,12 +40,13 @@ Campos mínimos: `product_id`, `type`, `quantity` (>0), `balance_after`, `reason
 - Validación: tras el ajuste, `existence >= reserved`.  
 - Preferible escribir siempre fila en `stock_movements`.
 
-### 4. Reservas de taller (si entran en Core 2)
+### 4. Reservas de taller (MVP Core 2)
 
 - Dominio **aparte** de `Sale` (p. ej. collection `appointment` / `booking`).  
 - Estados típicos: solicitada → confirmada → realizada / cancelada.  
 - **No** listar pedidos de tienda en el menú Reservas.  
 - Stock de piezas en cita: **fuera** del MVP mínimo (Core posterior).
+- **Incluidas en el núcleo** (decisión 2026-08-13).
 
 ## Competencias por superficie (Core 2)
 
@@ -57,7 +58,7 @@ Campos mínimos: `product_id`, `type`, `quantity` (>0), `balance_after`, `reason
 | Ver movimientos | No | Lectura | **Sí** |
 | Agenda reservas taller | Solicitar (futuro) | Operar | **Gobernar** |
 
-## 5. Finanzas (Core 2)
+## 5. Finanzas (Core 2) — aceptado 2026-08-13
 
 | Evento | Stock | Dinero |
 |--------|-------|--------|
@@ -69,3 +70,10 @@ Campos mínimos: `product_id`, `type`, `quantity` (>0), `balance_after`, `reason
 - Proveedor y referencia de factura son parte del documento de entrada (proveedor opcional si concepto regalía).
 - Crear producto en el flujo de entrada está permitido (datos mínimos).
 - Detalle: [`FINANCE_MODEL_CORE2.md`](./FINANCE_MODEL_CORE2.md)
+- **COGS (decisión 2026-08-13):** `last_unit_cost × qty` al VERIFIED. **No promedio.**
+- `last_unit_cost` se actualiza en entradas con costo de compra; concepto regalía: costo 0 en línea (no obliga a pisar último costo de compra salvo regla explícita en implementación).
+
+## 6. Reservas de taller (MVP Core 2)
+
+- Incluidas en el núcleo (decisión 2026-08-13).
+- Collection separada de `Sale`; menú Reservas ≠ Ventas pendientes.

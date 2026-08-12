@@ -1,7 +1,7 @@
 # Core 2 — Modelo financiero (entradas + ventas)
 
-**Fecha:** 2026-08-12  
-**Estado:** propuesto · pendiente aceptación en fase 2.0  
+**Fecha:** 2026-08-13  
+**Estado:** **aceptado** (2026-08-13) · COGS = último costo · reservas de taller en MVP Core 2  
 **No altera** soft-hold Core 1 (`existence` / `reserved` / `available`).
 
 ## Problema que resuelve
@@ -70,6 +70,7 @@ Si no existe el producto → crear producto mínimo (nombre, categoría, precio 
   → existence += qty por línea
   → stock_movements tipo entrada (qty + balance_after + reason)
   → documento purchase_entry + líneas con costos
+  → actualiza last_unit_cost si concepto compra y unit_cost > 0
   → toast + cierre modal
 ```
 
@@ -131,21 +132,20 @@ Mínimo viable:
 
 ### Extensión venta / movimiento (al VERIFIED)
 
-Opciones (elegir una en 2.0):
+**Collection `sale_finance_event`** (recomendado): `sale_id`, `revenue`, `cogs`, `margin`, `user_id`, `at`  
++ `salida_venta` en `stock_movements` solo para qty.
 
-**A.** Campos en `stock_movements` / evento de confirmación: `sale_amount`, `cogs_amount`  
-**B.** Collection `sale_finance_event` por confirmación: `sale_id`, `revenue`, `cogs`, `margin`, `user_id`, `at`
-
-Recomendación inicial: **B** (no sobrecarga movements) + `salida_venta` en movements solo para qty.
-
-### Producto (campos opcionales Core 2)
+### Producto (campos Core 2)
 
 | Campo | Uso |
 |-------|-----|
-| `last_unit_cost` | último costo de entrada (informativo) |
-| `avg_unit_cost` | si se adopta promedio móvil (documentar fórmula) |
+| `last_unit_cost` | último costo de entrada de compra; base del COGS |
 
-**MVP:** usar costo de la **línea de entrada más reciente** o promedio simple documentado; no bloquear Core 2 con valoración FIFO completa.
+**MVP (decisión 2026-08-13):** COGS = **último costo** (`last_unit_cost` del producto, actualizado en cada línea de entrada con concepto compra; regalía puede dejar costo 0 o no actualizar según regla de línea).
+
+- No se usa promedio móvil en Core 2 (puede distorsionar margen y generar “pérdidas” contables engañosas).
+- FIFO/LIFO por lote queda fuera (Core 3+).
+- Al VERIFIED: `cogs = last_unit_cost × qty` (por línea de producto); si no hay costo previo, `cogs = 0` y se registra advertencia/log.
 
 ---
 
@@ -177,7 +177,7 @@ Reservas / UNVERIFIED **no** aparecen como ingreso.
 
 | Fase | Encaje finanzas |
 |------|-----------------|
-| 2.0 | Aceptar este modelo + decisión regalía/proveedor |
+| 2.0 | Modelo **aceptado**; COGS = último costo |
 | 2.1 | Schema: `supplier`, `purchase_entry`, líneas; además `stock_movements` |
 | 2.2 | Al VERIFIED: evento financiero (revenue/COGS) + `salida_venta` qty |
 | 2.3 | UX **Registrar entrada** (factura) + listados |
