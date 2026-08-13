@@ -1,19 +1,31 @@
-import type {PromotionDTO} from "../dto/PromotionDTO";
-import type {Promotion} from "../../domain/entity/Promotion";
+import type { PromotionDTO } from "../dto/PromotionDTO"
+import type { Promotion, PromotionKind, PromotionStatus } from "../../domain/entity/Promotion"
 
-export type PromotionWriteDTO = Pick<
-    PromotionDTO,
-    | "$id"
-    | "productId"
-    | "title"
-    | "message"
-    | "imageUrl"
-    | "oldPrice"
-    | "currentPrice"
-    | "validFromEpochMillis"
-    | "validUntilEpochMillis"
-    | "source"
->;
+export type PromotionWriteDTO = {
+    productId?: string | null
+    title: string
+    message: string
+    imageUrl?: string | null
+    oldPrice?: number | null
+    currentPrice?: number | null
+    validFromEpochMillis: number
+    validUntilEpochMillis: number
+    source?: string | null
+    kind?: string | null
+    status?: string | null
+}
+
+function asKind(value: unknown): PromotionKind | undefined {
+    if (value === "banner" || value === "product_discount") return value
+    return undefined
+}
+
+function asStatus(value: unknown): PromotionStatus | undefined {
+    if (value === "draft" || value === "active" || value === "ended" || value === "cancelled") {
+        return value
+    }
+    return undefined
+}
 
 export function promotionFromDTO(dto: PromotionDTO): Promotion {
     return {
@@ -26,17 +38,15 @@ export function promotionFromDTO(dto: PromotionDTO): Promotion {
         currentPrice: dto.currentPrice ?? null,
         validFromEpochMillis: dto.validFromEpochMillis,
         validUntilEpochMillis: dto.validUntilEpochMillis,
-        source: dto.source === "manual" ? "manual" : "automatic",
-    };
+        source: dto.source === "manual" ? "manual" : dto.source === "automatic" ? "automatic" : undefined,
+        kind: asKind(dto.kind),
+        status: asStatus(dto.status),
+    }
 }
 
-/**
- * Domain → DTO (create/update payload)
- * El id de dominio se serializa en $id de Appwrite.
- */
+/** Domain → payload Appwrite (sin $id; el id va en createDocument). */
 export function promotionToDTO(promotion: Promotion): PromotionWriteDTO {
     return {
-        $id: promotion.id,
         productId: promotion.productId ?? null,
         title: promotion.title,
         message: promotion.message,
@@ -45,6 +55,8 @@ export function promotionToDTO(promotion: Promotion): PromotionWriteDTO {
         currentPrice: promotion.currentPrice ?? null,
         validFromEpochMillis: promotion.validFromEpochMillis,
         validUntilEpochMillis: promotion.validUntilEpochMillis,
-        source: promotion.source ?? "automatic",
-    };
+        source: promotion.source ?? "manual",
+        kind: promotion.kind ?? null,
+        status: promotion.status ?? "active",
+    }
 }

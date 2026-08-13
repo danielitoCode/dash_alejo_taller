@@ -1,7 +1,6 @@
-import type {Models} from "appwrite";
+import type { Models } from "appwrite"
 
-export interface PromotionDTO extends Models.Document{
-    id: string
+export interface PromotionDTO extends Models.Document {
     productId?: string | null
     title: string
     message: string
@@ -11,6 +10,6 @@ export interface PromotionDTO extends Models.Document{
     validFromEpochMillis: number
     validUntilEpochMillis: number
     source?: string | null
-    $createdAt: string
-    $updatedAt: string
+    kind?: string | null
+    status?: string | null
 }

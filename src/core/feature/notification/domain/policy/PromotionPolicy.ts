@@ -54,6 +54,19 @@ export function isActiveProductDiscount(
 }
 
 /**
+ * Banner informativo activo (sin mutar precio).
+ */
+export function isActiveBanner(
+    promo: Promotion & { kind?: string; status?: string },
+    nowEpochMillis: number
+): boolean {
+    if (resolvePromotionKind(promo) !== "banner") return false
+    const status = promo.status
+    if (status === "cancelled" || status === "ended" || status === "draft") return false
+    return isPromotionWindowActive(promo, nowEpochMillis)
+}
+
+/**
  * Precio de venta efectivo (política B).
  * listPrice = product.price (catálogo).
  */
@@ -75,8 +88,6 @@ export function effectivePrice(
     )
     if (active.length === 0) return base
 
-    // Unicidad: si hubiera más de una (datos legacy), gana la de menor promoPrice
-    // y la más reciente por validFrom.
     active.sort((a, b) => {
         const pa = Number(a.currentPrice)
         const pb = Number(b.currentPrice)

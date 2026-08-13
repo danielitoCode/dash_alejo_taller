@@ -23,12 +23,12 @@ export class PromotionNetRepository {
         return response.documents
     }
 
-    async create(promo: PromotionWriteDTO): Promise<PromotionDTO> {
+    async create(promo: PromotionWriteDTO, documentId?: string): Promise<PromotionDTO> {
         return await this.databases.createDocument<PromotionDTO>(
             this.databaseId,
             COLLECTION_ID,
-            promo.$id || ID.unique(),
-            promo as PromotionDTO
+            documentId?.trim() || ID.unique(),
+            promo as unknown as PromotionDTO
         )
     }
 
