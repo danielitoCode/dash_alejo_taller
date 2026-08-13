@@ -273,13 +273,20 @@
 </section>
 
 {#if formOpen}
-    <div class="modal-backdrop" role="presentation" on:click={closeForm}>
+    <div
+        class="modal-backdrop"
+        role="presentation"
+        on:click={closeForm}
+        on:keydown={(e) => e.key === "Escape" && closeForm()}
+    >
         <div
             class="modal"
             role="dialog"
+            tabindex="-1"
             aria-modal="true"
             aria-labelledby="promo-form-title"
             on:click|stopPropagation
+            on:keydown={(e) => e.key === "Escape" && closeForm()}
         >
             <header class="modal-head">
                 <h2 id="promo-form-title">
