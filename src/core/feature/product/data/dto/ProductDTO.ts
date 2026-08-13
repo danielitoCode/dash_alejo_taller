@@ -16,4 +16,6 @@ export interface ProductDTO extends Models.Document {
     category_id: string
     status?: string
     rating?: number
+    /** Core 2 — último costo; ausente en docs Core 1 → mapper 0/undefined */
+    last_unit_cost?: number
 }
