@@ -68,7 +68,7 @@
         }
     }
 
-    function deliveryLabel(d: DeliveryType | string | undefined): string {
+    function deliveryLabel(d: DeliveryType | string | null | undefined): string {
         if (d === DeliveryType.PICKUP || d === "PICKUP") return "Recogida (PICKUP)";
         if (d === DeliveryType.DELIVERY || d === "DELIVERY") return "Entrega (DELIVERY)";
         return String(d ?? "—");
@@ -260,7 +260,7 @@
                         {@const avail = product ? availableStock(product) : null}
                         <article class="line-row">
                             <div class="line-main">
-                                <div class="line-title">{line.name || product?.name || line.productId}</div>
+                                <div class="line-title">{product?.name || line.productId}</div>
                                 <p class="line-sub">ID: {line.productId}</p>
                                 <p class="line-sub">
                                     Unidad: {formatSaleMoney(line.price, currencyCode)}
