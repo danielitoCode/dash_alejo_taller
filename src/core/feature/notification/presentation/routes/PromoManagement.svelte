@@ -225,7 +225,7 @@
         <SkeletonList rows={6} />
     {:else if filtered.length === 0}
         <div class="mgmt-card empty">
-            <p class="mgmt-muted">No hay promociones{query ? " que coincidan" : "".}.</p>
+            <p class="mgmt-muted">No hay promociones{query ? " que coincidan" : ""}.</p>
             <button class="mgmt-btn primary" type="button" on:click={() => openForm("product_discount")}>
                 Crear primera promo
             </button>
