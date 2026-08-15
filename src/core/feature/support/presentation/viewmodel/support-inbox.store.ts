@@ -76,11 +76,11 @@ function createSupportInboxStore() {
         const nuevo = $s.items.filter((m) => m.status === "nuevo").length;
         const enProceso = $s.items.filter((m) => m.status === "en_proceso").length;
         const resuelto = $s.items.filter((m) => m.status === "resuelto").length;
-        return { total, nuevo, enProceso, resuelto };
+        const cerrado = $s.items.filter((m) => m.status === "cerrado").length;
+        return { total, nuevo, enProceso, resuelto, cerrado };
     });
 
     return { subscribe, syncAll, setStatus, startRealtime, stopRealtime, counts };
 }
 
 export const supportInboxStore = createSupportInboxStore();
-
