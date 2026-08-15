@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
     import { onMount } from "svelte";
     import type { NavController } from "../../../../../lib/navigation/NavController";
     import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
@@ -19,6 +19,7 @@
 
     onMount(() => {
         supportInboxStore.syncAll().catch(() => {});
+        return supportInboxStore.startRealtime();
     });
 
     $: items = $supportInboxStore.items;
@@ -60,6 +61,7 @@
     }
 
     function statusLabel(s: SupportStatus): string {
+        if (s === "cerrado") return "Cerrado";
         if (s === "nuevo") return "Nuevo";
         if (s === "en_proceso") return "En proceso";
         return "Resuelto";
@@ -92,6 +94,11 @@
                     <Icon icon={Wrench} size={18} ariaLabel="En proceso" />
                     {counts.enProceso} en proceso
                 </span>
+                {#if (counts.unread ?? 0) > 0}
+                    <span class="mgmt-chip">
+                        {counts.unread} sin leer
+                    </span>
+                {/if}
                 {#if isRefreshing}
                     <span class="mgmt-chip" aria-label="Sincronizando">
                         <LoadingSpinner size={16} label="Sincronizando" subtle />
@@ -137,6 +144,7 @@
                             <option value="nuevo">Nuevo</option>
                             <option value="en_proceso">En proceso</option>
                             <option value="resuelto">Resuelto</option>
+                            <option value="cerrado">Cerrado</option>
                         </select>
                     </label>
 
@@ -172,14 +180,23 @@
                     {/if}
 
                     {#each filtered as m (m.id)}
-                        <button class="row-btn" type="button" on:click={() => openDetail(m.id)} aria-label={m.subject}>
+                        <button
+                            class="row-btn"
+                            class:unread={(m.unreadStaff ?? 0) > 0}
+                            type="button"
+                            on:click={() => openDetail(m.id)}
+                            aria-label={m.subject}
+                        >
                             <div class="row-left">
                                 <div class="row-ico">
                                     <Icon icon={reasonIcon(m.reason)} size={18} ariaLabel={reasonLabel(m.reason)} />
                                 </div>
                                 <div class="row-main">
                                     <div class="row-top">
-                                        <span class="row-title">{m.subject || "Sin asunto"}</span>
+                                        <span class="row-title">
+                                            {#if (m.unreadStaff ?? 0) > 0}<span class="unread-dot" title="Sin leer"></span>{/if}
+                                            {m.subject || "Sin asunto"}
+                                        </span>
                                         <span class={badgeClass(m.status)}>{statusLabel(m.status)}</span>
                                     </div>
                                     <div class="row-sub">
@@ -218,6 +235,10 @@
         border: 1px solid var(--md-sys-color-outline-variant);
         background: color-mix(in srgb, var(--md-sys-color-surface) 92%, transparent);
         padding: 12px 14px;
+    }
+
+    .row-btn.unread {
+        border-color: color-mix(in srgb, var(--md-sys-color-primary) 35%, var(--md-sys-color-outline-variant));
     }
 
     .row-btn:hover {
@@ -268,6 +289,17 @@
         text-overflow: ellipsis;
         white-space: nowrap;
         min-width: 0;
+    }
+
+    .unread-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        margin-right: 6px;
+        vertical-align: middle;
+        background: var(--md-sys-color-primary);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--md-sys-color-primary) 28%, transparent);
     }
 
     .row-sub {
@@ -345,8 +377,3 @@
         }
     }
 </style>
-
-
-
-
-
