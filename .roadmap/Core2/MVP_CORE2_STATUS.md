@@ -1,41 +1,33 @@
 # Core 2 — Estado MVP Back-office
 
-**Última actualización:** 2026-08-13  
-**Veredicto:** **En curso** — 2.1 dominio/mappers + schema doc listos; crear collections en Appwrite + net repos pendiente.  
+**Última actualización:** 2026-08-18  
+**Veredicto:** **En curso** — schema Appwrite **creado + permisos**; siguiente **B1 net repos** y luego B2/B3 en paralelo.  
 **Core 2 dash cerrado:** ☐  
-**Rama:** `Core2`
+**Rama:** `Core2`  
+**Checklist unificado:** [`CORE2_UNIFIED_CHECKLIST.md`](./CORE2_UNIFIED_CHECKLIST.md)
 
 | Fase | Nombre | Estado |
 |------|--------|--------|
-| 2.0 | Alcance + políticas delta | ✓ Doc · **decisiones producto SÍ** · espejo AlejoTaller ☐ |
-| 2.1 | Schema stock + finanzas | ◐ **código dominio/DTO/mapper** · Appwrite console ☐ · net repos ☐ |
-| 2.2 | Operador `salida_venta` + ingreso/COGS | ☐ (AlejoTaller) |
-| 2.3 | Panel **factura de entrada** + movimientos / ajuste | ☐ |
-| 2.4 | Reportes económicos + cola UNVERIFIED | ☐ |
-| 2.5 | Reservas de taller | ☐ **incluida en MVP** |
+| 2.0 | Alcance + políticas delta | ✓ |
+| 2.1 | Schema Appwrite + dominio | ✓ cloud · ◐ código dominio/DTO (dash) · net repos ☐ |
+| 2.2 | Operador `salida_venta` + finance | ☐ (AlejoTaller) |
+| 2.3 | Panel factura + movements / ajuste | ☐ (entrada rápida existence-only hoy) |
+| 2.4 | Reportes + cola UNVERIFIED | ☐ |
+| 2.5 | Reservas de taller | ☐ |
 | 2.6 | Seguridad + DoD | ☐ |
 
-## Dependencias
+## Hecho (2026-08-18)
 
-- Core 1 dash: **cerrado** (2026-08-12)
-- Soft-hold: **congelado**
-- Schema Appwrite: [`APPWRITE_CORE2_SCHEMA.md`](./APPWRITE_CORE2_SCHEMA.md)
-- Modelo financiero: [`FINANCE_MODEL_CORE2.md`](./FINANCE_MODEL_CORE2.md) — **aceptado** · COGS = último costo
+- [x] Collections en Appwrite: `stock_movements`, `supplier`, `purchase_entry`, `purchase_entry_line`, `sale_finance_event`, `last_unit_cost`
+- [x] Permisos staff/operador; cliente sin write
+- [x] Soft-hold Core 1 intacto en `master`; trabajo en `Core2`
+- [x] Checklist unificado cliente + dash + operador
 
-## Decisiones de producto (2026-08-13)
+## Código baseline (no Core 2 formal completo)
 
-- [x] Modelo financiero **aceptado**
-- [x] COGS = **último costo** (`last_unit_cost` × qty)
-- [x] **Reservas de taller** en MVP Core 2
+- «Dar entrada»: `existence += qty` (sin movement formal hasta B3)
+- Dominio/DTO/mapper en rama Core2 (si ya presente) → completar **net repositories**
 
-## 2.1 entregado en código (rama Core2)
+## Cómo cerrar
 
-- `Product.lastUnitCost` / `last_unit_cost`
-- Features: `inventory`, `purchase`, `finance` (domain + DTO + mapper + repo interfaces)
-- `APPWRITE_COLLECTIONS` constants
-- Tests unitarios COGS + mapper
-
-## Pendiente 2.1
-
-- [ ] Crear attributes/collections en consola Appwrite (checklist en schema doc)
-- [ ] Net repositories Appwrite
+Ver DoD en [`CORE2_IMPLEMENTATION_PLAN.md`](./CORE2_IMPLEMENTATION_PLAN.md) y bloques B1–B6 del checklist unificado.
