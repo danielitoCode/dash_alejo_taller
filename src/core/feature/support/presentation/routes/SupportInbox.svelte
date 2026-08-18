@@ -172,9 +172,9 @@
                                             {#if (m.unreadStaff ?? 0) > 0}
                                                 <span
                                                     class="item-unread-badge"
-                                                    title={`${m.unreadStaff} mensaje(s) nuevo(s)`}
-                                                    aria-label={`${m.unreadStaff} sin leer`}
-                                                >{m.unreadStaff > 99 ? "99+" : m.unreadStaff}</span>
+                                                    title={`${m.unreadStaff ?? 0} mensaje(s) nuevo(s)`}
+                                                    aria-label={`${m.unreadStaff ?? 0} sin leer`}
+                                                >{(m.unreadStaff ?? 0) > 99 ? "99+" : (m.unreadStaff ?? 0)}</span>
                                             {/if}
                                         </span>
                                         <span class={badgeClass(m.status)}>{statusLabel(m.status)}</span>
