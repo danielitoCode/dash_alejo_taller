@@ -92,6 +92,12 @@
     $: internalStack = $internalStackStore;
     $: currentPath = internalStack.at(-1)?.route ?? dashboard.path;
     $: visibleItems = items.filter((item) => canAccessRoute(currentRole, item.path));
+    /** Badge Mensajes = hilos con status "nuevo" (solicitudes pendientes). */
+    $: supportPendingNuevo = ($supportInboxStore.items ?? []).filter((m) => m.status === "nuevo").length;
+    $: navItems = visibleItems.map((item) => ({
+        ...item,
+        badge: item.path === support.path ? supportPendingNuevo : 0
+    }));
     $: if (currentRole && currentPath && !canAccessRoute(currentRole, currentPath)) {
         const allowedPath = firstAllowedPath(currentRole);
         if (allowedPath !== currentPath) {
@@ -102,6 +108,7 @@
     }
 
     let sidebarOpen = false;
+    let stopSupportRt: (() => void) | null = null;
     let stopPulseRefresh: (() => void) | null = null;
     let stopStockFanout: (() => void) | null = null;
     let stopAppwriteProductRt: (() => void) | null = null;
@@ -245,6 +252,12 @@
             toastStore.error("Error al sincronizar ventas");
         });
 
+        // Badge Mensajes: sync inicial + realtime Appwrite
+        supportInboxStore.syncAll().catch(() => {
+            /* badge opcional; SupportInbox reintentará al abrir */
+        });
+        stopSupportRt = supportInboxStore.startRealtime();
+
         logger.info(
             `[Pusher] init key=${ENV.pusherKey ? ENV.pusherKey.slice(0, 6) + "…" : "N/A"} cluster=${ENV.pusherCluster ?? "N/A"} channel=${ENV.pusherSupportChannel ?? "support-inbox"}`
         );
@@ -363,6 +376,9 @@
         supportSyncTimer = null;
         salesSyncTimer = null;
         stockSyncTimer = null;
+        stopSupportRt?.();
+        stopSupportRt = null;
+        supportInboxStore.stopRealtime();
         stopPulseRefresh?.();
         stopPulseRefresh = null;
         stopStockFanout?.();
@@ -457,14 +473,19 @@
         </header>
 
         <nav class="sidebar-nav" aria-label="Menú">
-            {#each visibleItems as item}
+            {#each navItems as item}
                 <button
-                        class:selected={currentPath === item.path}
+                        class:selected={currentPath === item.path || (item.path === support.path && currentPath === supportDetail.path)}
                         on:click={() => go(item.path)}
                         aria-current={currentPath === item.path ? "page" : undefined}
-                        title={item.label}
+                        title={item.badge > 0 ? `${item.label} (${item.badge} nuevas)` : item.label}
                 >
-                    <Icon icon={item.icon} size={18} className="nav-ico" ariaLabel={item.label} />
+                    <span class="nav-ico-wrap">
+                        <Icon icon={item.icon} size={18} className="nav-ico" ariaLabel={item.label} />
+                        {#if item.badge > 0}
+                            <span class="nav-badge" aria-label={`${item.badge} solicitudes nuevas`}>{item.badge > 99 ? "99+" : item.badge}</span>
+                        {/if}
+                    </span>
                     <span class="nav-label">{item.label}</span>
                 </button>
             {/each}
@@ -609,6 +630,40 @@
 
     .nav-ico {
         opacity: 0.92;
+    }
+
+    .nav-ico-wrap {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .nav-badge {
+        position: absolute;
+        top: -8px;
+        right: -10px;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 5px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #d92d20;
+        color: #fff;
+        font-size: 0.68rem;
+        font-weight: 800;
+        line-height: 1;
+        pointer-events: none;
+        border: 2px solid var(--md-sys-color-surface);
+        box-shadow: 0 4px 10px rgb(0 0 0 / 0.2);
+        z-index: 2;
+    }
+
+    .sidebar-nav button.selected .nav-badge {
+        border-color: var(--md-sys-color-primary);
     }
 
     .sidebar-nav button:hover {
