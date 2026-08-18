@@ -36,6 +36,17 @@ function createSupportInboxStore() {
     const { subscribe, update } = writable<SupportInboxState>(initialState);
     let unsubscribe: (() => void) | null = null;
     let syncTimer: number | null = null;
+    /** NestedNav + Detail pueden compartir la misma suscripción RT. */
+    let rtRefCount = 0;
+
+    function getState(): SupportInboxState {
+        let snap: SupportInboxState = initialState;
+        const unsub = subscribe((s) => {
+            snap = s;
+        });
+        unsub();
+        return snap;
+    }
 
     async function syncAll(): Promise<void> {
         update((s) => ({ ...s, loading: true, error: null }));
@@ -135,22 +146,36 @@ function createSupportInboxStore() {
     }
 
     function startRealtime(): () => void {
-        stopRealtime();
-        unsubscribe = supportContainer.useCases.inbox.subscribe(() => {
-            if (syncTimer) window.clearTimeout(syncTimer);
-            syncTimer = window.setTimeout(() => {
-                let activeId: string | null = null;
-                const unsubSnap = subscribe((s) => {
-                    activeId = s.activeThreadId;
-                });
-                unsubSnap();
-                syncAll().catch(() => {});
-                if (activeId) {
-                    loadMessages(activeId).catch(() => {});
-                }
-            }, 220);
-        });
-        return stopRealtime;
+        rtRefCount += 1;
+        if (!unsubscribe) {
+            unsubscribe = supportContainer.useCases.inbox.subscribe(() => {
+                if (syncTimer) window.clearTimeout(syncTimer);
+                syncTimer = window.setTimeout(() => {
+                    void (async () => {
+                        const activeId = getState().activeThreadId;
+                        try {
+                            await syncAll();
+                        } catch {
+                            /* badge/list best-effort */
+                        }
+                        // Chat abierto: recargar burbujas (badge solo no basta)
+                        if (activeId) {
+                            try {
+                                await loadMessages(activeId);
+                            } catch {
+                                /* ignore */
+                            }
+                        }
+                    })();
+                }, 180);
+            });
+        }
+        return () => {
+            rtRefCount = Math.max(0, rtRefCount - 1);
+            if (rtRefCount === 0) {
+                stopRealtime();
+            }
+        };
     }
 
     function stopRealtime(): void {
@@ -166,6 +191,7 @@ function createSupportInboxStore() {
             }
             unsubscribe = null;
         }
+        rtRefCount = 0;
     }
 
     const counts = derived({ subscribe }, ($s) => {
