@@ -37,7 +37,14 @@
                 (m.body || "").toLowerCase().includes(q)
             );
         })
-        .sort((a, b) => b.createdAtIso.localeCompare(a.createdAtIso));
+        .sort((a, b) => {
+            // 1) tickets con mensajes nuevos arriba
+            const ua = (a.unreadStaff ?? 0) > 0 ? 1 : 0;
+            const ub = (b.unreadStaff ?? 0) > 0 ? 1 : 0;
+            if (ua !== ub) return ub - ua;
+            // 2) por llegada / última actividad (createdAtIso = lastMessageAt)
+            return (b.createdAtIso || "").localeCompare(a.createdAtIso || "");
+        });
 
     $: isRefreshing = $supportInboxStore.loading && items.length > 0;
     $: isInitialLoading = $supportInboxStore.loading && items.length === 0;
@@ -61,10 +68,10 @@
     }
 
     function statusLabel(s: SupportStatus): string {
-        if (s === "cerrado") return "Cerrado";
         if (s === "nuevo") return "Nuevo";
         if (s === "en_proceso") return "En proceso";
-        return "Resuelto";
+        if (s === "resuelto") return "Resuelto";
+        return "Cerrado";
     }
 
     function badgeClass(s: SupportStatus): string {
@@ -74,99 +81,66 @@
     }
 </script>
 
-<section class="mgmt-screen">
-    <div class="mgmt-container">
-        <header class="mgmt-page-head">
-            <div class="mgmt-page-title">
-                <h1 class="mgmt-h1">Mensajes</h1>
-                <p class="mgmt-muted">Bandeja de soporte y consultas</p>
+<section class="mgmt-container">
+    <header class="mgmt-page-head">
+        <div class="mgmt-page-title">
+            <div class="title-row">
+                <Icon icon={Inbox} size={22} className="title-ico" ariaLabel="Mensajes" />
+                <div>
+                    <h1 class="mgmt-h1">Mensajes</h1>
+                    <p class="mgmt-muted">Bandeja de soporte entrante</p>
+                </div>
             </div>
-            <div class="mgmt-chip-row">
-                <span class="mgmt-chip">
-                    <Icon icon={Inbox} size={18} ariaLabel="Total" />
-                    {counts.total} total
-                </span>
-                <span class="mgmt-chip">
-                    <Icon icon={Mail} size={18} ariaLabel="Nuevos" />
-                    {counts.nuevo} nuevos
-                </span>
-                <span class="mgmt-chip">
-                    <Icon icon={Wrench} size={18} ariaLabel="En proceso" />
-                    {counts.enProceso} en proceso
-                </span>
+            <div class="head-stats">
                 {#if (counts.unread ?? 0) > 0}
-                    <span class="mgmt-chip">
+                    <span class="stat-pill hot">
                         {counts.unread} sin leer
                     </span>
                 {/if}
-                {#if isRefreshing}
-                    <span class="mgmt-chip" aria-label="Sincronizando">
-                        <LoadingSpinner size={16} label="Sincronizando" subtle />
-                        Sincronizando...
-                    </span>
-                {/if}
+                <span class="stat-pill">{counts.nuevo ?? 0} nuevos</span>
+                <span class="stat-pill">{counts.enProceso ?? 0} en proceso</span>
             </div>
-        </header>
+        </div>
+    </header>
 
-        <div class="mgmt-layout">
-            <section class="mgmt-card mgmt-form-card" aria-label="Filtros">
-                <h2 class="mgmt-card-title" style="margin:0 0 12px 0">Filtros</h2>
+    <div class="mgmt-toolbar">
+        <div class="search-wrap">
+            <Icon icon={Search} size={16} className="search-ico" />
+            <input
+                class="mgmt-input"
+                type="search"
+                placeholder="Buscar por nombre, email, asunto…"
+                bind:value={query}
+            />
+        </div>
+        <select class="mgmt-select" bind:value={reason} aria-label="Filtrar por motivo">
+            <option value="all">Todos los motivos</option>
+            <option value="soporte">Soporte</option>
+            <option value="pregunta_tecnica">Pregunta técnica</option>
+            <option value="facturacion">Facturación</option>
+            <option value="otro">Otro</option>
+        </select>
+        <select class="mgmt-select" bind:value={status} aria-label="Filtrar por estado">
+            <option value="all">Todos los estados</option>
+            <option value="nuevo">Nuevo</option>
+            <option value="en_proceso">En proceso</option>
+            <option value="resuelto">Resuelto</option>
+            <option value="cerrado">Cerrado</option>
+        </select>
+        {#if isRefreshing}
+            <LoadingSpinner size={18} />
+        {/if}
+    </div>
 
-                <div class="mgmt-grid">
-                    <label class="mgmt-field" style="grid-column:1/-1">
-                        <span>Buscar</span>
-                        <div class="mgmt-input-with-icon">
-                            <Icon icon={Search} size={18} className="mgmt-input-ico" ariaLabel="Buscar" />
-                            <input
-                                class="mgmt-input"
-                                type="text"
-                                bind:value={query}
-                                placeholder="Nombre, correo, asunto..."
-                            />
-                        </div>
-                    </label>
-
-                    <label class="mgmt-field">
-                        <span>Motivo</span>
-                        <select class="mgmt-select" bind:value={reason}>
-                            <option value="all">Todos</option>
-                            <option value="soporte">Soporte</option>
-                            <option value="pregunta_tecnica">Pregunta técnica</option>
-                            <option value="facturacion">Facturación</option>
-                            <option value="otro">Otro</option>
-                        </select>
-                    </label>
-
-                    <label class="mgmt-field">
-                        <span>Estado</span>
-                        <select class="mgmt-select" bind:value={status}>
-                            <option value="all">Todos</option>
-                            <option value="nuevo">Nuevo</option>
-                            <option value="en_proceso">En proceso</option>
-                            <option value="resuelto">Resuelto</option>
-                            <option value="cerrado">Cerrado</option>
-                        </select>
-                    </label>
-
-                    <div class="mgmt-actions" style="grid-column:1/-1">
-                        <button class="mgmt-btn ghost" type="button" on:click={() => supportInboxStore.syncAll()}>
-                            <Icon icon={Inbox} size={18} ariaLabel="Refrescar" />
-                            Refrescar
-                        </button>
-                    </div>
-                </div>
-            </section>
-
-            <section class="mgmt-card" aria-label="Entrantes">
+    <div class="mgmt-grid">
+        <div class="mgmt-main">
+            <section class="mgmt-card">
                 <div class="list-head">
-                    <h2 class="mgmt-card-title" style="margin:0">Entrantes</h2>
-                    <span class="mgmt-chip">
-                        <Icon icon={MessageSquareText} size={18} ariaLabel="Filtrados" />
-                        {filtered.length}
-                    </span>
+                    <strong>Tickets</strong>
+                    <span class="mgmt-muted">{filtered.length}</span>
                 </div>
 
-                <div class="mgmt-list">
+                <div class="list-body">
                     {#if isInitialLoading}
                         <SkeletonList rows={9} showAvatar={false} showActions={false} lines={2} compact />
                     {:else if filtered.length === 0}
@@ -194,8 +168,14 @@
                                 <div class="row-main">
                                     <div class="row-top">
                                         <span class="row-title">
-                                            {#if (m.unreadStaff ?? 0) > 0}<span class="unread-dot" title="Sin leer"></span>{/if}
                                             {m.subject || "Sin asunto"}
+                                            {#if (m.unreadStaff ?? 0) > 0}
+                                                <span
+                                                    class="item-unread-badge"
+                                                    title={`${m.unreadStaff} mensaje(s) nuevo(s)`}
+                                                    aria-label={`${m.unreadStaff} sin leer`}
+                                                >{m.unreadStaff > 99 ? "99+" : m.unreadStaff}</span>
+                                            {/if}
                                         </span>
                                         <span class={badgeClass(m.status)}>{statusLabel(m.status)}</span>
                                     </div>
@@ -219,54 +199,106 @@
     .list-head {
         display: flex;
         justify-content: space-between;
-        gap: 10px;
         align-items: center;
-        margin-bottom: 10px;
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--md-sys-color-outline-variant);
+    }
+
+    .title-row {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .title-ico {
+        opacity: 0.9;
+    }
+
+    .head-stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+    }
+
+    .stat-pill {
+        font-size: 0.78rem;
+        font-weight: 700;
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--md-sys-color-outline-variant);
+        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 40%, transparent);
+    }
+
+    .stat-pill.hot {
+        background: color-mix(in srgb, #d92d20 16%, transparent);
+        border-color: color-mix(in srgb, #d92d20 35%, var(--md-sys-color-outline-variant));
+        color: color-mix(in srgb, #d92d20 85%, var(--md-sys-color-on-surface));
+    }
+
+    .search-wrap {
+        position: relative;
+        flex: 1;
+        min-width: 180px;
+    }
+
+    .search-ico {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        opacity: 0.6;
+        pointer-events: none;
+    }
+
+    .search-wrap :global(input) {
+        padding-left: 36px;
+    }
+
+    .list-body {
+        display: grid;
+        max-height: min(70vh, 720px);
+        overflow: auto;
     }
 
     .row-btn {
-        width: 100%;
         display: grid;
         grid-template-columns: 1fr auto;
-        gap: 14px;
+        gap: 12px;
         align-items: center;
         text-align: left;
-        border-radius: 16px;
-        border: 1px solid var(--md-sys-color-outline-variant);
-        background: color-mix(in srgb, var(--md-sys-color-surface) 92%, transparent);
         padding: 12px 14px;
-    }
-
-    .row-btn.unread {
-        border-color: color-mix(in srgb, var(--md-sys-color-primary) 35%, var(--md-sys-color-outline-variant));
+        border: 0;
+        border-bottom: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 70%, transparent);
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+        transition: background 120ms ease;
     }
 
     .row-btn:hover {
-        border-color: color-mix(in srgb, var(--md-sys-color-primary) 35%, var(--md-sys-color-outline-variant));
-        background: color-mix(in srgb, var(--md-sys-color-primary) 10%, var(--md-sys-color-surface) 88%);
+        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 35%, transparent);
     }
 
-    .row-btn:focus-visible {
-        outline: 2px solid color-mix(in srgb, var(--md-sys-color-primary) 55%, white);
-        outline-offset: 2px;
+    .row-btn.unread {
+        background: color-mix(in srgb, var(--md-sys-color-primary) 8%, transparent);
     }
 
     .row-left {
-        display: grid;
-        grid-template-columns: auto 1fr;
+        display: flex;
         gap: 12px;
         align-items: center;
         min-width: 0;
     }
 
     .row-ico {
-        width: 38px;
-        height: 38px;
-        border-radius: 14px;
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
         display: grid;
         place-items: center;
-        border: 1px solid var(--md-sys-color-outline-variant);
-        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 32%, transparent);
+        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 55%, transparent);
+        flex-shrink: 0;
     }
 
     .row-main {
@@ -289,17 +321,31 @@
         text-overflow: ellipsis;
         white-space: nowrap;
         min-width: 0;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
     }
 
-    .unread-dot {
-        display: inline-block;
-        width: 8px;
-        height: 8px;
+    .item-unread-badge {
+        flex-shrink: 0;
+        min-width: 20px;
+        height: 20px;
+        padding: 0 6px;
         border-radius: 999px;
-        margin-right: 6px;
-        vertical-align: middle;
-        background: var(--md-sys-color-primary);
-        box-shadow: 0 0 0 3px color-mix(in srgb, var(--md-sys-color-primary) 28%, transparent);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #d92d20;
+        color: #fff;
+        font-size: 0.7rem;
+        font-weight: 800;
+        line-height: 1;
+        border: 2px solid var(--md-sys-color-surface);
+        box-shadow: 0 4px 10px rgb(0 0 0 / 0.18);
+    }
+
+    .row-btn.unread .row-title {
+        font-weight: 950;
     }
 
     .row-sub {
@@ -359,21 +405,15 @@
     .empty-ico {
         width: 52px;
         height: 52px;
-        border-radius: 18px;
+        border-radius: 16px;
         display: grid;
         place-items: center;
-        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 45%, transparent);
-        border: 1px solid var(--md-sys-color-outline-variant);
+        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 50%, transparent);
+        margin-bottom: 4px;
     }
 
     .empty-title {
-        font-weight: 900;
-        letter-spacing: -0.01em;
-    }
-
-    @media (max-width: 720px) {
-        .row-time {
-            display: none;
-        }
+        font-weight: 800;
+        font-size: 1.05rem;
     }
 </style>
