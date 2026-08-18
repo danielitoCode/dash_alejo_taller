@@ -33,10 +33,10 @@
         scrollToBottom();
     }
 
-    /** Si el hilo cambia (lastMessageAt) por RT/badge, recargar burbujas. */
+    /** createdAtIso del inbox row = lastMessageAt del hilo; al cambiar, recargar burbujas. */
     let lastSeenMessageAt = "";
-    $: if (threadId && message?.lastMessageAt && message.lastMessageAt !== lastSeenMessageAt) {
-        lastSeenMessageAt = message.lastMessageAt;
+    $: if (threadId && message?.createdAtIso && message.createdAtIso !== lastSeenMessageAt) {
+        lastSeenMessageAt = message.createdAtIso;
         supportInboxStore.loadMessages(threadId).then(() => scrollToBottom()).catch(() => {});
     }
 
@@ -54,7 +54,7 @@
             })
             .finally(() => (loading = false));
 
-        // NestedNav ya mantiene RT; aquí solo incrementamos ref-count
+        // NestedNav mantiene RT; ref-count para no matar la suscripción global
         const stop = supportInboxStore.startRealtime();
         return () => {
             stop();
@@ -126,13 +126,18 @@
     {:else}
         <div class="chat-shell">
             <div class="chat-meta">
-                <div class="meta-row">
-                    <Icon icon={Mail} size={16} className="meta-ico" />
-                    <span>{message.email || "Sin email"}</span>
-                </div>
-                <div class="meta-row">
-                    <Icon icon={Clock} size={16} className="meta-ico" />
-                    <span>{message.lastMessageAt ? new Date(message.lastMessageAt).toLocaleString() : "—"}</span>
+                <div class="meta-main">
+                    <div class="meta-title">
+                        <Icon icon={MessageSquareText} size={18} className="meta-ico" />
+                        <strong>{message.subject || "Sin asunto"}</strong>
+                    </div>
+                    <p class="mgmt-muted meta-sub">
+                        {message.fromName || "—"} · {message.fromEmail || "sin email"}
+                    </p>
+                    <p class="mgmt-muted meta-sub">
+                        <Icon icon={Clock} size={14} className="meta-ico" />
+                        {new Date(message.createdAtIso).toLocaleString()}
+                    </p>
                 </div>
                 <div class="status-actions">
                     <span class="status-pill status-{message.status}">{message.status}</span>
@@ -159,7 +164,7 @@
                             <div class="bubble">
                                 <div class="bubble-head">
                                     <span class="who">{msg.senderRole === "staff" ? (msg.senderName || "Soporte") : (msg.senderName || "Cliente")}</span>
-                                    <span class="when">{msg.createdAt ? new Date(msg.createdAt).toLocaleString() : ""}</span>
+                                    <span class="when">{new Date(msg.createdAtIso).toLocaleString()}</span>
                                 </div>
                                 <p class="bubble-body">{msg.body}</p>
                             </div>
@@ -209,23 +214,37 @@
         display: flex;
         flex-wrap: wrap;
         gap: 12px 18px;
-        align-items: center;
+        align-items: flex-start;
+        justify-content: space-between;
     }
 
-    .meta-row {
+    .meta-main {
+        display: grid;
+        gap: 4px;
+        min-width: 0;
+    }
+
+    .meta-title {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 1rem;
+    }
+
+    .meta-sub {
+        margin: 0;
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        font-size: 0.9rem;
-        color: var(--md-sys-color-on-surface-variant);
+        font-size: 0.88rem;
     }
 
     .meta-ico {
         opacity: 0.85;
+        flex-shrink: 0;
     }
 
     .status-actions {
-        margin-left: auto;
         display: inline-flex;
         flex-wrap: wrap;
         gap: 8px;
@@ -257,9 +276,8 @@
     }
 
     .status-cerrado {
-        background: color-mix(in srgb, #94a3b8 16%, transparent);
-        border-color: color-mix(in srgb, #94a3b8 35%, var(--md-sys-color-outline-variant));
         background: color-mix(in srgb, #94a3b8 12%, transparent);
+        border-color: color-mix(in srgb, #94a3b8 35%, var(--md-sys-color-outline-variant));
     }
 
     .chat-wrap {
