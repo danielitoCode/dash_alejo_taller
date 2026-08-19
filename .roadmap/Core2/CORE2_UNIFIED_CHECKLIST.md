@@ -3,7 +3,7 @@
 **Espejo operativo.** Fuente de trabajo compartida con AlejoTaller.  
 **Rama:** `Core2` en **ambos** repos · **master** solo con merges recomendados.
 
-**Última actualización:** 2026-08-18  
+**Última actualización:** 2026-08-19  
 **Core 2 cerrado:** NO
 
 ### Reglas
@@ -33,19 +33,19 @@
   - [x] `sale_finance_event`
   - [x] `last_unit_cost` en product
 - [x] Políticas documentadas (POLICY_DELTAS + FINANCE_MODEL)
-- [x] (dash) dominio/DTO/mapper inventory/purchase/finance en rama Core2 (si presente)
+- [x] (dash) dominio/DTO/mapper inventory/purchase/finance en rama Core2
 
 ---
 
 ## Bloque 1 — Contrato dominio + DTO/repo net
 
-- [ ] Enums en código: movement types + purchase concepts
-- [ ] Net repos Appwrite dash: movements, purchase_*, finance (lectura/escritura según rol)
-- [ ] Net repos operador: movements + finance write en confirm
-- [ ] Constantes collection IDs
-- [ ] Tests mapper/DTO round-trip
+- [x] Enums en código: movement types + purchase concepts
+- [x] Net repos Appwrite dash: movements, purchase_*, finance
+- [ ] Net repos operador: movements + finance write en confirm (con B2)
+- [x] Constantes collection IDs (`APPWRITE_COLLECTIONS`)
+- [x] Tests mapper/DTO round-trip (inventory/purchase/finance)
 
-**Siguiente foco:** completar B1 net repos.
+**Siguiente foco:** B2 operador traza + B3 dash entrada formal.
 
 ---
 
@@ -94,7 +94,7 @@
 ## Orden
 
 ```text
-B0 ✓ → B1 → B2 ∥ B3 → B4 → B5 → B6
+B0 ✓ → B1 (dash ✓; operador con B2) → B2 ∥ B3 → B4 → B5 → B6
 ```
 
 ## Registro
@@ -103,3 +103,4 @@ B0 ✓ → B1 → B2 ∥ B3 → B4 → B5 → B6
 |-------|------|------|
 | 2026-08-18 | B0 schema cloud | Confirmado equipo |
 | 2026-08-18 | Checklist unificado | Rama Core2 |
+| 2026-08-19 | B1 dash net repos + tests | APPWRITE_COLLECTIONS + StockMovement/Purchase/Finance net |
