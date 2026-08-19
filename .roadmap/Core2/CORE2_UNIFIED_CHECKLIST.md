@@ -3,7 +3,7 @@
 **Espejo operativo.** Fuente de trabajo compartida con AlejoTaller.  
 **Rama:** `Core2` en **ambos** repos · **master** solo con merges recomendados.
 
-**Última actualización:** 2026-08-19  
+**Última actualización:** 2026-08-19 (B2 código)  
 **Core 2 cerrado:** NO
 
 ### Reglas
@@ -41,20 +41,20 @@
 
 - [x] Enums en código: movement types + purchase concepts
 - [x] Net repos Appwrite dash: movements, purchase_*, finance
-- [ ] Net repos operador: movements + finance write en confirm (con B2)
+- [x] Net repos operador: movements + finance write en confirm (con B2)
 - [x] Constantes collection IDs (`APPWRITE_COLLECTIONS`)
 - [x] Tests mapper/DTO round-trip (inventory/purchase/finance)
 
-**Siguiente foco:** B2 operador traza + B3 dash entrada formal.
+**Siguiente foco:** B3 dash entrada formal.
 
 ---
 
 ## Bloque 2 — Operador traza VERIFIED (AlejoTaller)
 
-- [ ] `salida_venta` + balance_after + sale_id + user_id
-- [ ] sale_finance_event (revenue, cogs, margin)
-- [ ] Sin finance en UNVERIFIED; sin salida en DELETED
-- [ ] Idempotencia + tests + smoke (tú)
+- [x] `salida_venta` + balance_after + sale_id + user_id
+- [x] sale_finance_event (revenue, cogs, margin)
+- [x] Sin finance en UNVERIFIED; sin salida en DELETED
+- [x] Idempotencia + tests (código); smoke Appwrite (tú)
 
 ---
 
@@ -94,7 +94,7 @@
 ## Orden
 
 ```text
-B0 ✓ → B1 (dash ✓; operador con B2) → B2 ∥ B3 → B4 → B5 → B6
+B0 ✓ → B1 ✓ → B2 ✓ código (smoke tuyo) → B3 ← siguiente → B4 → B5 → B6
 ```
 
 ## Registro
@@ -104,3 +104,4 @@ B0 ✓ → B1 (dash ✓; operador con B2) → B2 ∥ B3 → B4 → B5 → B6
 | 2026-08-18 | B0 schema cloud | Confirmado equipo |
 | 2026-08-18 | Checklist unificado | Rama Core2 |
 | 2026-08-19 | B1 dash net repos + tests | APPWRITE_COLLECTIONS + StockMovement/Purchase/Finance net |
+| 2026-08-19 | B2 operador | salida_venta + finance + tests unitarios |
