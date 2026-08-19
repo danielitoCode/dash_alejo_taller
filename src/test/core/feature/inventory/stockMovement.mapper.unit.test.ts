@@ -19,7 +19,7 @@ function fakeDto(partial: Partial<StockMovementDTO> & { $id: string }): StockMov
         reason: "compra",
         user_id: "u1",
         ...partial,
-    } as StockMovementDTO
+    } as unknown as StockMovementDTO
 }
 
 describe("stockMovement mapper round-trip", () => {
