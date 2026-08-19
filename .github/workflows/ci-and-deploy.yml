@@ -1,14 +1,14 @@
 name: CI and Deploy
 
-# Quality gate obligatorio en push/PR a master.
-# Deploy Vercel solo si existen secrets; si no, el job se omite (no rompe el check de calidad).
+# Quality en push/PR a master y Core2.
+# Deploy Vercel solo en push a master (Core2 no despliega producción).
 # Qodana sigue en workflow aparte.
 
 on:
   push:
-    branches: [master]
+    branches: [master, Core2]
   pull_request:
-    branches: [master]
+    branches: [master, Core2]
   workflow_dispatch:
 
 concurrency:
@@ -56,7 +56,8 @@ jobs:
     needs: quality
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: needs.quality.result == 'success'
+    # Solo producción desde master; Core2 corre quality pero no deploy.
+    if: needs.quality.result == 'success' && github.ref == 'refs/heads/master' && github.event_name == 'push'
     permissions:
       contents: read
       deployments: write

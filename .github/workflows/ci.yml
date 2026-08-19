@@ -2,12 +2,13 @@ name: CI
 
 # Gate de calidad ligero (sin deploy). Útil como check required en branch protection.
 # El pipeline completo con deploy está en ci-and-deploy.yml.
+# Core2: corre quality en cada push/PR; no bloquea el push (sin required status en Core2).
 
 on:
   push:
-    branches: [master]
+    branches: [master, Core2]
   pull_request:
-    branches: [master]
+    branches: [master, Core2]
   workflow_dispatch:
 
 concurrency:
