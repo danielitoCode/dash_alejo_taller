@@ -21,7 +21,7 @@ describe("saleFinanceEvent mapper round-trip", () => {
             user_id: "op1",
             at: "2026-08-18T12:00:00.000Z",
             currency: "CUP",
-        } as SaleFinanceEventDTO
+        } as unknown as SaleFinanceEventDTO
         const domain = saleFinanceEventFromDTO(dto)
         expect(domain.saleId).toBe("sale1")
         expect(domain.revenue).toBe(150)
