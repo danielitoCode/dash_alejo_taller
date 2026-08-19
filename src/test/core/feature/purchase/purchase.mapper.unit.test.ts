@@ -21,7 +21,7 @@ describe("purchase mapper round-trip", () => {
             $permissions: [],
             name: "Proveedor A",
             contact: "a@x.com",
-        } as SupplierDTO
+        } as unknown as SupplierDTO
         const domain = supplierFromDTO(dto)
         expect(domain.name).toBe("Proveedor A")
         const write = supplierToDTO(domain)
@@ -43,7 +43,7 @@ describe("purchase mapper round-trip", () => {
             user_id: "u1",
             line_count: 1,
             supplier_id: "sup1",
-        } as PurchaseEntryDTO
+        } as unknown as PurchaseEntryDTO
         const entry = purchaseEntryFromDTO(entryDto)
         expect(entry.totalCost).toBe(100)
         expect(entry.supplierId).toBe("sup1")
@@ -64,7 +64,7 @@ describe("purchase mapper round-trip", () => {
             unit_cost: 25,
             concept: "purchase",
             line_cost: 100,
-        } as PurchaseEntryLineDTO
+        } as unknown as PurchaseEntryLineDTO
         const line = purchaseEntryLineFromDTO(lineDto)
         expect(line.concept).toBe("purchase")
         expect(line.lineCost).toBe(100)
