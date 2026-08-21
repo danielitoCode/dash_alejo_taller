@@ -15,7 +15,8 @@
     import { productStore } from "../viewmodel/product.store";
     import { subscribeStockChanged } from "../../../../infrastructure/data/alset-pulse/stock-pulse";
     import { parseProductImages, serializeProductImages } from "../util/product.image";
-    import { BadgeDollarSign, PackagePlus, Pencil, Plus, Save, Search, Trash2, X } from "lucide-svelte";
+    import { BadgeDollarSign, FilePlus2, PackagePlus, Pencil, Plus, Save, Search, Trash2, X } from "lucide-svelte";
+    import PurchaseInvoiceModal from "../components/PurchaseInvoiceModal.svelte";
 
     let draftName = "";
     let draftDescription = "";
@@ -35,6 +36,7 @@
     let entryProduct: Product | null = null;
     let entryQty: number | string = "";
     let entrySubmitting = false;
+    let invoiceOpen = false;
 
     let stopStockSub: (() => void) | null = null;
 
@@ -241,10 +243,14 @@
             <div>
                 <h1 class="mgmt-title">Productos</h1>
                 <p class="mgmt-subtitle">
-                    Stock: available = existence − reserved. Entradas con «Dar entrada» (delta).
+                    Stock: available = existence − reserved. Atajo «Dar entrada» o factura multi-línea.
                 </p>
             </div>
             <div class="mgmt-meta">
+                <button class="mgmt-btn primary" type="button" on:click={() => (invoiceOpen = true)}>
+                    <Icon icon={FilePlus2} size={18} ariaLabel="Factura" />
+                    Factura de entrada
+                </button>
                 <span class="mgmt-chip">
                     <Icon icon={BadgeDollarSign} size={18} ariaLabel="Total" />
                     {filtered.length} / {items.length}
@@ -406,6 +412,8 @@
         </section>
     </div>
 </section>
+
+<PurchaseInvoiceModal open={invoiceOpen} products={items} onClose={() => (invoiceOpen = false)} />
 
 {#if entryOpen && entryProduct}
     <div class="entry-overlay" role="presentation" on:click|self={() => closeEntry()}>
