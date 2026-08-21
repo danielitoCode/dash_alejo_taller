@@ -3,7 +3,7 @@
 **Espejo operativo.** Fuente de trabajo compartida con AlejoTaller.  
 **Rama:** `Core2` en **ambos** repos · **master** solo con merges recomendados.
 
-**Última actualización:** 2026-08-19 (B2 código)  
+**Última actualización:** 2026-08-21 (B3.1)  
 **Core 2 cerrado:** NO
 
 ### Reglas
@@ -45,7 +45,7 @@
 - [x] Constantes collection IDs (`APPWRITE_COLLECTIONS`)
 - [x] Tests mapper/DTO round-trip (inventory/purchase/finance)
 
-**Siguiente foco:** B3 dash entrada formal.
+**Siguiente foco:** B3.2 factura multi-línea (tras smoke B3.1).
 
 ---
 
@@ -60,11 +60,11 @@
 
 ## Bloque 3 — Dash entrada formal + listados
 
-- [ ] Dar entrada → también `stock_movements` tipo `entrada`
+- [x] Dar entrada → también `stock_movements` tipo `entrada` (B3.1)
 - [ ] Factura multi-línea purchase_entry + lines + existence + movement
 - [ ] Ajuste auditado
 - [ ] Listados movements + facturas
-- [ ] Tests case-use
+- [x] Tests case-use (RegisterStockEntry + movement entrada)
 
 ---
 
@@ -94,7 +94,7 @@
 ## Orden
 
 ```text
-B0 ✓ → B1 ✓ → B2 ✓ código (smoke tuyo) → B3 ← siguiente → B4 → B5 → B6
+B0 ✓ → B1 ✓ → B2 ✓ código (smoke tuyo) → B3.1 ✓ → B3.2 factura ← siguiente → B4 → B5 → B6
 ```
 
 ## Registro
@@ -105,3 +105,4 @@ B0 ✓ → B1 ✓ → B2 ✓ código (smoke tuyo) → B3 ← siguiente → B4 �
 | 2026-08-18 | Checklist unificado | Rama Core2 |
 | 2026-08-19 | B1 dash net repos + tests | APPWRITE_COLLECTIONS + StockMovement/Purchase/Finance net |
 | 2026-08-19 | B2 operador | salida_venta + finance + tests unitarios |
+| 2026-08-21 | B3.1 Dar entrada → movement entrada | dash | RegisterStockEntryCaseUse + unit tests |

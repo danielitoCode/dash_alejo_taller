@@ -1,12 +1,22 @@
+import type { StockMovementRepository } from "../../../inventory/domain/repository/stock-movement.repository"
+import { createStockMovement } from "../../../inventory/domain/entity/StockMovement"
 import type { Product } from "../entity/Product"
 import type { ProductRepository } from "../repository/product.repository"
 
+export type ResolveStaffUserId = () => Promise<string>
+
 /**
- * Core 1 — entrada de mercancía por delta (no setea existence absoluto).
+ * Core 1 + Core 2 B3.1 — entrada de mercancía por delta.
  * existence += quantity; reserved no se toca.
+ * Tras el update escribe stock_movements tipo `entrada` (balance_after).
+ * Fallo de movement: soft-fail (stock ya aplicado; auditoría no bloquea).
  */
 export class RegisterStockEntryCaseUse {
-    constructor(private readonly productRepository: ProductRepository) {}
+    constructor(
+        private readonly productRepository: ProductRepository,
+        private readonly movementRepository: StockMovementRepository,
+        private readonly resolveUserId: ResolveStaffUserId = async () => "staff"
+    ) {}
 
     async execute(productId: string, quantity: number): Promise<Product> {
         const id = String(productId || "").trim()
@@ -34,6 +44,27 @@ export class RegisterStockEntryCaseUse {
             )
         }
 
-        return await this.productRepository.update(id, { existence: nextExistence })
+        const updated = await this.productRepository.update(id, { existence: nextExistence })
+
+        try {
+            const userId = (await this.resolveUserId()).trim() || "staff"
+            const movement = createStockMovement({
+                id: crypto.randomUUID(),
+                productId: id,
+                type: "entrada",
+                quantity: units,
+                balanceAfter: nextExistence,
+                reason: "dar_entrada",
+                userId,
+            })
+            await this.movementRepository.create(movement)
+        } catch (err) {
+            console.error(
+                `[RegisterStockEntry] stock ok productId=${id} existence=${nextExistence}; movement failed`,
+                err
+            )
+        }
+
+        return updated
     }
 }
