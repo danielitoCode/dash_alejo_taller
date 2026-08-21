@@ -3,7 +3,7 @@
 **Espejo operativo.** Fuente de trabajo compartida con AlejoTaller.  
 **Rama:** `Core2` en **ambos** repos · **master** solo con merges recomendados.
 
-**Última actualización:** 2026-08-21 (B3.1)  
+**Última actualización:** 2026-08-21 (merge PRs + B3.1)  
 **Core 2 cerrado:** NO
 
 ### Reglas
@@ -25,7 +25,7 @@
 
 - [x] Rama `Core2` (AlejoTaller + dash)
 - [x] Soft-hold Core 1 (cliente + operador existence/reserved)
-- [x] Dash «Dar entrada» existence delta (sin movement formal aún en path Core 1)
+- [x] Dash «Dar entrada» existence delta (Core 1; formalizado en B3.1)
 - [x] Appwrite collections + permisos staff/operador (no cliente):
   - [x] `stock_movements`
   - [x] `supplier`
@@ -45,8 +45,6 @@
 - [x] Constantes collection IDs (`APPWRITE_COLLECTIONS`)
 - [x] Tests mapper/DTO round-trip (inventory/purchase/finance)
 
-**Siguiente foco:** B3.2 factura multi-línea (tras smoke B3.1).
-
 ---
 
 ## Bloque 2 — Operador traza VERIFIED (AlejoTaller)
@@ -54,17 +52,19 @@
 - [x] `salida_venta` + balance_after + sale_id + user_id
 - [x] sale_finance_event (revenue, cogs, margin)
 - [x] Sin finance en UNVERIFIED; sin salida en DELETED
-- [x] Idempotencia + tests (código); smoke Appwrite (tú)
+- [x] Idempotencia + tests unitarios
+- [ ] **Smoke tuyo:** confirm en dispositivo → docs en Appwrite
 
 ---
 
 ## Bloque 3 — Dash entrada formal + listados
 
 - [x] Dar entrada → también `stock_movements` tipo `entrada` (B3.1)
-- [ ] Factura multi-línea purchase_entry + lines + existence + movement
+- [x] Tests case-use (RegisterStockEntry + movement entrada)
+- [ ] Factura multi-línea purchase_entry + lines + existence + movement (**B3.2**)
 - [ ] Ajuste auditado
 - [ ] Listados movements + facturas
-- [x] Tests case-use (RegisterStockEntry + movement entrada)
+- [ ] **Smoke tuyo:** Dar entrada → doc `entrada` en Appwrite
 
 ---
 
@@ -84,8 +84,10 @@
 
 ## Bloque 6 — CI, permisos, cierre
 
-- [ ] Permisos auditados
-- [ ] CI verde en Core2
+- [ ] Permisos auditados (consola Appwrite)
+- [x] CI verde en Core2 (dash quality + operador unit tests)
+- [x] PRs abiertos Core2 → master (dash #1, AlejoTaller #11)
+- [ ] Merge PRs a master (tú en GitHub)
 - [ ] Smoke cruzado entrada → pedido → confirm → salida_venta + finance
 - [ ] STATUS cerrado ambos repos
 
@@ -94,7 +96,9 @@
 ## Orden
 
 ```text
-B0 ✓ → B1 ✓ → B2 ✓ código (smoke tuyo) → B3.1 ✓ → B3.2 factura ← siguiente → B4 → B5 → B6
+B0 ✓ → B1 ✓ → B2 ✓ código → B3.1 ✓ → merge PRs + smoke (tú)
+  → B3.2 factura multi-línea ← siguiente código
+  → B4 → B5 → B6
 ```
 
 ## Registro
@@ -105,4 +109,6 @@ B0 ✓ → B1 ✓ → B2 ✓ código (smoke tuyo) → B3.1 ✓ → B3.2 factura 
 | 2026-08-18 | Checklist unificado | Rama Core2 |
 | 2026-08-19 | B1 dash net repos + tests | APPWRITE_COLLECTIONS + StockMovement/Purchase/Finance net |
 | 2026-08-19 | B2 operador | salida_venta + finance + tests unitarios |
-| 2026-08-21 | B3.1 Dar entrada → movement entrada | dash | RegisterStockEntryCaseUse + unit tests |
+| 2026-08-21 | B3.1 Dar entrada → movement entrada | dash RegisterStockEntryCaseUse + unit tests |
+| 2026-08-21 | CI Core2 verde | dash a78b7c4; operador 9ef3378 |
+| 2026-08-21 | PRs merge | dash #1 · AlejoTaller #11 |
