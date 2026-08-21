@@ -10,15 +10,14 @@ import type { StockMovementRepository } from "../../../../../core/feature/invent
 
 function product(partial: Partial<Product> & { id: string }): Product {
     return {
-        id: partial.id,
-        name: partial.name ?? "P",
-        description: partial.description ?? "",
-        price: partial.price ?? 10,
-        existence: partial.existence ?? 0,
-        reserved: partial.reserved ?? 0,
-        photoUrl: partial.photoUrl ?? "",
-        categoryId: partial.categoryId ?? "c1",
-        status: partial.status ?? "active",
+        name: "P",
+        description: "",
+        price: 10,
+        existence: 0,
+        reserved: 0,
+        photoUrl: "",
+        categoryId: "c1",
+        status: "active",
         ...partial,
     }
 }

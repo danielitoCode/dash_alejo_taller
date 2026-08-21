@@ -25,8 +25,10 @@ const saveProductCaseUse = new SaveProductCaseUse(productOfflineFirstRepository)
 
 async function resolveStaffUserId(): Promise<string> {
     try {
-        const user = await authContainer.useCases.getCurrentUser()
-        const id = String((user as { $id?: string })?.$id || (user as { id?: string })?.id || "").trim()
+        const user = await authContainer.useCases.accounts.getCurrentUser()
+        const id = String(
+            (user as { $id?: string })?.$id || (user as { id?: string })?.id || ""
+        ).trim()
         return id || "staff"
     } catch {
         return "staff"
