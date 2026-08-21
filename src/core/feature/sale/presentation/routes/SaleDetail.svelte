@@ -58,7 +58,7 @@
     });
 
     function formatIso(value: string | number | Date | null | undefined): string {
-        if (value == null || value === "") return "—";
+        if (value == null || value === "") return "\u2014";
         try {
             const d = value instanceof Date ? value : new Date(value);
             if (Number.isNaN(d.getTime())) return String(value);
@@ -71,7 +71,7 @@
     function deliveryLabel(d: DeliveryType | string | null | undefined): string {
         if (d === DeliveryType.PICKUP || d === "PICKUP") return "Recogida (PICKUP)";
         if (d === DeliveryType.DELIVERY || d === "DELIVERY") return "Entrega (DELIVERY)";
-        return String(d ?? "—");
+        return String(d ?? "\u2014");
     }
 
     function saleStateClass(state: BuyState | string): string {
@@ -86,8 +86,8 @@
         if (!sale || sale.verified !== BuyState.UNVERIFIED) return;
         const ok = window.confirm(
             "Confirmar esta venta (VERIFIED)?\n\n" +
-                "• existence -= qty por línea\n" +
-                "• reserved -= qty por línea\n"
+                "\u2022 existence -= qty por l\u00ednea\n" +
+                "\u2022 reserved -= qty por l\u00ednea\n"
         );
         if (!ok) return;
         confirming = true;
@@ -106,8 +106,8 @@
         if (!sale || sale.verified !== BuyState.UNVERIFIED) return;
         const ok = window.confirm(
             "Rechazar esta venta (DELETED)?\n\n" +
-                "• reserved -= qty por línea\n" +
-                "• existence NO cambia\n\n"
+                "\u2022 reserved -= qty por l\u00ednea\n" +
+                "\u2022 existence NO cambia\n\n"
         );
         if (!ok) return;
         rejecting = true;
@@ -146,7 +146,7 @@
         </div>
     {:else if !sale}
         <div class="mgmt-card">
-            <p class="mgmt-muted">No se encontró la venta.</p>
+            <p class="mgmt-muted">No se encontr\u00f3 la venta.</p>
         </div>
     {:else}
         <div class="detail-card">
@@ -159,12 +159,12 @@
                         <h1>{user?.name ?? "Usuario desconocido"}</h1>
                         <p class="sub-line">
                             <Icon icon={User} size={14} ariaLabel="Email" />
-                            {user?.email ?? "—"}
+                            {user?.email ?? "\u2014"}
                         </p>
                         <p class="sub-line compact">
                             <Icon icon={Package} size={14} ariaLabel="Items" />
-                            {sale.products.length} líneas
-                            <span class="dot">·</span>
+                            {sale.products.length} l\u00edneas
+                            <span class="dot">\u00b7</span>
                             <Icon icon={Truck} size={14} ariaLabel="Entrega" />
                             {deliveryLabel(sale.deliveryType)}
                         </p>
@@ -187,7 +187,7 @@
                                 </span>
                                 <span class="meta-item">
                                     <Icon icon={User} size={14} ariaLabel="User id" />
-                                    <code class="id-full">{sale.userId || "—"}</code>
+                                    <code class="id-full">{sale.userId || "\u2014"}</code>
                                 </span>
                                 <span class="meta-item">
                                     <Icon icon={Clock} size={14} ariaLabel="Fecha pedido" />
@@ -202,8 +202,8 @@
                                     Actualizado: {formatIso(sale.updatedAtIso)}
                                 </span>
                                 <span class="meta-item">
-                                    <Icon icon={ShieldCheck} size={14} ariaLabel="Operación" />
-                                    Confirm: existence−=qty + reserved−=qty · Reject: solo reserved−=qty
+                                    <Icon icon={ShieldCheck} size={14} ariaLabel="Operaci\u00f3n" />
+                                    Confirm: existence\u2212=qty + reserved\u2212=qty \u00b7 Reject: solo reserved\u2212=qty
                                 </span>
                             </div>
                         {/if}
@@ -233,7 +233,7 @@
                                 on:click={onConfirm}
                             >
                                 <Icon icon={CheckCircle2} size={18} ariaLabel="Confirmar" />
-                                {confirming ? "Confirmando…" : "Confirmar"}
+                                {confirming ? "Confirmando\u2026" : "Confirmar"}
                             </button>
                             <button
                                 class="mgmt-btn danger reject-btn"
@@ -242,7 +242,7 @@
                                 on:click={onReject}
                             >
                                 <Icon icon={XCircle} size={18} ariaLabel="Rechazar" />
-                                {rejecting ? "Rechazando…" : "Rechazar"}
+                                {rejecting ? "Rechazando\u2026" : "Rechazar"}
                             </button>
                         </div>
                     {/if}
@@ -251,8 +251,8 @@
 
             <div class="lines-section">
                 <div class="lines-head">
-                    <h2>Líneas del pedido</h2>
-                    <span class="lines-sum">Suma líneas: {formatSaleMoney(lineSum, currencyCode)}</span>
+                    <h2>L\u00edneas del pedido</h2>
+                    <span class="lines-sum">Suma l\u00edneas: {formatSaleMoney(lineSum, currencyCode)}</span>
                 </div>
                 <div class="lines">
                     {#each sale.products as line (line.productId + String(line.quantity))}
@@ -264,13 +264,13 @@
                                 <p class="line-sub">ID: {line.productId}</p>
                                 <p class="line-sub">
                                     Unidad: {formatSaleMoney(line.price, currencyCode)}
-                                    · Línea: {formatSaleMoney(saleLineTotal(line), currencyCode)}
+                                    \u00b7 L\u00ednea: {formatSaleMoney(saleLineTotal(line), currencyCode)}
                                     {#if avail != null}
-                                        · <span class="avail">disponible ahora: {avail}</span>
+                                        \u00b7 <span class="avail">disponible ahora: {avail}</span>
                                     {/if}
                                 </p>
                             </div>
-                            <div class="line-qty">×{line.quantity}</div>
+                            <div class="line-qty">\u00d7{line.quantity}</div>
                         </article>
                     {/each}
                 </div>

@@ -5,6 +5,7 @@ export type ProductStatus = "active" | "inactive"
  * - existence: unidades físicas
  * - reserved: soft-hold (pedidos UNVERIFIED); no editable a mano en panel Core 1
  * - available = max(0, existence - reserved)
+ * - lastUnitCost: Core 2 — último costo de compra (base COGS)
  */
 export interface Product {
     id: string
@@ -19,6 +20,11 @@ export interface Product {
     status: ProductStatus
     rating?: number
     createdAtIso?: string
+    /**
+     * Core 2 — último costo unitario de compra (base COGS).
+     * undefined/0 si nunca hubo entrada con costo.
+     */
+    lastUnitCost?: number
 }
 
 /** available = max(0, existence − reserved) — misma fórmula que tienda y operador. */
@@ -29,7 +35,7 @@ export function availableStock(product: Pick<Product, "existence" | "reserved">)
 }
 
 /**
- * Factory con validaciones de dominio (Core 1).
+ * Factory con validaciones de dominio (Core 1 + lastUnitCost Core 2).
  */
 export function createProduct(product: Product): Product {
     if (!product.id || product.id.trim() === "") {
@@ -55,11 +61,21 @@ export function createProduct(product: Product): Product {
         throw new Error("existence cannot be less than reserved")
     }
 
+    let lastUnitCost = product.lastUnitCost
+    if (lastUnitCost !== undefined && lastUnitCost !== null) {
+        const c = Number(lastUnitCost)
+        if (!Number.isFinite(c) || c < 0) {
+            throw new Error("lastUnitCost must be a number >= 0")
+        }
+        lastUnitCost = c
+    }
+
     return {
         rating: 0.0,
         ...product,
         existence,
         reserved,
+        lastUnitCost,
     }
 }
 

@@ -1,34 +1,33 @@
 # Core 2 — Estado MVP Back-office
 
-**Última actualización:** 2026-08-13  
-**Veredicto:** **Planificado** — finanzas aceptadas (COGS = último costo); reservas de taller en MVP. Siguiente: schema **2.1**.  
-**Core 2 dash cerrado:** ☐
+**Última actualización:** 2026-08-19  
+**Veredicto:** **En curso** — B1 dash **net repos + tests mapper** listos; siguiente **B2 operador** ∥ **B3 entrada formal**.  
+**Core 2 dash cerrado:** ☐  
+**Rama:** `Core2`  
+**Checklist unificado:** [`CORE2_UNIFIED_CHECKLIST.md`](./CORE2_UNIFIED_CHECKLIST.md)
 
 | Fase | Nombre | Estado |
 |------|--------|--------|
-| 2.0 | Alcance + políticas delta | ✓ Doc · **decisiones producto SÍ** · espejo AlejoTaller ☐ |
-| 2.1 | Schema stock + finanzas (supplier, purchase_entry, …) | ☐ |
-| 2.2 | Operador `salida_venta` + ingreso/COGS | ☐ (AlejoTaller) |
-| 2.3 | Panel **factura de entrada** + movimientos / ajuste | ☐ |
-| 2.4 | Reportes económicos + cola UNVERIFIED | ☐ |
-| 2.5 | Reservas de taller | ☐ **incluida en MVP** |
+| 2.0 | Alcance + políticas delta | ✓ |
+| 2.1 | Schema Appwrite + dominio | ✓ cloud · ✓ dominio/DTO/mapper · ✓ net repos dash · operador net ☐ |
+| 2.2 | Operador `salida_venta` + finance | ☐ (AlejoTaller) |
+| 2.3 | Panel factura + movements / ajuste | ☐ (entrada rápida existence-only hoy) |
+| 2.4 | Reportes + cola UNVERIFIED | ☐ |
+| 2.5 | Reservas de taller | ☐ |
 | 2.6 | Seguridad + DoD | ☐ |
 
-## Dependencias
+## Hecho (2026-08-19)
 
-- Core 1 dash: **cerrado** (2026-08-12)
-- Soft-hold: **congelado** — no cambiar fórmula ni efectos UNVERIFIED/VERIFIED/DELETED
-- Schema canónico movimientos: `AlejoTaller/.roadmap/Core2/DESIGN_STOCK_MOVEMENTS.md`
-- Modelo financiero: [`FINANCE_MODEL_CORE2.md`](./FINANCE_MODEL_CORE2.md) — **aceptado**
+- [x] Collections Appwrite + permisos
+- [x] Soft-hold Core 1 intacto en `master`; trabajo en `Core2`
+- [x] Dominio/DTO/mapper + **net repositories** dash (inventory/purchase/finance)
+- [x] Constantes `APPWRITE_COLLECTIONS`
+- [x] Tests unitarios mapper round-trip
 
-## Decisiones de producto (2026-08-13)
+## Código baseline
 
-- [x] Modelo financiero **aceptado** (factura de entrada + margen al VERIFIED)
-- [x] COGS = **último costo** (`last_unit_cost` × qty) — no promedio
-- [x] **Reservas de taller** incluidas en el MVP Core 2
-- [ ] Go/no-go monorepo `AlejoTaller/admin` (no bloquea 2.1–2.5)
-- [ ] Espejo de alcance/políticas en `AlejoTaller/.roadmap/Core2/`
+- «Dar entrada»: `existence += qty` (movement formal = B3)
 
-## Cómo cerrar Core 2
+## Cómo cerrar
 
-Ver criterios en [`CORE2_IMPLEMENTATION_PLAN.md`](./CORE2_IMPLEMENTATION_PLAN.md) § DoD.
+Ver DoD en plan + bloques B2–B6 del checklist unificado.

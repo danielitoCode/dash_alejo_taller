@@ -24,6 +24,7 @@ export type ProductWriteDTO = Pick<
     | "rating"
     | "existence"
     | "reserved"
+    | "last_unit_cost"
 >
 
 /** Payload de catálogo sin tocar soft-hold (no envía reserved). */
@@ -33,7 +34,19 @@ export type ProductCatalogWriteDTO = Omit<ProductWriteDTO, "reserved">
  * DTO → Domain.
  * reserved ausente o inválido → 0 (docs legacy).
  */
+function toNonNegNumber(value: unknown, fallback = 0): number {
+    const n = Number(value)
+    if (!Number.isFinite(n) || n < 0) return fallback
+    return n
+}
+
 export function productFromDTO(dto: ProductDTO): Product {
+    const rawCost = dto.last_unit_cost
+    const lastUnitCost =
+        rawCost === undefined || rawCost === null
+            ? undefined
+            : toNonNegNumber(rawCost, 0)
+
     return {
         id: dto.$id,
         name: dto.name,
@@ -45,6 +58,7 @@ export function productFromDTO(dto: ProductDTO): Product {
         categoryId: dto.category_id,
         status: dto.status === "inactive" ? "inactive" : "active",
         rating: dto.rating ?? 0,
+        lastUnitCost,
     }
 }
 
@@ -52,7 +66,7 @@ export function productFromDTO(dto: ProductDTO): Product {
  * Domain → DTO completo (create o sync que debe reflejar reserved).
  */
 export function productToDTO(product: Product): ProductWriteDTO {
-    return {
+    const dto: ProductWriteDTO = {
         $id: product.id,
         name: product.name,
         description: product.description,
@@ -64,6 +78,10 @@ export function productToDTO(product: Product): ProductWriteDTO {
         status: product.status,
         rating: product.rating,
     }
+    if (product.lastUnitCost !== undefined && product.lastUnitCost !== null) {
+        dto.last_unit_cost = toNonNegNumber(product.lastUnitCost, 0)
+    }
+    return dto
 }
 
 /**
