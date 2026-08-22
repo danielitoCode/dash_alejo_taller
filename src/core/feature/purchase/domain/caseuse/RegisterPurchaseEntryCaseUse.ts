@@ -105,6 +105,8 @@ export class RegisterPurchaseEntryCaseUse {
                 createSupplier({
                     id: crypto.randomUUID(),
                     name: supplierName,
+                    // Appwrite exige contact (required); vacío si solo hay nombre.
+                    contact: "",
                 })
             )
             supplierId = created.id
