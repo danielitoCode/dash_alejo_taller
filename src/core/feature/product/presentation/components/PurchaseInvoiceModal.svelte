@@ -133,12 +133,12 @@
                                 </select>
                             </label>
                             <label class="mgmt-field">
-                                <span>Cant.</span>
-                                <input class="mgmt-input" type="number" min="1" step="1" bind:value={line.quantity} disabled={invoiceSubmitting} />
+                                <span>Cant. comprada</span>
+                                <input class="mgmt-input" type="number" min="1" step="1" bind:value={line.quantity} disabled={invoiceSubmitting} title="Cantidad comprada de este producto" aria-label="Cantidad comprada" />
                             </label>
                             <label class="mgmt-field">
-                                <span>Costo unit.</span>
-                                <input class="mgmt-input" type="number" min="0" step="0.01" bind:value={line.unitCost} disabled={invoiceSubmitting} />
+                                <span>Costo unitario</span>
+                                <input class="mgmt-input" type="number" min="0" step="0.01" bind:value={line.unitCost} disabled={invoiceSubmitting} title="Costo por unidad" aria-label="Costo unitario" />
                             </label>
                             <label class="mgmt-field">
                                 <span>Concepto</span>
