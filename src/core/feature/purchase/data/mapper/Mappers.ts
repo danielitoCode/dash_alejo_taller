@@ -29,8 +29,12 @@ export function supplierFromDTO(dto: SupplierDTO): Supplier {
 }
 
 export function supplierToDTO(s: Supplier): SupplierWriteDTO {
-    const dto: SupplierWriteDTO = { $id: s.id, name: s.name }
-    if (s.contact) dto.contact = s.contact
+    // Appwrite collection `supplier` exige `contact` (required).
+    const dto: SupplierWriteDTO = {
+        $id: s.id,
+        name: s.name,
+        contact: s.contact != null && String(s.contact).trim() !== "" ? String(s.contact).trim() : "",
+    }
     if (s.notes) dto.notes = s.notes
     return dto
 }
