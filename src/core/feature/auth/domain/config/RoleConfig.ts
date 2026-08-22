@@ -23,7 +23,8 @@ export const ROLE_ROUTE_ACCESS: Record<BusinessRole, string[]> = {
         "sales-detail",
         "promo",
         "settings",
-        "reservation"
+        "reservation",
+        "inventory"
     ],
     admin: [
         "dashboard",
@@ -36,7 +37,8 @@ export const ROLE_ROUTE_ACCESS: Record<BusinessRole, string[]> = {
         "sales-detail",
         "promo",
         "settings",
-        "reservation"
+        "reservation",
+        "inventory"
     ],
     sales: [
         "dashboard",
