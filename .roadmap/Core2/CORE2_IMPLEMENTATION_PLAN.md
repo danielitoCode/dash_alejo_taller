@@ -3,7 +3,7 @@
 **Checklist operativo unificado:** [`CORE2_UNIFIED_CHECKLIST.md`](./CORE2_UNIFIED_CHECKLIST.md)  
 **Rama de trabajo:** `Core2` · merges incrementales a `master` cuando el bloque esté verde.  
 **Última actualización:** 2026-08-23  
-**Estado:** schema Appwrite **✓** · B4 completo ✓ · siguiente B5  
+**Estado:** schema Appwrite **✓** · B5 código ✓ · siguiente B6  
 **Repos:** dash_alejo_taller + AlejoTaller (operador / web)
 
 **Fórmula:** `available = max(0, existence − reserved)` · **COGS:** `last_unit_cost × qty` al VERIFIED.
@@ -14,7 +14,7 @@
 
 ```text
 Rama: Core2
-Fase actual: B4 ✓ · siguiente B5 reservas de taller
+Fase actual: B5 ✓ código · siguiente B6 cierre
 Core 2 cerrado: NO
 ```
 
@@ -95,17 +95,18 @@ Seguimiento en checklist unificado B2. Dash no es primario.
 
 ---
 
-## Fase 2.5 — Reservas de taller ← siguiente
+## Fase 2.5 — Reservas de taller
 
-- [ ] Collection Appwrite + permisos
-- [ ] Dominio / DTO / net repo / mapper
-- [ ] Panel dash listado + alta + estados (no mezclar Sale tienda)
+- [x] Collection Appwrite + permisos (consola)
+- [x] Dominio / DTO / net repo / mapper
+- [x] Panel dash listado + alta + estados (Reservas)
 - [ ] (Opcional) solicitud cliente web
-- [ ] Tests + smoke
+- [x] Tests mapper
+- [ ] Smoke UI → Appwrite
 
 ---
 
-## Fase 2.6 — Cierre
+## Fase 2.6 — Cierre ← siguiente
 
 - [ ] Permisos + CI + smoke cruzado + STATUS cerrado
 

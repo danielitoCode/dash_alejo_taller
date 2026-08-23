@@ -3,7 +3,7 @@
 **Espejo operativo.** Fuente de trabajo compartida con AlejoTaller.  
 **Rama:** `Core2` en **ambos** repos · **master** solo con merges recomendados.
 
-**Última actualización:** 2026-08-23 (B4.2 cerrado · UX tooltips/responsive)  
+**Última actualización:** 2026-08-23 (B5 reservas taller — código dash)  
 **Core 2 cerrado:** NO
 
 ### Reglas
@@ -82,21 +82,21 @@
 
 ---
 
-## Bloque 5 — Reservas taller ← **siguiente**
+## Bloque 5 — Reservas taller
 
-- [ ] Collection Appwrite (p. ej. `workshop_reservation` o acordada) + permisos staff
-- [ ] Dominio + DTO + net repo + mapper (dash)
-- [ ] Panel dash: listado / alta / estados (no mezclar con Sale de tienda)
+- [x] Collection Appwrite `workshop_reservation` + permisos staff (consola)
+- [x] Dominio + DTO + net repo + mapper (dash)
+- [x] Panel dash: listado / alta / cambio de estado (Reservas)
 - [ ] (Opcional) solicitud desde cliente web
-- [ ] Tests unitarios case-use / mapper
-- [ ] Smoke en consola Appwrite
+- [x] Tests unitarios mapper / factory
+- [ ] **Smoke tuyo:** crear reserva en UI → documento en Appwrite
 
 ---
 
-## Bloque 6 — CI, permisos, cierre
+## Bloque 6 — CI, permisos, cierre ← **siguiente**
 
 - [ ] Permisos auditados (consola Appwrite)
-- [x] CI verde en Core2 (dash quality + operador unit tests) — revalidar tras B4.2
+- [x] CI verde en Core2 (dash quality + operador unit tests) — revalidar tras B5
 - [x] PRs abiertos Core2 → master (dash #1, AlejoTaller #11)
 - [ ] Merge PRs a master (tú en GitHub)
 - [ ] Smoke cruzado: entrada → pedido → confirm → salida_venta + finance
@@ -107,8 +107,8 @@
 ## Orden
 
 ```text
-B0 ✓ → B1 ✓ → B2 ✓ → B3 ✓ → B4.1 ✓ → B4.2 ✓
-  → B5 reservas taller ← siguiente  ·  B6 cierre
+B0 ✓ → B1 ✓ → B2 ✓ → B3 ✓ → B4 ✓ → B5 ✓ código dash
+  → B6 cierre ← siguiente (permisos, CI, smoke cruzado, merge)
 ```
 
 ## Registro
@@ -126,3 +126,4 @@ B0 ✓ → B1 ✓ → B2 ✓ → B3 ✓ → B4.1 ✓ → B4.2 ✓
 | 2026-08-23 | B3.3 ajuste + Inventario | dash RegisterStockAdjustment + InventoryTrace UI + RoleConfig inventory |
 | 2026-08-23 | B4.1 cola UNVERIFIED | dash sortSalesByAge + SaleManagement badges |
 | 2026-08-23 | B4.2 resumen finance | aggregate + panel + confirm escribe event + reconcile + tooltips/responsive |
+| 2026-08-23 | B5 reservas taller | collection workshop_reservation + dominio/repo/UI Reservas |
