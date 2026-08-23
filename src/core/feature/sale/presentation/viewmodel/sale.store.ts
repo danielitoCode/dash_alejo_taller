@@ -2,6 +2,7 @@ import type { Sale } from "../../domain/entity/Sale";
 import { derived, writable } from "svelte/store";
 import { saleContainer } from "../../di/sale.container";
 import { productStore } from "../../../product/presentation/viewmodel/product.store";
+import { financeStore } from "../../../finance/presentation/viewmodel/finance.store";
 import { logger } from "../../../../infrastructure/presentation/util/logger.service";
 
 interface SaleState {
@@ -59,13 +60,12 @@ function createSaleStore() {
     async function setVerified(id: string, verified: string): Promise<void> {
         update((state) => ({ ...state, loading: true, error: null }));
         try {
-            const updated = await saleContainer.useCases.updateVerified.execute(id, verified);
+            const updated = await saleContainer.useCases.updateVerified.execute(id, verified as any);
             update((state) => ({
                 ...state,
                 items: state.items.map((s) => (s.id === id ? updated : s)),
             }));
-        } catch (error: any) {
-            logger.error(error?.message ?? error, error?.stack);
+        } catch (error) {
             update((state) => ({ ...state, error: normalizeError(error) }));
             throw error;
         } finally {
@@ -73,17 +73,19 @@ function createSaleStore() {
         }
     }
 
-    /** Core1 5.1 + 6.4 — confirm + refresh stock en productStore. */
+    /** Core1 5.1 + 6.4 + Core2 B4.2 — confirm + finance + refresh stock. */
     async function confirmSale(id: string): Promise<Sale> {
         update((state) => ({ ...state, loading: true, error: null }));
         try {
             const snapshotSale = snapshot.items.find((s) => s.id === id) ?? null;
             const updated = await saleContainer.useCases.confirmFromPanel.execute(id, snapshotSale);
+            void financeStore.loadSummary().catch((e) =>
+                logger.warn(`[sale.store] finance refresh after confirm: ${e}`)
+            );
             update((state) => ({
                 ...state,
                 items: state.items.map((s) => (s.id === id ? updated : s)),
             }));
-            // 6.4 — UI de catálogo refleja existence/reserved sin esperar navegación
             await productStore
                 .refreshStockForProducts(productIdsFromSale(snapshotSale ?? updated))
                 .catch((e) => logger.warn(`[sale.store][6.4] refresh after confirm: ${e}`));
