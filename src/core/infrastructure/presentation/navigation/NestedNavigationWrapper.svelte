@@ -49,17 +49,19 @@
     import {
         BadgeDollarSign,
         CalendarCheck2,
-        ClipboardList,
         Home,
         LogOut,
         Menu,
         MessageSquareText,
         Megaphone,
         Package,
+        ClipboardList,
         Settings,
         Tags,
         Users
     } from "lucide-svelte";
+    import { createNestedNavRuntime } from "./nested-nav-runtime";
+    import "./nested-shell.css";
 
     export let navController: NavController;
     export let navBackStackEntry: NavBackStackEntry<{ id?: string }>;
@@ -105,18 +107,6 @@
     }
 
     let sidebarOpen = false;
-    let stopPulseRefresh: (() => void) | null = null;
-    let stopStockFanout: (() => void) | null = null;
-    let stopAppwriteProductRt: (() => void) | null = null;
-    let supportSyncTimer: number | null = null;
-    let salesSyncTimer: number | null = null;
-    let stockSyncTimer: number | null = null;
-    let pendingStockIds: string[] = [];
-    let syncingSupport = false;
-    let syncingSales = false;
-    let syncingStock = false;
-    let queuedSupport = false;
-    let queuedSales = false;
 
     function go(path: string) {
         if (!canAccessRoute(currentRole, path)) {
@@ -128,32 +118,17 @@
         sidebarOpen = false;
     }
 
+    const runtime = createNestedNavRuntime({
+        getRole: () => currentRole,
+        setRole: (r) => { currentRole = r; },
+        getPath: () => currentPath,
+        firstAllowedPath,
+        internalNavigate: (p) => internalNavController.navigate(p),
+        outerNavigate: navController,
+    });
+
     async function refreshUserRole() {
-        try {
-            logger.info("[NestedNav] Refrescando rol del usuario...");
-            const u = await authContainer.useCases.accounts.getCurrentUser();
-            const newRole = normalizeBusinessRole(u.role);
-            const oldRole = currentRole;
-
-            if (newRole !== oldRole) {
-                logger.info(`[NestedNav] Rol actualizado: ${oldRole} → ${newRole}`);
-                currentRole = newRole;
-                toastStore.success(`✅ Rol actualizado a: ${newRole}`);
-
-                const allowedPath = firstAllowedPath(currentRole);
-                if (!canAccessRoute(currentRole, currentPath)) {
-                    internalNavController.navigate(allowedPath);
-                }
-            } else {
-                logger.info(`[NestedNav] El rol sigue siendo: ${currentRole}`);
-                toastStore.info(`El rol es: ${currentRole}`);
-            }
-        } catch (error) {
-            const msg = error instanceof Error ? error.message : String(error);
-            const stack = error instanceof Error ? error.stack : undefined;
-            logger.error(`[NestedNav] Error refrescando rol: ${msg}`, stack);
-            toastStore.error("Error al refrescar rol");
-        }
+        await runtime.refreshUserRole();
     }
 
     async function logout() {
@@ -164,37 +139,102 @@
         }
     }
 
-    function scheduleStockRefresh(productIds: string[]) {
-        for (const id of productIds) {
-            if (id && !pendingStockIds.includes(id)) pendingStockIds.push(id);
-        }
-        if (stockSyncTimer) window.clearTimeout(stockSyncTimer);
-        stockSyncTimer = window.setTimeout(() => {
-            stockSyncTimer = null;
-            void flushStockRefresh();
-        }, 180);
-    }
+    onMount(() => {
+        runtime.mount();
+    });
 
-    async function flushStockRefresh() {
-        if (syncingStock) {
-            if (stockSyncTimer) window.clearTimeout(stockSyncTimer);
-            stockSyncTimer = window.setTimeout(() => {
-                stockSyncTimer = null;
-                void flushStockRefresh();
-            }, 220);
-            return;
-        }
-        const ids = pendingStockIds.splice(0, pendingStockIds.length);
-        syncingStock = true;
-        try {
-            if (ids.length > 0) {
-                await productStore.handleStockChanged(ids);
-            } else {
-                await productStore.syncAll();
-            }
-        } catch (e: any) {
-            logger.error(`[stock-rt] refresh failed: ${e?.message ?? e}`, e?.stack);
-        } finally {
-            syncingStock = false;
-        }
-    }
+    onDestroy(() => {
+        runtime.destroy();
+    });
+
+</script>
+
+<section class="nested-shell">
+    <aside class="sidebar {sidebarOpen ? 'open' : ''}">
+        <header class="sidebar-head">
+            <div class="brand">
+                <img src="/alejoicon_clean.svg" alt="Logo" class="brand-logo" />
+                <div class="brand-meta">
+                    <h2>Business Dashboard</h2>
+                    {#await currentUser}
+                        <p>Loading user...</p>
+                    {:then user}
+                        <p>{user.name} · {currentRole}</p>
+                    {:catch error}
+                        <p>{error.message}</p>
+                    {/await}
+                </div>
+            </div>
+        </header>
+
+        <nav class="sidebar-nav" aria-label="Menú">
+            {#each visibleItems as item}
+                <button
+                        class:selected={currentPath === item.path}
+                        on:click={() => go(item.path)}
+                        aria-current={currentPath === item.path ? "page" : undefined}
+                        title={item.label}
+                >
+                    <Icon icon={item.icon} size={18} className="nav-ico" ariaLabel={item.label} />
+                    <span class="nav-label">{item.label}</span>
+                </button>
+            {/each}
+        </nav>
+
+        <button class="logout" on:click={logout} aria-label="Cerrar sesión" title="Cerrar sesión">
+            <Icon icon={LogOut} size={18} className="nav-ico" ariaLabel="Cerrar sesión" />
+            <span class="logout-label">Cerrar sesión</span>
+        </button>
+    </aside>
+
+    <main class="content">
+        <div class="top-mobile">
+            <button
+                    class="menu-toggle"
+                    type="button"
+                    aria-label={sidebarOpen ? "Cerrar menú" : "Abrir menú"}
+                    on:click={() => (sidebarOpen = !sidebarOpen)}
+            >
+                <Icon icon={Menu} size={20} className="menu-ico" ariaLabel="Menú" />
+            </button>
+            <strong>Panel de gestión</strong>
+            <button
+                    class="refresh-role-btn"
+                    title="Refrescar rol (si lo cambiaste en AppWrite)"
+                    on:click={refreshUserRole}
+                    aria-label="Refrescar rol"
+            >
+                🔄
+            </button>
+            <span class="ghost" aria-hidden="true">{userId}</span>
+        </div>
+
+        <RealtimeDock navController={internalNavController} />
+
+        {#key currentPath}
+            <div class="route-stage" in:fade={{ duration: 180 }} out:fade={{ duration: 120 }}>
+                <NavHost
+                        navController={internalNavController}
+                        routes={[
+                        composable(dashboard, () => DashboardHome),
+                        composable(support, () => SupportInbox),
+                        composable(supportDetail, () => SupportDetail),
+                        composable(users, () => UserManagement),
+                        composable(product, () => ProductManagement),
+                        composable(inventory, () => InventoryTrace),
+                        composable(category, () => CategoryManagement),
+                        composable(sales, () => SaleManagement),
+                        composable(salesDetail, () => SaleDetail),
+                        composable(promo, () => PromoManagement),
+                        composable(settings, () => SettingsManagement),
+                        composable(reservation, () => ReservationManagement)
+                    ]}
+                />
+            </div>
+        {/key}
+    </main>
+
+    {#if sidebarOpen}
+        <button class="scrim" aria-label="Cerrar menú" on:click={() => (sidebarOpen = false)}></button>
+    {/if}
+</section>
