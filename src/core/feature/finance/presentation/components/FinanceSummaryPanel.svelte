@@ -3,7 +3,7 @@
     import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
     import LoadingSpinner from "../../../../infrastructure/presentation/components/LoadingSpinner.svelte";
     import { financeStore } from "../viewmodel/finance.store";
-    import { BadgeDollarSign, PiggyBank, TrendingUp, Wallet } from "lucide-svelte";
+    import { BadgeDollarSign, PiggyBank, RefreshCw, TrendingUp, Wallet } from "lucide-svelte";
 
     const money = new Intl.NumberFormat(undefined, {
         minimumFractionDigits: 2,
@@ -17,7 +17,7 @@
         try {
             await financeStore.loadSummary(days);
         } catch {
-            /* silent; error en store */
+            /* error en store */
         }
     }
 
@@ -28,6 +28,7 @@
     $: summary = $financeStore.summary;
     $: loading = $financeStore.loading;
     $: error = $financeStore.error;
+    $: reconciled = $financeStore.reconciled;
     $: primary =
         summary.byCurrency.length === 1
             ? summary.byCurrency[0]
@@ -36,198 +37,282 @@
               null;
 </script>
 
-<section class="finance-panel" aria-label="Resumen financiero VERIFIED">
+<section class="fp" aria-label="Resumen financiero VERIFIED">
+    <div class="fp-accent" aria-hidden="true"></div>
     <header class="fp-head">
-        <div>
-            <h2 class="fp-title">Finanzas (solo confirmadas)</h2>
-            <p class="fp-sub">
-                Ingresos, COGS y margen desde <code>sale_finance_event</code> — no incluye pendientes.
-            </p>
+        <div class="fp-head-main">
+            <div class="fp-brand">
+                <span class="fp-brand-ico">
+                    <Icon icon={PiggyBank} size={20} ariaLabel="Finanzas" />
+                </span>
+                <div>
+                    <h2 class="fp-title">Finanzas operativas</h2>
+                    <p class="fp-sub">
+                        Solo ventas <strong>confirmadas</strong> · ingresos, COGS y margen
+                        (<code>sale_finance_event</code>)
+                    </p>
+                </div>
+            </div>
         </div>
-        <div class="fp-ranges" role="group" aria-label="Rango de fechas">
-            {#each [7, 30, 90] as d}
-                <button
-                    type="button"
-                    class="fp-range"
-                    class:active={rangeDays === d}
-                    on:click={() => load(d)}
-                    disabled={loading}
-                >
-                    {d}d
-                </button>
-            {/each}
+        <div class="fp-actions">
+            <div class="fp-ranges" role="group" aria-label="Rango de fechas">
+                {#each [7, 30, 90] as d}
+                    <button
+                        type="button"
+                        class="fp-range"
+                        class:active={rangeDays === d}
+                        on:click={() => load(d)}
+                        disabled={loading}
+                    >
+                        {d} días
+                    </button>
+                {/each}
+            </div>
+            <button
+                type="button"
+                class="fp-refresh"
+                on:click={() => load(rangeDays)}
+                disabled={loading}
+                title="Actualizar y reconciliar"
+            >
+                <Icon icon={RefreshCw} size={16} ariaLabel="Actualizar" />
+                Actualizar
+            </button>
         </div>
     </header>
 
+    {#if reconciled > 0}
+        <p class="fp-banner">
+            Se sincronizaron {reconciled} venta(s) confirmada(s) sin evento financiero previo.
+        </p>
+    {/if}
+
     {#if loading && summary.count === 0}
-        <div class="fp-loading"><LoadingSpinner size={24} label="Cargando finanzas" /></div>
+        <div class="fp-loading"><LoadingSpinner size={26} label="Cargando finanzas" /></div>
     {:else if error}
         <p class="fp-error">{error}</p>
     {:else if summary.count === 0}
-        <p class="fp-empty">No hay eventos financieros en los últimos {rangeDays} días.</p>
+        <div class="fp-empty">
+            <p>No hay eventos financieros en los últimos {rangeDays} días.</p>
+            <p class="fp-empty-hint">
+                Confirma ventas desde el panel o el operador; al confirmar se genera el evento de
+                ingresos/COGS/margen. Pulsa <strong>Actualizar</strong> para reconciliar ventas ya
+                confirmadas.
+            </p>
+        </div>
     {:else}
         <div class="fp-kpis">
             <article class="fp-kpi">
-                <div class="fp-ico revenue"><Icon icon={BadgeDollarSign} size={18} ariaLabel="Ingresos" /></div>
-                <div>
-                    <div class="fp-label">Ingresos</div>
-                    <div class="fp-value">
+                <div class="fp-ico revenue">
+                    <Icon icon={BadgeDollarSign} size={20} ariaLabel="Ingresos" />
+                </div>
+                <div class="fp-kpi-body">
+                    <span class="fp-label">Ingresos</span>
+                    <span class="fp-value">
                         {money.format(primary ? primary.revenue : summary.revenue)}
                         {#if primary}<span class="fp-cur">{primary.currency}</span>{/if}
-                    </div>
+                    </span>
                 </div>
             </article>
             <article class="fp-kpi">
-                <div class="fp-ico cogs"><Icon icon={Wallet} size={18} ariaLabel="COGS" /></div>
-                <div>
-                    <div class="fp-label">COGS</div>
-                    <div class="fp-value">
+                <div class="fp-ico cogs">
+                    <Icon icon={Wallet} size={20} ariaLabel="COGS" />
+                </div>
+                <div class="fp-kpi-body">
+                    <span class="fp-label">COGS</span>
+                    <span class="fp-value">
                         {money.format(primary ? primary.cogs : summary.cogs)}
                         {#if primary}<span class="fp-cur">{primary.currency}</span>{/if}
-                    </div>
+                    </span>
                 </div>
             </article>
             <article class="fp-kpi">
-                <div class="fp-ico margin"><Icon icon={TrendingUp} size={18} ariaLabel="Margen" /></div>
-                <div>
-                    <div class="fp-label">Margen</div>
-                    <div class="fp-value">
+                <div class="fp-ico margin">
+                    <Icon icon={TrendingUp} size={20} ariaLabel="Margen" />
+                </div>
+                <div class="fp-kpi-body">
+                    <span class="fp-label">Margen bruto</span>
+                    <span class="fp-value">
                         {money.format(primary ? primary.margin : summary.margin)}
                         {#if primary}<span class="fp-cur">{primary.currency}</span>{/if}
-                    </div>
+                    </span>
                 </div>
             </article>
             <article class="fp-kpi">
-                <div class="fp-ico count"><Icon icon={PiggyBank} size={18} ariaLabel="Eventos" /></div>
-                <div>
-                    <div class="fp-label">Ventas confirmadas</div>
-                    <div class="fp-value">{summary.count}</div>
+                <div class="fp-ico count">
+                    <Icon icon={PiggyBank} size={20} ariaLabel="Eventos" />
+                </div>
+                <div class="fp-kpi-body">
+                    <span class="fp-label">Ventas con finance</span>
+                    <span class="fp-value">{summary.count}</span>
                 </div>
             </article>
         </div>
 
         {#if summary.byCurrency.length > 1}
-            <div class="fp-by-cur" aria-label="Desglose por moneda">
-                {#each summary.byCurrency as b}
-                    <div class="fp-cur-row">
-                        <strong>{b.currency}</strong>
-                        <span>{b.count} venta(s)</span>
-                        <span>Ing. {money.format(b.revenue)}</span>
-                        <span>COGS {money.format(b.cogs)}</span>
-                        <span>Margen {money.format(b.margin)}</span>
-                    </div>
-                {/each}
+            <div class="fp-table-wrap">
+                <table class="fp-table">
+                    <thead>
+                        <tr>
+                            <th>Moneda</th>
+                            <th>Ventas</th>
+                            <th>Ingresos</th>
+                            <th>COGS</th>
+                            <th>Margen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {#each summary.byCurrency as b}
+                            <tr>
+                                <td><strong>{b.currency}</strong></td>
+                                <td>{b.count}</td>
+                                <td>{money.format(b.revenue)}</td>
+                                <td>{money.format(b.cogs)}</td>
+                                <td>{money.format(b.margin)}</td>
+                            </tr>
+                        {/each}
+                    </tbody>
+                </table>
             </div>
         {/if}
     {/if}
 </section>
 
 <style>
-    .finance-panel {
-        margin-top: 16px;
-        padding: 16px 18px;
-        border-radius: 16px;
+    .fp {
+        position: relative;
+        margin-top: 18px;
+        padding: 0;
+        border-radius: 18px;
         border: 1px solid var(--md-sys-color-outline-variant);
-        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 12%, var(--md-sys-color-surface));
-        box-shadow: 0 8px 24px color-mix(in srgb, black 5%, transparent);
+        background: linear-gradient(
+            160deg,
+            color-mix(in srgb, var(--md-sys-color-surface-variant) 18%, var(--md-sys-color-surface)) 0%,
+            var(--md-sys-color-surface) 42%
+        );
+        box-shadow:
+            0 1px 2px color-mix(in srgb, black 5%, transparent),
+            0 12px 32px color-mix(in srgb, black 6%, transparent);
+        overflow: hidden;
+    }
+    .fp-accent {
+        height: 4px;
+        background: linear-gradient(
+            90deg,
+            var(--md-sys-color-primary),
+            color-mix(in srgb, var(--md-sys-color-primary) 40%, #22c55e)
+        );
     }
     .fp-head {
         display: flex;
         flex-wrap: wrap;
         justify-content: space-between;
-        gap: 12px;
+        gap: 14px;
         align-items: flex-start;
-        margin-bottom: 14px;
+        padding: 16px 18px 12px;
     }
-    .fp-title { margin: 0; font-size: 1.05rem; font-weight: 800; }
-    .fp-sub {
-        margin: 4px 0 0;
-        font-size: 0.84rem;
-        color: var(--md-sys-color-on-surface-variant);
-    }
-    .fp-sub code { font-size: 0.78rem; }
-    .fp-ranges { display: inline-flex; gap: 6px; }
-    .fp-range {
-        padding: 6px 12px;
-        border-radius: 999px;
-        border: 1px solid var(--md-sys-color-outline-variant);
-        background: transparent;
-        color: inherit;
-        font-weight: 700;
-        font-size: 0.82rem;
-        cursor: pointer;
-    }
-    .fp-range.active {
-        background: color-mix(in srgb, var(--md-sys-color-primary) 16%, transparent);
-        border-color: color-mix(in srgb, var(--md-sys-color-primary) 40%, var(--md-sys-color-outline-variant));
+    .fp-brand { display: flex; gap: 12px; align-items: flex-start; }
+    .fp-brand-ico {
+        width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center;
         color: var(--md-sys-color-primary);
-    }
-    .fp-loading, .fp-empty, .fp-error {
-        margin: 0;
-        padding: 16px 0;
-        text-align: center;
-        color: var(--md-sys-color-on-surface-variant);
-    }
-    .fp-error { color: var(--md-sys-color-error); }
-    .fp-kpis {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 12px;
-    }
-    .fp-kpi {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-        padding: 12px;
-        border-radius: 14px;
-        border: 1px solid var(--md-sys-color-outline-variant);
-        background: var(--md-sys-color-surface);
-    }
-    .fp-ico {
-        width: 40px;
-        height: 40px;
-        border-radius: 12px;
-        display: grid;
-        place-items: center;
+        background: color-mix(in srgb, var(--md-sys-color-primary) 12%, transparent);
+        border: 1px solid color-mix(in srgb, var(--md-sys-color-primary) 24%, transparent);
         flex-shrink: 0;
     }
-    .fp-ico.revenue { background: color-mix(in srgb, #16a34a 16%, transparent); color: #16a34a; }
-    .fp-ico.cogs { background: color-mix(in srgb, #d97706 16%, transparent); color: #d97706; }
-    .fp-ico.margin { background: color-mix(in srgb, #2563eb 16%, transparent); color: #2563eb; }
-    .fp-ico.count { background: color-mix(in srgb, #7c3aed 16%, transparent); color: #7c3aed; }
+    .fp-title { margin: 0; font-size: 1.08rem; font-weight: 850; letter-spacing: -0.02em; }
+    .fp-sub {
+        margin: 4px 0 0; font-size: 0.82rem; color: var(--md-sys-color-on-surface-variant);
+        line-height: 1.4; max-width: 42rem;
+    }
+    .fp-sub code { font-size: 0.76rem; }
+    .fp-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .fp-ranges {
+        display: inline-flex; gap: 4px; padding: 3px; border-radius: 12px;
+        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 35%, transparent);
+        border: 1px solid var(--md-sys-color-outline-variant);
+    }
+    .fp-range {
+        padding: 7px 12px; border-radius: 9px; border: none; background: transparent;
+        color: inherit; font-weight: 700; font-size: 0.8rem; cursor: pointer;
+    }
+    .fp-range.active {
+        background: var(--md-sys-color-surface); color: var(--md-sys-color-primary);
+        box-shadow: 0 1px 3px color-mix(in srgb, black 8%, transparent);
+    }
+    .fp-refresh {
+        display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px;
+        border-radius: 10px; border: 1px solid var(--md-sys-color-outline-variant);
+        background: color-mix(in srgb, var(--md-sys-color-surface) 90%, transparent);
+        color: inherit; font-weight: 700; font-size: 0.82rem; cursor: pointer;
+    }
+    .fp-refresh:hover {
+        border-color: color-mix(in srgb, var(--md-sys-color-primary) 35%, var(--md-sys-color-outline-variant));
+    }
+    .fp-banner {
+        margin: 0 18px 10px; padding: 8px 12px; border-radius: 10px; font-size: 0.84rem; font-weight: 650;
+        color: color-mix(in srgb, #0d9488 80%, var(--md-sys-color-on-surface));
+        background: color-mix(in srgb, #0d9488 12%, transparent);
+        border: 1px solid color-mix(in srgb, #0d9488 22%, transparent);
+    }
+    .fp-loading, .fp-error {
+        margin: 0; padding: 28px 18px; text-align: center; color: var(--md-sys-color-on-surface-variant);
+    }
+    .fp-error { color: var(--md-sys-color-error); }
+    .fp-empty { padding: 24px 18px 28px; text-align: center; color: var(--md-sys-color-on-surface-variant); }
+    .fp-empty p { margin: 0; }
+    .fp-empty-hint {
+        margin-top: 8px !important; font-size: 0.86rem; max-width: 36rem;
+        margin-left: auto; margin-right: auto; line-height: 1.45;
+    }
+    .fp-kpis {
+        display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; padding: 4px 18px 18px;
+    }
+    .fp-kpi {
+        display: flex; gap: 12px; align-items: center; padding: 14px; border-radius: 14px;
+        border: 1px solid var(--md-sys-color-outline-variant); background: var(--md-sys-color-surface);
+        box-shadow: 0 4px 12px color-mix(in srgb, black 4%, transparent);
+        transition: border-color 140ms ease, box-shadow 140ms ease;
+    }
+    .fp-kpi:hover {
+        border-color: color-mix(in srgb, var(--md-sys-color-primary) 28%, var(--md-sys-color-outline-variant));
+        box-shadow: 0 6px 16px color-mix(in srgb, black 6%, transparent);
+    }
+    .fp-ico {
+        width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center;
+        flex-shrink: 0; border: 1px solid transparent;
+    }
+    .fp-ico.revenue { background: color-mix(in srgb, #16a34a 14%, transparent); border-color: color-mix(in srgb, #16a34a 22%, transparent); color: #16a34a; }
+    .fp-ico.cogs { background: color-mix(in srgb, #d97706 14%, transparent); border-color: color-mix(in srgb, #d97706 22%, transparent); color: #d97706; }
+    .fp-ico.margin { background: color-mix(in srgb, #2563eb 14%, transparent); border-color: color-mix(in srgb, #2563eb 22%, transparent); color: #2563eb; }
+    .fp-ico.count { background: color-mix(in srgb, #7c3aed 14%, transparent); border-color: color-mix(in srgb, #7c3aed 22%, transparent); color: #7c3aed; }
+    .fp-kpi-body { min-width: 0; display: grid; gap: 2px; }
     .fp-label {
-        font-size: 0.75rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
+        font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em;
         color: var(--md-sys-color-on-surface-variant);
     }
-    .fp-value {
-        font-size: 1.15rem;
-        font-weight: 850;
+    .fp-value { font-size: 1.2rem; font-weight: 850; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+    .fp-cur { font-size: 0.72rem; font-weight: 750; margin-left: 4px; opacity: 0.75; }
+    .fp-table-wrap {
+        margin: 0 18px 18px; overflow: auto; border-radius: 12px;
+        border: 1px solid var(--md-sys-color-outline-variant);
+    }
+    .fp-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    .fp-table th {
+        text-align: left; padding: 10px 12px; font-size: 0.72rem; text-transform: uppercase;
+        letter-spacing: 0.04em; color: var(--md-sys-color-on-surface-variant);
+        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 45%, transparent);
+        border-bottom: 1px solid var(--md-sys-color-outline-variant);
+    }
+    .fp-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 70%, transparent);
         font-variant-numeric: tabular-nums;
-        margin-top: 2px;
     }
-    .fp-cur {
-        font-size: 0.75rem;
-        font-weight: 700;
-        margin-left: 4px;
-        opacity: 0.8;
-    }
-    .fp-by-cur { margin-top: 12px; display: grid; gap: 8px; }
-    .fp-cur-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px 16px;
-        font-size: 0.86rem;
-        padding: 8px 12px;
-        border-radius: 10px;
-        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 25%, transparent);
-    }
-    @media (max-width: 960px) {
-        .fp-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
-    @media (max-width: 520px) {
+    .fp-table tr:last-child td { border-bottom: none; }
+    @media (max-width: 960px) { .fp-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 560px) {
         .fp-kpis { grid-template-columns: 1fr; }
+        .fp-head { flex-direction: column; }
+        .fp-actions { width: 100%; justify-content: space-between; }
     }
 </style>
