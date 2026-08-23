@@ -8,7 +8,16 @@
     import { purchaseStore } from "../../../purchase/presentation/viewmodel/purchase.store";
     import type { StockMovement } from "../../domain/entity/StockMovement";
     import type { PurchaseEntry, PurchaseEntryLine } from "../../../purchase/domain/entity/PurchaseEntry";
-    import { ClipboardList, FileText, RefreshCw } from "lucide-svelte";
+    import {
+        Building2,
+        CalendarDays,
+        ClipboardList,
+        FileText,
+        Layers,
+        Receipt,
+        RefreshCw,
+        Wallet,
+    } from "lucide-svelte";
 
     type Tab = "movements" | "invoices";
 
@@ -113,25 +122,11 @@
             </div>
         </div>
         <div class="tab-row" role="tablist">
-            <button
-                class="tab-btn"
-                class:active={tab === "movements"}
-                type="button"
-                role="tab"
-                aria-selected={tab === "movements"}
-                on:click={() => (tab = "movements")}
-            >
+            <button class="tab-btn" class:active={tab === "movements"} type="button" role="tab" aria-selected={tab === "movements"} on:click={() => (tab = "movements")}>
                 <Icon icon={ClipboardList} size={16} ariaLabel="Movimientos" />
                 Movimientos
             </button>
-            <button
-                class="tab-btn"
-                class:active={tab === "invoices"}
-                type="button"
-                role="tab"
-                aria-selected={tab === "invoices"}
-                on:click={() => (tab = "invoices")}
-            >
+            <button class="tab-btn" class:active={tab === "invoices"} type="button" role="tab" aria-selected={tab === "invoices"} on:click={() => (tab = "invoices")}>
                 <Icon icon={FileText} size={16} ariaLabel="Facturas" />
                 Facturas de entrada
             </button>
@@ -181,21 +176,37 @@
                 <div class="entry-list">
                     {#each entries as e (e.id)}
                         <article class="entry-card" class:expanded={expandedEntryId === e.id}>
-                            <button
-                                class="entry-card-head"
-                                type="button"
-                                on:click={() => toggleEntry(e.id)}
-                                aria-expanded={expandedEntryId === e.id}
-                            >
-                                <div class="entry-card-main">
-                                    <strong class="entry-ref">{e.reference || e.id}</strong>
-                                    <p class="entry-meta">
-                                        {fmtDate(e.entryDateIso)} · {e.lineCount} línea(s) · total
-                                        <span class="entry-total">{e.totalCost} {e.currency}</span>
-                                        {#if e.supplierId}
-                                            · proveedor <span class="mono">{e.supplierId}</span>
-                                        {/if}
-                                    </p>
+                            <button class="entry-card-head" type="button" on:click={() => toggleEntry(e.id)} aria-expanded={expandedEntryId === e.id}>
+                                <div class="entry-card-leading">
+                                    <span class="entry-icon" aria-hidden="true">
+                                        <Icon icon={Receipt} size={22} ariaLabel="Factura" />
+                                    </span>
+                                    <div class="entry-card-main">
+                                        <div class="entry-title-row">
+                                            <span class="entry-label">Factura</span>
+                                            <strong class="entry-ref">{e.reference || e.id}</strong>
+                                        </div>
+                                        <div class="entry-chips">
+                                            <span class="meta-chip" title="Fecha de la factura de entrada">
+                                                <Icon icon={CalendarDays} size={14} ariaLabel="Fecha" />
+                                                <span>{fmtDate(e.entryDateIso)}</span>
+                                            </span>
+                                            <span class="meta-chip" title="Número de líneas de producto">
+                                                <Icon icon={Layers} size={14} ariaLabel="Líneas" />
+                                                <span>{e.lineCount} {e.lineCount === 1 ? "línea" : "líneas"}</span>
+                                            </span>
+                                            <span class="meta-chip chip-total" title="Importe total de la factura">
+                                                <Icon icon={Wallet} size={14} ariaLabel="Total" />
+                                                <span class="entry-total">{e.totalCost} {e.currency}</span>
+                                            </span>
+                                            {#if e.supplierId}
+                                                <span class="meta-chip chip-supplier" title="Proveedor asociado">
+                                                    <Icon icon={Building2} size={14} ariaLabel="Proveedor" />
+                                                    <span class="supplier-id">{e.supplierId}</span>
+                                                </span>
+                                            {/if}
+                                        </div>
+                                    </div>
                                 </div>
                                 <span class="details-toggle" aria-hidden="true">
                                     {expandedEntryId === e.id ? "Ocultar detalles" : "Ver detalles"}
@@ -250,12 +261,11 @@
     .inv-header { margin-bottom: 4px; }
     .tab-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
     .tab-btn {
-        display: inline-flex; align-items: center; gap: 7px;
-        padding: 9px 16px; border-radius: 12px;
+        display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px; border-radius: 12px;
         border: 1px solid var(--md-sys-color-outline-variant);
         background: color-mix(in srgb, var(--md-sys-color-surface-variant) 18%, transparent);
-        color: var(--md-sys-color-on-surface); font-weight: 650; font-size: 0.92rem;
-        cursor: pointer; transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+        color: var(--md-sys-color-on-surface); font-weight: 650; font-size: 0.92rem; cursor: pointer;
+        transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
     }
     .tab-btn:hover { background: color-mix(in srgb, var(--md-sys-color-surface-variant) 35%, transparent); }
     .tab-btn.active {
@@ -266,8 +276,7 @@
     }
     .inv-card {
         margin-top: 14px; padding: 0; overflow: hidden; border-radius: 16px;
-        border: 1px solid var(--md-sys-color-outline-variant);
-        background: var(--md-sys-color-surface);
+        border: 1px solid var(--md-sys-color-outline-variant); background: var(--md-sys-color-surface);
         box-shadow: 0 1px 2px color-mix(in srgb, black 6%, transparent), 0 8px 24px color-mix(in srgb, black 5%, transparent);
     }
     .loading-wrap { display: grid; place-items: center; padding: 48px 24px; }
@@ -286,9 +295,8 @@
         border-bottom: 1px solid var(--md-sys-color-outline-variant); white-space: nowrap; cursor: help;
     }
     .trace-table tbody td {
-        text-align: left; padding: 12px 14px;
+        text-align: left; padding: 12px 14px; vertical-align: middle;
         border-bottom: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 70%, transparent);
-        vertical-align: middle;
     }
     .trace-table tbody tr { transition: background 120ms ease; }
     .trace-table tbody tr:hover { background: color-mix(in srgb, var(--md-sys-color-primary) 6%, transparent); }
@@ -302,69 +310,104 @@
     .reason { max-width: 280px; word-break: break-word; color: var(--md-sys-color-on-surface-variant); font-size: 0.88rem; }
     .type-pill {
         display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px;
-        font-size: 0.76rem; font-weight: 750; letter-spacing: 0.01em; border: 1px solid transparent;
+        font-size: 0.76rem; font-weight: 750; border: 1px solid transparent;
     }
-    .type-entrada {
-        background: color-mix(in srgb, #16a34a 18%, transparent);
-        border-color: color-mix(in srgb, #16a34a 28%, transparent);
-        color: color-mix(in srgb, #16a34a 70%, var(--md-sys-color-on-surface));
-    }
-    .type-ajuste {
-        background: color-mix(in srgb, #d97706 18%, transparent);
-        border-color: color-mix(in srgb, #d97706 28%, transparent);
-        color: color-mix(in srgb, #d97706 70%, var(--md-sys-color-on-surface));
-    }
-    .type-salida_venta {
-        background: color-mix(in srgb, #2563eb 16%, transparent);
-        border-color: color-mix(in srgb, #2563eb 26%, transparent);
-        color: color-mix(in srgb, #2563eb 70%, var(--md-sys-color-on-surface));
-    }
-    .type-devolucion {
-        background: color-mix(in srgb, #7c3aed 16%, transparent);
-        border-color: color-mix(in srgb, #7c3aed 26%, transparent);
-        color: color-mix(in srgb, #7c3aed 70%, var(--md-sys-color-on-surface));
-    }
-    .entry-list { display: grid; gap: 12px; padding: 16px; }
+    .type-entrada { background: color-mix(in srgb, #16a34a 18%, transparent); border-color: color-mix(in srgb, #16a34a 28%, transparent); color: color-mix(in srgb, #16a34a 70%, var(--md-sys-color-on-surface)); }
+    .type-ajuste { background: color-mix(in srgb, #d97706 18%, transparent); border-color: color-mix(in srgb, #d97706 28%, transparent); color: color-mix(in srgb, #d97706 70%, var(--md-sys-color-on-surface)); }
+    .type-salida_venta { background: color-mix(in srgb, #2563eb 16%, transparent); border-color: color-mix(in srgb, #2563eb 26%, transparent); color: color-mix(in srgb, #2563eb 70%, var(--md-sys-color-on-surface)); }
+    .type-devolucion { background: color-mix(in srgb, #7c3aed 16%, transparent); border-color: color-mix(in srgb, #7c3aed 26%, transparent); color: color-mix(in srgb, #7c3aed 70%, var(--md-sys-color-on-surface)); }
+
+    .entry-list { display: grid; gap: 14px; padding: 16px; }
     .entry-card {
-        border: 1px solid var(--md-sys-color-outline-variant); border-radius: 14px; overflow: hidden;
-        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 10%, var(--md-sys-color-surface));
+        border: 1px solid var(--md-sys-color-outline-variant); border-radius: 16px; overflow: hidden;
+        background: linear-gradient(165deg, color-mix(in srgb, var(--md-sys-color-surface-variant) 14%, var(--md-sys-color-surface)) 0%, var(--md-sys-color-surface) 48%);
         transition: border-color 160ms ease, box-shadow 160ms ease;
     }
-    .entry-card:hover { border-color: color-mix(in srgb, var(--md-sys-color-primary) 30%, var(--md-sys-color-outline-variant)); }
+    .entry-card:hover {
+        border-color: color-mix(in srgb, var(--md-sys-color-primary) 32%, var(--md-sys-color-outline-variant));
+        box-shadow: 0 6px 20px color-mix(in srgb, black 7%, transparent);
+    }
     .entry-card.expanded {
-        border-color: color-mix(in srgb, var(--md-sys-color-primary) 40%, var(--md-sys-color-outline-variant));
-        box-shadow: 0 4px 16px color-mix(in srgb, black 6%, transparent);
+        border-color: color-mix(in srgb, var(--md-sys-color-primary) 42%, var(--md-sys-color-outline-variant));
+        box-shadow: 0 0 0 1px color-mix(in srgb, var(--md-sys-color-primary) 18%, transparent), 0 8px 24px color-mix(in srgb, black 8%, transparent);
     }
     .entry-card-head {
         width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 16px;
-        padding: 14px 16px; background: transparent; border: none; color: inherit; text-align: left;
+        padding: 16px 18px; background: transparent; border: none; color: inherit; text-align: left;
         cursor: pointer; transition: background 120ms ease;
     }
-    .entry-card-head:hover { background: color-mix(in srgb, var(--md-sys-color-primary) 5%, transparent); }
-    .entry-card-main { min-width: 0; flex: 1; }
-    .entry-ref {
-        font-size: 0.98rem; font-weight: 750; display: block;
-        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    .entry-card-head:hover { background: color-mix(in srgb, var(--md-sys-color-primary) 4%, transparent); }
+    .entry-card-leading { display: flex; align-items: flex-start; gap: 14px; min-width: 0; flex: 1; }
+    .entry-icon {
+        flex-shrink: 0; width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center;
+        color: var(--md-sys-color-primary);
+        background: color-mix(in srgb, var(--md-sys-color-primary) 12%, transparent);
+        border: 1px solid color-mix(in srgb, var(--md-sys-color-primary) 22%, transparent);
     }
-    .entry-meta { margin: 5px 0 0; font-size: 0.86rem; color: var(--md-sys-color-on-surface-variant); line-height: 1.45; }
-    .entry-total { font-weight: 700; color: var(--md-sys-color-on-surface); }
+    .entry-card-main { min-width: 0; flex: 1; display: grid; gap: 10px; }
+    .entry-title-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; min-width: 0; }
+    .entry-label {
+        font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em;
+        color: var(--md-sys-color-on-surface-variant); padding: 2px 8px; border-radius: 6px;
+        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 40%, transparent);
+        border: 1px solid var(--md-sys-color-outline-variant);
+    }
+    .entry-ref {
+        font-size: 1.05rem; font-weight: 800; letter-spacing: -0.01em;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
+    }
+    .entry-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .meta-chip {
+        display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
+        padding: 6px 11px; border-radius: 999px; font-size: 0.82rem; font-weight: 600;
+        color: var(--md-sys-color-on-surface);
+        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 28%, transparent);
+        border: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 90%, transparent);
+        line-height: 1.2;
+    }
+    .meta-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: min(280px, 62vw); }
+    .chip-total {
+        background: color-mix(in srgb, var(--md-sys-color-primary) 12%, transparent);
+        border-color: color-mix(in srgb, var(--md-sys-color-primary) 28%, transparent);
+        color: var(--md-sys-color-primary);
+    }
+    .entry-total { font-weight: 800; font-variant-numeric: tabular-nums; }
+    .chip-supplier {
+        background: color-mix(in srgb, #0d9488 10%, transparent);
+        border-color: color-mix(in srgb, #0d9488 24%, transparent);
+    }
+    .supplier-id {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 0.75rem; font-weight: 650; max-width: min(220px, 50vw) !important;
+    }
     .details-toggle {
         flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px;
-        padding: 6px 12px; border-radius: 999px; font-size: 0.82rem; font-weight: 700;
+        padding: 8px 14px; border-radius: 999px; font-size: 0.82rem; font-weight: 750;
         color: var(--md-sys-color-primary);
         background: color-mix(in srgb, var(--md-sys-color-primary) 10%, transparent);
-        border: 1px solid color-mix(in srgb, var(--md-sys-color-primary) 22%, transparent);
+        border: 1px solid color-mix(in srgb, var(--md-sys-color-primary) 24%, transparent);
         white-space: nowrap;
     }
+    .entry-card-head:hover .details-toggle { background: color-mix(in srgb, var(--md-sys-color-primary) 16%, transparent); }
     .chev { font-size: 0.95rem; line-height: 1; opacity: 0.9; }
     .entry-card-body {
-        padding: 0 16px 16px; padding-top: 14px;
+        padding: 14px 18px 18px;
         border-top: 1px dashed color-mix(in srgb, var(--md-sys-color-outline-variant) 80%, transparent);
+        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 8%, transparent);
     }
     .notes { margin: 12px 0 0; font-size: 0.88rem; color: var(--md-sys-color-on-surface-variant); line-height: 1.45; }
     .notes-label { font-weight: 700; color: var(--md-sys-color-on-surface); }
-    @media (max-width: 640px) {
-        .entry-card-head { flex-direction: column; align-items: flex-start; gap: 10px; }
-        .details-toggle { align-self: flex-end; }
+    @media (max-width: 720px) {
+        .entry-card-head { flex-direction: column; align-items: stretch; gap: 12px; padding: 14px; }
+        .entry-card-leading { gap: 12px; }
+        .entry-icon { width: 40px; height: 40px; border-radius: 10px; }
+        .details-toggle { align-self: flex-end; width: fit-content; }
+        .meta-chip span { max-width: min(240px, 70vw); }
+    }
+    @media (max-width: 420px) {
+        .entry-title-row { flex-direction: column; align-items: flex-start; gap: 4px; }
+        .entry-ref { font-size: 0.98rem; white-space: normal; word-break: break-all; }
+        .entry-chips { gap: 6px; }
+        .meta-chip { padding: 5px 9px; font-size: 0.78rem; }
     }
 </style>
