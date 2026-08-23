@@ -9,6 +9,7 @@
     import { BuyState } from "../../../feature/sale/domain/entity/enums";
     import { saleStore } from "../../../feature/sale/presentation/viewmodel/sale.store";
     import { toastStore } from "../viewmodel/toast.store";
+    import FinanceSummaryPanel from "../../../feature/finance/presentation/components/FinanceSummaryPanel.svelte";
     import { getPrimaryProductImage } from "../../../feature/product/domain/entity/Product";
     import { logger } from "../util/logger.service";
     import {
@@ -261,6 +262,8 @@
         </article>
     </section>
 
+    <FinanceSummaryPanel />
+
     <section class="dash-grid" aria-label="Analitica">
         <section class="mgmt-card chart-card" aria-label="Ventas por dia">
             <div class="chart-head">
@@ -287,13 +290,7 @@
                             fill="color-mix(in srgb, var(--md-sys-color-primary) 72%, transparent)"
                         />
                     {/each}
-                    <line
-                        x1="0"
-                        y1="170"
-                        x2="700"
-                        y2="170"
-                        stroke="color-mix(in srgb, var(--md-sys-color-outline) 25%, transparent)"
-                    />
+                    <line x1="0" y1="170" x2="700" y2="170" stroke="color-mix(in srgb, var(--md-sys-color-outline) 25%, transparent)" />
                 </svg>
             </div>
 
@@ -464,159 +461,55 @@
         gap: 12px;
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     }
-
-    .kpi {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 14px;
-    }
-
+    .kpi { display: flex; align-items: center; gap: 12px; padding: 14px; }
     .kpi-ico {
-        width: 44px;
-        height: 44px;
-        border-radius: 16px;
-        display: grid;
-        place-items: center;
+        width: 44px; height: 44px; border-radius: 16px; display: grid; place-items: center;
         background: color-mix(in srgb, var(--md-sys-color-primary-container) 60%, transparent);
         color: var(--md-sys-color-on-primary-container);
         border: 1px solid color-mix(in srgb, var(--md-sys-color-primary) 22%, transparent);
         flex: 0 0 auto;
     }
-
-    .kpi-main {
-        min-width: 0;
-        display: grid;
-        gap: 2px;
-    }
-
-    .kpi-label {
-        color: color-mix(in srgb, var(--md-sys-color-on-surface) 70%, transparent);
-        font-weight: 700;
-        font-size: 0.92rem;
-    }
-
-    .kpi-value {
-        font-weight: 900;
-        letter-spacing: -0.02em;
-        font-size: 1.35rem;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .kpi-note {
-        color: color-mix(in srgb, var(--md-sys-color-on-surface) 66%, transparent);
-        font-size: 0.82rem;
-        font-weight: 700;
-    }
-
-    .dash-grid {
-        display: grid;
-        gap: 14px;
-        margin-top: 14px;
-    }
-
+    .kpi-main { min-width: 0; display: grid; gap: 2px; }
+    .kpi-label { color: color-mix(in srgb, var(--md-sys-color-on-surface) 70%, transparent); font-weight: 700; font-size: 0.92rem; }
+    .kpi-value { font-weight: 900; letter-spacing: -0.02em; font-size: 1.35rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .kpi-note { color: color-mix(in srgb, var(--md-sys-color-on-surface) 66%, transparent); font-size: 0.82rem; font-weight: 700; }
+    .dash-grid { display: grid; gap: 14px; margin-top: 14px; }
     @media (min-width: 980px) {
-        .dash-grid {
-            grid-template-columns: 1.35fr 1fr;
-            align-items: start;
-        }
+        .dash-grid { grid-template-columns: 1.35fr 1fr; align-items: start; }
     }
-
-    .chart-card {
-        grid-column: 1 / -1;
-    }
-
-    .chart-head {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-        justify-content: space-between;
-        flex-wrap: wrap;
-    }
-
+    .chart-card { grid-column: 1 / -1; }
+    .chart-head { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
     .chart {
-        margin-top: 12px;
-        width: 100%;
-        height: 190px;
-        border-radius: 16px;
+        margin-top: 12px; width: 100%; height: 190px; border-radius: 16px;
         border: 1px solid var(--md-sys-color-outline-variant);
         background: color-mix(in srgb, var(--md-sys-color-surface) 86%, transparent);
-        overflow: hidden;
-        padding: 10px;
+        overflow: hidden; padding: 10px;
         box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--md-sys-color-outline) 8%, transparent);
     }
-
-    .chart svg {
-        width: 100%;
-        height: 100%;
-        display: block;
-    }
-
+    .chart svg { width: 100%; height: 100%; display: block; }
     .chart-foot {
-        margin-top: 8px;
-        display: grid;
-        grid-template-columns: repeat(14, 1fr);
-        gap: 6px;
-        font-size: 0.72rem;
-        color: color-mix(in srgb, var(--md-sys-color-on-surface) 68%, transparent);
-        user-select: none;
+        margin-top: 8px; display: grid; grid-template-columns: repeat(14, 1fr); gap: 6px;
+        font-size: 0.72rem; color: color-mix(in srgb, var(--md-sys-color-on-surface) 68%, transparent); user-select: none;
     }
-
-    .tick {
-        text-align: center;
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-    }
-
+    .tick { text-align: center; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
     .bar {
-        width: min(220px, 100%);
-        height: 10px;
-        border-radius: 999px;
+        width: min(220px, 100%); height: 10px; border-radius: 999px;
         border: 1px solid var(--md-sys-color-outline-variant);
         background: color-mix(in srgb, var(--md-sys-color-surface-variant) 40%, transparent);
-        overflow: hidden;
-        align-self: center;
+        overflow: hidden; align-self: center;
     }
-
     .bar > span {
-        display: block;
-        height: 100%;
-        width: var(--w);
+        display: block; height: 100%; width: var(--w);
         background: color-mix(in srgb, var(--md-sys-color-primary) 68%, transparent);
         border-radius: 999px;
     }
-
     .status-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        border-radius: 999px;
-        padding: 7px 12px;
-        border: 1px solid var(--md-sys-color-outline-variant);
-        font-weight: 900;
-        white-space: nowrap;
+        display: inline-flex; align-items: center; gap: 8px; border-radius: 999px;
+        padding: 7px 12px; border: 1px solid var(--md-sys-color-outline-variant);
+        font-weight: 900; white-space: nowrap;
     }
-
-    .status-badge.pending {
-        border-color: color-mix(in srgb, #a855f7 40%, var(--md-sys-color-outline-variant));
-        background: color-mix(in srgb, #a855f7 12%, transparent);
-    }
-
-    .status-badge.verified {
-        border-color: color-mix(in srgb, #22c55e 40%, var(--md-sys-color-outline-variant));
-        background: color-mix(in srgb, #22c55e 12%, transparent);
-    }
-
-    .status-badge.rejected {
-        border-color: color-mix(in srgb, #ef4444 40%, var(--md-sys-color-outline-variant));
-        background: color-mix(in srgb, #ef4444 12%, transparent);
-    }
-
-    .status-badge.neutral,
-    .status-badge.muted {
-        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 36%, transparent);
-    }
+    .status-badge.pending { border-color: color-mix(in srgb, #a855f7 40%, var(--md-sys-color-outline-variant)); background: color-mix(in srgb, #a855f7 12%, transparent); }
+    .status-badge.verified { border-color: color-mix(in srgb, #22c55e 40%, var(--md-sys-color-outline-variant)); background: color-mix(in srgb, #22c55e 12%, transparent); }
+    .status-badge.rejected { border-color: color-mix(in srgb, #ef4444 40%, var(--md-sys-color-outline-variant)); background: color-mix(in srgb, #ef4444 12%, transparent); }
+    .status-badge.neutral, .status-badge.muted { background: color-mix(in srgb, var(--md-sys-color-surface-variant) 36%, transparent); }
 </style>
