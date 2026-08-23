@@ -34,7 +34,8 @@ describe("WorkshopReservation mapper (Core2 B5)", () => {
             $permissions: [],
             $collectionId: "workshop_reservation",
             $databaseId: "db",
-        } as WorkshopReservationDTO)
+            $sequence: 0,
+        } as unknown as WorkshopReservationDTO)
         expect(back.clientName).toBe("Ana")
         expect(back.equipment).toBe("Laptop HP")
         expect(back.status).toBe("confirmed")
