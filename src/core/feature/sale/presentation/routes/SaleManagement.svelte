@@ -12,6 +12,12 @@
         type SaleStatusFilter,
     } from "../../domain/util/filterSalesByStatus";
     import {
+        formatSaleAge,
+        saleAgeHours,
+        saleAgeUrgency,
+        sortSalesForQueue,
+    } from "../../domain/util/sortSalesByAge";
+    import {
         formatSaleMoney,
         saleCurrencyCode,
     } from "../../domain/util/formatSaleMoney";
@@ -69,17 +75,17 @@
         return user ? user.name : "Usuario desconocido";
     }
 
-    $: items = $saleStore.items
-        .slice()
-        .sort((a, b) => new Date(b.date ?? 0).getTime() - new Date(a.date ?? 0).getTime());
+    $: items = $saleStore.items.slice();
 
     $: counts = countSalesByStatus(items);
     $: isRefreshing = $saleStore.loading && items.length > 0;
     $: isInitialLoading = $saleStore.loading && items.length === 0;
 
     $: byStatus = filterSalesByStatus(items, statusFilter);
+    /* B4.1: pendientes = más antiguas primero; resto = más recientes primero */
+    $: orderedByAge = sortSalesForQueue(byStatus, statusFilter);
 
-    $: filteredItems = byStatus.filter((sale) => {
+    $: filteredItems = orderedByAge.filter((sale) => {
         const q = query.trim().toLowerCase();
         if (!q) return true;
         const userName = resolveUserSale(sale.id).toLowerCase();
@@ -109,53 +115,30 @@
                     Pedidos de la tienda (web/Android): pendientes con stock reservado, confirmadas y
                     rechazadas. Las citas de taller viven en Reservas (core futuro).
                 </p>
+                {#if statusFilter === BuyState.UNVERIFIED}
+                    <p class="queue-hint" title="Core2 B4.1">
+                        Cola por antigüedad: las más antiguas primero (atiende antes las que llevan más tiempo).
+                    </p>
+                {/if}
             </div>
             <div class="mgmt-chip-row status-tabs" role="tablist" aria-label="Filtrar por estado">
                 <span class="mgmt-chip origin" title="Core1 4.4">
                     <Icon icon={Store} size={18} ariaLabel="Origen" />
                     Origen: tienda cliente
                 </span>
-                <button
-                    type="button"
-                    role="tab"
-                    class="mgmt-chip tab"
-                    class:active={statusFilter === "all"}
-                    aria-selected={statusFilter === "all"}
-                    on:click={() => setStatusTab("all")}
-                >
+                <button type="button" role="tab" class="mgmt-chip tab" class:active={statusFilter === "all"} aria-selected={statusFilter === "all"} on:click={() => setStatusTab("all")}>
                     <Icon icon={BadgeDollarSign} size={18} ariaLabel="Total" />
                     {counts.total} total
                 </button>
-                <button
-                    type="button"
-                    role="tab"
-                    class="mgmt-chip tab"
-                    class:active={statusFilter === BuyState.UNVERIFIED}
-                    aria-selected={statusFilter === BuyState.UNVERIFIED}
-                    on:click={() => setStatusTab(BuyState.UNVERIFIED)}
-                >
+                <button type="button" role="tab" class="mgmt-chip tab" class:active={statusFilter === BuyState.UNVERIFIED} aria-selected={statusFilter === BuyState.UNVERIFIED} on:click={() => setStatusTab(BuyState.UNVERIFIED)}>
                     <Icon icon={Inbox} size={18} ariaLabel="Pendientes" />
                     {counts.pending} pendientes
                 </button>
-                <button
-                    type="button"
-                    role="tab"
-                    class="mgmt-chip tab"
-                    class:active={statusFilter === BuyState.VERIFIED}
-                    aria-selected={statusFilter === BuyState.VERIFIED}
-                    on:click={() => setStatusTab(BuyState.VERIFIED)}
-                >
+                <button type="button" role="tab" class="mgmt-chip tab" class:active={statusFilter === BuyState.VERIFIED} aria-selected={statusFilter === BuyState.VERIFIED} on:click={() => setStatusTab(BuyState.VERIFIED)}>
                     <Icon icon={ShieldCheck} size={18} ariaLabel="Confirmadas" />
                     {counts.verified} confirmadas
                 </button>
-                <button
-                    type="button"
-                    role="tab"
-                    class="mgmt-chip tab"
-                    class:active={statusFilter === BuyState.DELETED}
-                    aria-selected={statusFilter === BuyState.DELETED}
-                    on:click={() => setStatusTab(BuyState.DELETED)}
-                >
+                <button type="button" role="tab" class="mgmt-chip tab" class:active={statusFilter === BuyState.DELETED} aria-selected={statusFilter === BuyState.DELETED} on:click={() => setStatusTab(BuyState.DELETED)}>
                     <Icon icon={XCircle} size={18} ariaLabel="Rechazadas" />
                     {counts.rejected} rechazadas
                 </button>
@@ -194,10 +177,14 @@
                     {#each filteredItems as sale (sale.id)}
                         {@const code = saleCurrencyCode(sale.currency)}
                         {@const isPending = sale.verified === BuyState.UNVERIFIED}
+                        {@const ageLabel = isPending ? formatSaleAge(sale) : ""}
+                        {@const ageUrgency = isPending ? saleAgeUrgency(saleAgeHours(sale)) : "fresh"}
                         <div class="sale-card-wrapper">
                             <button
                                 class="sale-card"
                                 class:is-pending={isPending}
+                                class:age-warn={isPending && ageUrgency === "warn"}
+                                class:age-critical={isPending && ageUrgency === "critical"}
                                 type="button"
                                 on:click={() => openDetail(sale.id)}
                             >
@@ -205,32 +192,27 @@
                                     <div>
                                         <div class="sale-title">
                                             <h1>Venta: #{sale.id.slice(0, 8)}</h1>
+                                            {#if isPending}
+                                                <span class="age-badge age-{ageUrgency}" title="Tiempo en cola pendiente">{ageLabel}</span>
+                                            {/if}
                                         </div>
                                         <div class="sale-user-title">
                                             <h2>Usuario: {resolveUserSale(sale.id)}</h2>
                                         </div>
                                         <div class="sale-sub">
-                                            <span class="pill {saleStateClass(sale.verified)}">
-                                                {saleStateLabel(sale.verified)}
-                                            </span>
-                                            {#if code}
-                                                <span class="pill currency">{code}</span>
-                                            {/if}
+                                            <span class="pill {saleStateClass(sale.verified)}">{saleStateLabel(sale.verified)}</span>
+                                            {#if code}<span class="pill currency">{code}</span>{/if}
                                             <span class="dot">•</span>
                                             <span class="muted">{new Date(sale.date).toLocaleString()}</span>
                                         </div>
                                     </div>
-                                    <div class="sale-amount">
-                                        {formatSaleMoney(sale.amount ?? 0, sale.currency)}
-                                    </div>
+                                    <div class="sale-amount">{formatSaleMoney(sale.amount ?? 0, sale.currency)}</div>
                                 </div>
-
                                 <div class="sale-meta">
                                     <span class="muted">{sale.products?.length ?? 0} items</span>
                                     <Icon icon={ChevronRight} size={16} ariaLabel="Abrir" />
                                 </div>
                             </button>
-
                             <div class="custom-tooltip">
                                 <div class="tooltip-header">
                                     <Icon icon={Inbox} size={14} ariaLabel="Productos" />
@@ -241,9 +223,7 @@
                                         <div class="tooltip-item">
                                             <span class="tooltip-qty">{item.quantity}x</span>
                                             <span class="tooltip-name">{item.name}</span>
-                                            <span class="tooltip-price">
-                                                {formatSaleMoney(item.price, sale.currency)}
-                                            </span>
+                                            <span class="tooltip-price">{formatSaleMoney(item.price, sale.currency)}</span>
                                         </div>
                                     {:else}
                                         <span class="tooltip-empty">No hay productos en esta venta</span>
@@ -259,315 +239,128 @@
 </section>
 
 <style>
-    h1 {
-        margin: 0;
-        font-size: 1.2rem;
-        letter-spacing: -0.01em;
-        font-weight: 1000;
-    }
-
-    h2 {
-        margin: 0;
-        font-size: 1rem;
-        letter-spacing: -0.01em;
-        font-weight: 790;
-    }
-
-    .status-tabs {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        align-items: center;
-    }
-
-    .mgmt-chip.origin {
-        opacity: 0.95;
-        border-style: dashed;
-    }
-
+    h1 { margin: 0; font-size: 1.2rem; letter-spacing: -0.01em; font-weight: 1000; }
+    h2 { margin: 0; font-size: 1rem; letter-spacing: -0.01em; font-weight: 790; }
+    .status-tabs { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .mgmt-chip.origin { opacity: 0.95; border-style: dashed; }
     .mgmt-chip.tab {
-        cursor: pointer;
-        border: 1px solid var(--md-sys-color-outline-variant);
-        background: transparent;
-        font: inherit;
-        color: inherit;
+        cursor: pointer; border: 1px solid var(--md-sys-color-outline-variant);
+        background: transparent; font: inherit; color: inherit;
         transition: background-color 140ms ease, border-color 140ms ease;
     }
-
-    .mgmt-chip.tab:hover {
-        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 40%, transparent);
-    }
-
+    .mgmt-chip.tab:hover { background: color-mix(in srgb, var(--md-sys-color-surface-variant) 40%, transparent); }
     .mgmt-chip.tab.active {
         border-color: var(--md-sys-color-primary);
         background: color-mix(in srgb, var(--md-sys-color-primary) 18%, transparent);
         font-weight: 800;
     }
-
-    .sales-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 12px;
-    }
-
+    .sales-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     .filters {
-        display: grid;
-        grid-template-columns: minmax(0, 1.6fr) minmax(180px, 0.6fr);
-        gap: 12px;
-        margin-bottom: 12px;
+        display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(180px, 0.6fr);
+        gap: 12px; margin-bottom: 12px;
     }
-
-    .filter-field {
-        display: grid;
-        gap: 6px;
-    }
-
-    .filter-field span {
-        font-size: 0.86rem;
-        color: color-mix(in srgb, var(--md-sys-color-on-background) 70%, transparent);
-    }
-
+    .filter-field { display: grid; gap: 6px; }
+    .filter-field span { font-size: 0.86rem; color: color-mix(in srgb, var(--md-sys-color-on-background) 70%, transparent); }
     .filter-field.search {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        border: 1px solid var(--md-sys-color-outline-variant);
-        border-radius: 14px;
-        padding: 0 12px;
-        background: color-mix(in srgb, var(--md-sys-color-surface) 90%, transparent);
+        display: flex; align-items: center; gap: 10px;
+        border: 1px solid var(--md-sys-color-outline-variant); border-radius: 14px;
+        padding: 0 12px; background: color-mix(in srgb, var(--md-sys-color-surface) 90%, transparent);
     }
-
-    .filter-field.search input,
-    .filter-field select {
-        width: 100%;
-        height: 44px;
-        border: 0;
-        outline: 0;
-        background: transparent;
-        color: inherit;
-        font: inherit;
+    .filter-field.search input, .filter-field select {
+        width: 100%; height: 44px; border: 0; outline: 0; background: transparent; color: inherit; font: inherit;
     }
-
-    .sale-card-wrapper {
-        position: relative;
-    }
-
+    .sale-card-wrapper { position: relative; }
     .sale-card {
-        width: 100%;
-        text-align: left;
-        border-radius: 20px;
+        width: 100%; text-align: left; border-radius: 20px;
         border: 1px solid var(--md-sys-color-outline-variant);
         background: color-mix(in srgb, var(--md-sys-color-surface) 92%, transparent);
-        padding: 14px;
-        display: grid;
-        gap: 12px;
+        padding: 14px; display: grid; gap: 12px;
         box-shadow: 0 14px 34px color-mix(in srgb, black 30%, transparent);
-        transition: border-color 0.2s ease, background-color 0.2s ease;
-        cursor: pointer;
+        transition: border-color 0.2s ease, background-color 0.2s ease; cursor: pointer;
     }
-
     .sale-card:hover {
         border-color: color-mix(in srgb, var(--md-sys-color-primary) 35%, var(--md-sys-color-outline-variant));
         background: color-mix(in srgb, var(--md-sys-color-primary) 10%, var(--md-sys-color-surface) 88%);
         z-index: 2;
     }
-
     .sale-card.is-pending {
         border-color: color-mix(in srgb, #f59e0b 48%, var(--md-sys-color-outline-variant));
         background: color-mix(in srgb, #f59e0b 12%, var(--md-sys-color-surface) 88%);
-        box-shadow:
-            0 14px 34px color-mix(in srgb, black 28%, transparent),
-            0 0 0 1px color-mix(in srgb, #f59e0b 22%, transparent);
+        box-shadow: 0 14px 34px color-mix(in srgb, black 28%, transparent), 0 0 0 1px color-mix(in srgb, #f59e0b 22%, transparent);
     }
-
     .sale-card.is-pending:hover {
         border-color: color-mix(in srgb, #f59e0b 62%, var(--md-sys-color-outline-variant));
         background: color-mix(in srgb, #f59e0b 18%, var(--md-sys-color-surface) 82%);
     }
-
     .sale-card-wrapper:hover .custom-tooltip {
-        opacity: 1;
-        visibility: visible;
-        transform: translateY(0);
-        transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28),
-            visibility 0s ease 0s;
+        opacity: 1; visibility: visible; transform: translateY(0);
+        transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28), visibility 0s ease 0s;
     }
-
-    .sale-top {
-        display: flex;
-        justify-content: space-between;
-        align-items: start;
-        gap: 12px;
-    }
-
+    .sale-top { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
     .sale-title {
-        color: var(--md-sys-color-on-background);
-        font-weight: 950;
-        letter-spacing: -0.01em;
+        display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px;
+        color: var(--md-sys-color-on-background); font-weight: 950; letter-spacing: -0.01em;
     }
-
-    .sale-user-title {
-        color: var(--md-sys-color-on-background);
-        font-weight: 1200;
-        letter-spacing: -0.01em;
-    }
-
+    .sale-user-title { color: var(--md-sys-color-on-background); font-weight: 1200; letter-spacing: -0.01em; }
     .sale-sub {
-        margin-top: 6px;
-        display: inline-flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        align-items: center;
-        color: color-mix(in srgb, var(--md-sys-color-on-background) 72%, transparent);
-        font-size: 0.88rem;
+        margin-top: 6px; display: inline-flex; gap: 8px; flex-wrap: wrap; align-items: center;
+        color: color-mix(in srgb, var(--md-sys-color-on-background) 72%, transparent); font-size: 0.88rem;
     }
-
     .sale-amount {
-        color: var(--md-sys-color-on-background);
-        font-weight: 1000;
-        letter-spacing: -0.02em;
-        font-size: 1.15rem;
-        white-space: nowrap;
-        text-align: right;
+        color: var(--md-sys-color-on-background); font-weight: 1000; letter-spacing: -0.02em;
+        font-size: 1.15rem; white-space: nowrap; text-align: right;
     }
-
     .sale-meta {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        color: color-mix(in srgb, var(--md-sys-color-on-background) 72%, transparent);
-        font-size: 0.88rem;
+        display: flex; justify-content: space-between; align-items: center;
+        color: color-mix(in srgb, var(--md-sys-color-on-background) 72%, transparent); font-size: 0.88rem;
     }
-
     .pill {
-        font-size: 0.72rem;
-        font-weight: 900;
-        padding: 4px 8px;
-        border-radius: 999px;
+        font-size: 0.72rem; font-weight: 900; padding: 4px 8px; border-radius: 999px;
         border: 1px solid var(--md-sys-color-outline-variant);
         background: color-mix(in srgb, var(--md-sys-color-surface-variant) 35%, transparent);
-        white-space: nowrap;
-        color: var(--md-sys-color-on-surface);
+        white-space: nowrap; color: var(--md-sys-color-on-surface);
     }
-
-    .pill.currency {
-        font-weight: 800;
-        letter-spacing: 0.04em;
-        opacity: 0.95;
-    }
-
-    .pill.verified {
-        border-color: color-mix(in srgb, #22c55e 35%, var(--md-sys-color-outline-variant));
-        background: color-mix(in srgb, #22c55e 15%, transparent);
-        color: #4ade80;
-    }
-
-    .pill.unverified {
-        border-color: color-mix(in srgb, #f59e0b 50%, var(--md-sys-color-outline-variant));
-        background: color-mix(in srgb, #f59e0b 22%, transparent);
-        color: #fbbf24;
-        box-shadow: 0 0 0 1px color-mix(in srgb, #f59e0b 18%, transparent);
-    }
-
-    .pill.rejected {
-        border-color: color-mix(in srgb, #ef4444 38%, var(--md-sys-color-outline-variant));
-        background: color-mix(in srgb, #ef4444 15%, transparent);
-        color: #f87171;
-    }
-
-    .muted {
-        color: inherit;
-        opacity: 0.92;
-    }
-
-    .dot {
-        opacity: 0.7;
-    }
-
+    .pill.currency { font-weight: 800; letter-spacing: 0.04em; opacity: 0.95; }
+    .pill.verified { border-color: color-mix(in srgb, #22c55e 35%, var(--md-sys-color-outline-variant)); background: color-mix(in srgb, #22c55e 15%, transparent); color: #4ade80; }
+    .pill.unverified { border-color: color-mix(in srgb, #f59e0b 50%, var(--md-sys-color-outline-variant)); background: color-mix(in srgb, #f59e0b 22%, transparent); color: #fbbf24; box-shadow: 0 0 0 1px color-mix(in srgb, #f59e0b 18%, transparent); }
+    .pill.rejected { border-color: color-mix(in srgb, #ef4444 38%, var(--md-sys-color-outline-variant)); background: color-mix(in srgb, #ef4444 15%, transparent); color: #f87171; }
+    .muted { color: inherit; opacity: 0.92; }
+    .dot { opacity: 0.7; }
     .custom-tooltip {
-        position: absolute;
-        top: calc(100% + 8px);
-        left: 50%;
-        transform: translateX(-50%) translateY(10px);
-        width: 100%;
-        max-width: 320px;
+        position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%) translateY(10px);
+        width: 100%; max-width: 320px;
         background: color-mix(in srgb, var(--md-sys-color-surface-container-highest) 90%, black);
-        backdrop-filter: blur(8px);
-        border: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 40%, transparent);
-        border-radius: 14px;
-        padding: 12px;
+        backdrop-filter: blur(8px); border: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 40%, transparent);
+        border-radius: 14px; padding: 12px;
         box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
-        z-index: 50;
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s ease 0.2s;
-        pointer-events: none;
+        z-index: 50; opacity: 0; visibility: hidden;
+        transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s ease 0.2s; pointer-events: none;
     }
-
     .tooltip-header {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 0.82rem;
-        font-weight: 800;
-        color: var(--md-sys-color-on-surface);
-        padding-bottom: 8px;
+        display: flex; align-items: center; gap: 8px; font-size: 0.82rem; font-weight: 800;
+        color: var(--md-sys-color-on-surface); padding-bottom: 8px;
         border-bottom: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 30%, transparent);
-        margin-bottom: 8px;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+        margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;
     }
-
-    .tooltip-body {
-        display: grid;
-        gap: 6px;
+    .tooltip-body { display: grid; gap: 6px; }
+    .tooltip-item { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; font-size: 0.9rem; color: color-mix(in srgb, var(--md-sys-color-on-surface) 80%, transparent); }
+    .tooltip-qty { font-weight: 900; color: var(--md-sys-color-primary); font-size: 0.85rem; }
+    .tooltip-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+    .tooltip-price { font-weight: 700; color: color-mix(in srgb, var(--md-sys-color-on-surface) 60%, transparent); font-variant-numeric: tabular-nums; }
+    .tooltip-empty { font-size: 0.85rem; color: var(--md-sys-color-error); font-style: italic; }
+    .queue-hint { margin: 8px 0 0; font-size: 0.86rem; font-weight: 650; color: var(--md-sys-color-primary); }
+    .age-badge {
+        display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 999px;
+        font-size: 0.72rem; font-weight: 750; letter-spacing: 0.02em; border: 1px solid transparent; white-space: nowrap;
     }
-
-    .tooltip-item {
-        display: grid;
-        grid-template-columns: auto 1fr auto;
-        gap: 8px;
-        align-items: center;
-        font-size: 0.9rem;
-        color: color-mix(in srgb, var(--md-sys-color-on-surface) 80%, transparent);
-    }
-
-    .tooltip-qty {
-        font-weight: 900;
-        color: var(--md-sys-color-primary);
-        font-size: 0.85rem;
-    }
-
-    .tooltip-name {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        font-weight: 500;
-    }
-
-    .tooltip-price {
-        font-weight: 700;
-        color: color-mix(in srgb, var(--md-sys-color-on-surface) 60%, transparent);
-        font-variant-numeric: tabular-nums;
-    }
-
-    .tooltip-empty {
-        font-size: 0.85rem;
-        color: var(--md-sys-color-error);
-        font-style: italic;
-    }
-
+    .age-fresh { background: color-mix(in srgb, #22c55e 16%, transparent); border-color: color-mix(in srgb, #22c55e 28%, transparent); color: color-mix(in srgb, #16a34a 75%, var(--md-sys-color-on-surface)); }
+    .age-warn { background: color-mix(in srgb, #f59e0b 18%, transparent); border-color: color-mix(in srgb, #f59e0b 32%, transparent); color: color-mix(in srgb, #d97706 80%, var(--md-sys-color-on-surface)); }
+    .age-critical { background: color-mix(in srgb, #ef4444 18%, transparent); border-color: color-mix(in srgb, #ef4444 34%, transparent); color: color-mix(in srgb, #dc2626 80%, var(--md-sys-color-on-surface)); }
+    .sale-card.age-warn { border-color: color-mix(in srgb, #f59e0b 48%, var(--md-sys-color-outline-variant)); }
+    .sale-card.age-critical { border-color: color-mix(in srgb, #ef4444 52%, var(--md-sys-color-outline-variant)); box-shadow: 0 0 0 1px color-mix(in srgb, #ef4444 18%, transparent); }
     @media (max-width: 860px) {
-        .filters {
-            grid-template-columns: 1fr;
-        }
-
-        .sales-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .custom-tooltip {
-            display: none;
-        }
+        .filters { grid-template-columns: 1fr; }
+        .sales-grid { grid-template-columns: 1fr; }
+        .custom-tooltip { display: none; }
     }
 </style>
