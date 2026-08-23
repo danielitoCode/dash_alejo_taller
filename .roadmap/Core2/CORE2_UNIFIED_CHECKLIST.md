@@ -3,7 +3,7 @@
 **Espejo operativo.** Fuente de trabajo compartida con AlejoTaller.  
 **Rama:** `Core2` en **ambos** repos · **master** solo con merges recomendados.
 
-**Última actualización:** 2026-08-23 (B4.1 cola UNVERIFIED por antigüedad)  
+**Última actualización:** 2026-08-23 (B4.2 resumen finance VERIFIED)  
 **Core 2 cerrado:** NO
 
 ### Reglas
@@ -73,7 +73,7 @@
 ## Bloque 4 — Reportes + cola UNVERIFIED (dash)
 
 - [x] Cola por antigüedad (B4.1) — sortSalesForQueue + badges en Ventas
-- [ ] Resumen ingresos/COGS/margen (solo VERIFIED) (B4.2)
+- [x] Resumen ingresos/COGS/margen (solo VERIFIED) (B4.2) — FinanceSummaryPanel + aggregate
 
 ---
 
@@ -98,8 +98,8 @@
 ## Orden
 
 ```text
-B0 ✓ → B1 ✓ → B2 ✓ → B3.1–B3.3 ✓ → B4.1 ✓ cola UNVERIFIED
-  → B4.2 resumen ingresos/COGS/margen ← siguiente  ·  B5 → B6
+B0 ✓ → B1 ✓ → B2 ✓ → B3 ✓ → B4.1 ✓ → B4.2 ✓ resumen finance
+  → B5 reservas taller ← siguiente  ·  B6 cierre
 ```
 
 ## Registro
@@ -116,3 +116,4 @@ B0 ✓ → B1 ✓ → B2 ✓ → B3.1–B3.3 ✓ → B4.1 ✓ cola UNVERIFIED
 | 2026-08-21 | B3.2 factura multi-línea | dash | RegisterPurchaseEntryCaseUse + UI + tests |
 | 2026-08-23 | B3.3 ajuste + Inventario | dash RegisterStockAdjustment + InventoryTrace UI + RoleConfig inventory |
 | 2026-08-23 | B4.1 cola UNVERIFIED | dash sortSalesByAge + SaleManagement badges |
+| 2026-08-23 | B4.2 resumen finance | dash aggregateFinanceSummary + FinanceSummaryPanel en Dashboard |

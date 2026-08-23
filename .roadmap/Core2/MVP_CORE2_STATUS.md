@@ -1,7 +1,7 @@
 # Core 2 — Estado MVP Back-office
 
 **Última actualización:** 2026-08-23  
-**Veredicto:** **En curso** — B4.1 ✓ cola UNVERIFIED; siguiente **B4.2 resumen finance**.  
+**Veredicto:** **En curso** — B4.2 ✓ resumen finance; siguiente **B5 reservas**.  
 **Core 2 dash cerrado:** ☐  
 **Rama:** `Core2`  
 **Checklist unificado:** [`CORE2_UNIFIED_CHECKLIST.md`](./CORE2_UNIFIED_CHECKLIST.md)
@@ -12,7 +12,7 @@
 | 2.1 | Schema Appwrite + dominio | ✓ cloud · ✓ dominio/DTO/mapper · ✓ net repos dash · ✓ operador net |
 | 2.2 | Operador `salida_venta` + finance | ✓ código (smoke dispositivo ☐) |
 | 2.3 | Panel factura + movements / ajuste | ✓ (B3.1–B3.3) |
-| 2.4 | Reportes + cola UNVERIFIED | parcial (B4.1 ✓ · B4.2 ☐) |
+| 2.4 | Reportes + cola UNVERIFIED | ✓ (B4.1 + B4.2) |
 | 2.5 | Reservas de taller | ☐ |
 | 2.6 | Seguridad + DoD | ☐ |
 
@@ -28,8 +28,9 @@
 
 - B3.1–B3.3: entrada formal, factura multi-línea, ajuste auditado, vista Inventario
 - B4.1: cola pendientes por antigüedad en Ventas
-- Siguiente: B4.2 resumen ingresos/COGS/margen
+- B4.2: resumen ingresos/COGS/margen (sale_finance_event)
+- Siguiente: B5 reservas de taller
 
 ## Cómo cerrar
 
-Ver DoD en plan + bloques B4–B6 del checklist unificado.
+Ver DoD en plan + bloques B5–B6 del checklist unificado.
