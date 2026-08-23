@@ -3,7 +3,7 @@
 **Checklist operativo unificado:** [`CORE2_UNIFIED_CHECKLIST.md`](./CORE2_UNIFIED_CHECKLIST.md)  
 **Rama de trabajo:** `Core2` · merges incrementales a `master` cuando el bloque esté verde.  
 **Última actualización:** 2026-08-23  
-**Estado:** schema Appwrite **✓** · ejecución código formal ~10% (baseline + dominio parcial)  
+**Estado:** schema Appwrite **✓** · B4.1 ✓  
 **Repos:** dash_alejo_taller + AlejoTaller (operador / web)
 
 **Fórmula:** `available = max(0, existence − reserved)` · **COGS:** `last_unit_cost × qty` al VERIFIED.
@@ -14,7 +14,7 @@
 
 ```text
 Rama: Core2
-Fase actual: B3.3 ✓ · siguiente B4.1 cola UNVERIFIED
+Fase actual: B4.1 ✓ · siguiente B4.2 resumen finance
 Core 2 cerrado: NO
 ```
 
@@ -90,8 +90,8 @@ Seguimiento en checklist unificado B2. Dash no es primario.
 
 ## Fase 2.4 — Reportes y cola
 
-- [ ] Cola UNVERIFIED por antigüedad
-- [ ] Resumen ingresos/COGS/margen (solo VERIFIED)
+- [x] Cola UNVERIFIED por antigüedad (B4.1)
+- [ ] Resumen ingresos/COGS/margen (solo VERIFIED) (B4.2)
 
 ---
 

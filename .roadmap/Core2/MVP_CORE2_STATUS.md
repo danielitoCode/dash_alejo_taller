@@ -1,7 +1,7 @@
 # Core 2 — Estado MVP Back-office
 
 **Última actualización:** 2026-08-23  
-**Veredicto:** **En curso** — B3.3 ✓ (ajuste + Inventario); siguiente **B4.1 cola UNVERIFIED**.  
+**Veredicto:** **En curso** — B4.1 ✓ cola UNVERIFIED; siguiente **B4.2 resumen finance**.  
 **Core 2 dash cerrado:** ☐  
 **Rama:** `Core2`  
 **Checklist unificado:** [`CORE2_UNIFIED_CHECKLIST.md`](./CORE2_UNIFIED_CHECKLIST.md)
@@ -12,7 +12,7 @@
 | 2.1 | Schema Appwrite + dominio | ✓ cloud · ✓ dominio/DTO/mapper · ✓ net repos dash · ✓ operador net |
 | 2.2 | Operador `salida_venta` + finance | ✓ código (smoke dispositivo ☐) |
 | 2.3 | Panel factura + movements / ajuste | ✓ (B3.1–B3.3) |
-| 2.4 | Reportes + cola UNVERIFIED | ☐ |
+| 2.4 | Reportes + cola UNVERIFIED | parcial (B4.1 ✓ · B4.2 ☐) |
 | 2.5 | Reservas de taller | ☐ |
 | 2.6 | Seguridad + DoD | ☐ |
 
@@ -27,7 +27,8 @@
 ## Código baseline (2026-08-23)
 
 - B3.1–B3.3: entrada formal, factura multi-línea, ajuste auditado, vista Inventario
-- Siguiente: B4.1 cola UNVERIFIED por antigüedad
+- B4.1: cola pendientes por antigüedad en Ventas
+- Siguiente: B4.2 resumen ingresos/COGS/margen
 
 ## Cómo cerrar
 
