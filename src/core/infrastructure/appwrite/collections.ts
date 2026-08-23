@@ -15,6 +15,8 @@ export const APPWRITE_COLLECTIONS = {
     purchaseEntry: "purchase_entry",
     purchaseEntryLine: "purchase_entry_line",
     saleFinanceEvent: "sale_finance_event",
+    /** Core 2 B5 — reservas de taller */
+    workshopReservation: "workshop_reservation",
 } as const
 
 export type AppwriteCollectionId =
