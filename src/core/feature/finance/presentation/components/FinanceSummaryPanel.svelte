@@ -85,6 +85,7 @@
                         on:click={() => load(d)}
                         disabled={loading}
                         aria-label="Últimos {d} días"
+                        title={TIPS.range}
                     >
                         {d} días
                         <span class="fp-tip" role="tooltip">{TIPS.range}</span>
@@ -97,6 +98,7 @@
                 on:click={() => load(rangeDays)}
                 disabled={loading}
                 aria-label="Actualizar y reconciliar"
+                title={TIPS.refresh}
             >
                 <Icon icon={RefreshCw} size={16} ariaLabel="" />
                 <span class="fp-refresh-label">Actualizar</span>
@@ -126,7 +128,7 @@
         </div>
     {:else}
         <div class="fp-kpis">
-            <article class="fp-kpi tip-host" tabindex="0">
+            <article class="fp-kpi tip-host" title={TIPS.ingresos}>
                 <div class="fp-ico revenue">
                     <Icon icon={BadgeDollarSign} size={20} ariaLabel="Ingresos" />
                 </div>
@@ -145,7 +147,7 @@
                 <span class="fp-tip" role="tooltip">{TIPS.ingresos}</span>
             </article>
 
-            <article class="fp-kpi tip-host" tabindex="0">
+            <article class="fp-kpi tip-host" title={TIPS.cogs}>
                 <div class="fp-ico cogs">
                     <Icon icon={Wallet} size={20} ariaLabel="COGS" />
                 </div>
@@ -164,7 +166,7 @@
                 <span class="fp-tip" role="tooltip">{TIPS.cogs}</span>
             </article>
 
-            <article class="fp-kpi tip-host" tabindex="0">
+            <article class="fp-kpi tip-host" title={TIPS.margen}>
                 <div class="fp-ico margin">
                     <Icon icon={TrendingUp} size={20} ariaLabel="Margen" />
                 </div>
@@ -183,7 +185,7 @@
                 <span class="fp-tip" role="tooltip">{TIPS.margen}</span>
             </article>
 
-            <article class="fp-kpi tip-host" tabindex="0">
+            <article class="fp-kpi tip-host" title={TIPS.count}>
                 <div class="fp-ico count">
                     <Icon icon={PiggyBank} size={20} ariaLabel="Eventos" />
                 </div>
@@ -201,7 +203,7 @@
         </div>
 
         {#if summary.byCurrency.length > 1}
-            <div class="fp-table-wrap tip-host" tabindex="0">
+            <div class="fp-table-wrap tip-host" title={TIPS.currency}>
                 <table class="fp-table">
                     <caption class="fp-caption">
                         Desglose por moneda
@@ -257,7 +259,6 @@
         max-width: 100%;
         box-sizing: border-box;
     }
-
     .fp-accent {
         height: 4px;
         border-radius: 18px 18px 0 0;
@@ -267,21 +268,13 @@
             color-mix(in srgb, var(--md-sys-color-primary) 40%, #22c55e)
         );
     }
-
     .fp-head {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: space-between;
-        gap: 14px;
-        align-items: flex-start;
-        padding: 16px 18px 12px;
-        min-width: 0;
+        display: flex; flex-wrap: wrap; justify-content: space-between; gap: 14px;
+        align-items: flex-start; padding: 16px 18px 12px; min-width: 0;
     }
-
     .fp-head-main { min-width: 0; flex: 1 1 220px; }
     .fp-brand { display: flex; gap: 12px; align-items: flex-start; min-width: 0; }
     .fp-brand-text { min-width: 0; }
-
     .fp-brand-ico {
         width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center;
         color: var(--md-sys-color-primary);
@@ -289,56 +282,42 @@
         border: 1px solid color-mix(in srgb, var(--md-sys-color-primary) 24%, transparent);
         flex-shrink: 0;
     }
-
     .fp-title { margin: 0; font-size: 1.08rem; font-weight: 850; letter-spacing: -0.02em; }
     .fp-sub {
         margin: 4px 0 0; font-size: 0.82rem; color: var(--md-sys-color-on-surface-variant);
         line-height: 1.4; max-width: 42rem;
     }
     .fp-sub code { font-size: 0.76rem; word-break: break-all; }
-
-    .fp-actions {
-        display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
-        flex: 0 1 auto; min-width: 0;
-    }
-
+    .fp-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; flex: 0 1 auto; min-width: 0; }
     .fp-ranges {
         display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 3px; border-radius: 12px;
         background: color-mix(in srgb, var(--md-sys-color-surface-variant) 35%, transparent);
         border: 1px solid var(--md-sys-color-outline-variant);
     }
-
     .fp-range {
         position: relative; padding: 7px 12px; border-radius: 9px; border: none;
         background: transparent; color: inherit; font-weight: 700; font-size: 0.8rem;
         cursor: pointer; white-space: nowrap;
     }
-
     .fp-range.active {
         background: var(--md-sys-color-surface); color: var(--md-sys-color-primary);
         box-shadow: 0 1px 3px color-mix(in srgb, black 8%, transparent);
     }
-
     .fp-refresh {
         position: relative; display: inline-flex; align-items: center; gap: 6px;
-        padding: 8px 14px; border-radius: 10px;
-        border: 1px solid var(--md-sys-color-outline-variant);
+        padding: 8px 14px; border-radius: 10px; border: 1px solid var(--md-sys-color-outline-variant);
         background: color-mix(in srgb, var(--md-sys-color-surface) 90%, transparent);
         color: inherit; font-weight: 700; font-size: 0.82rem; cursor: pointer; white-space: nowrap;
     }
-
     .fp-refresh:hover {
         border-color: color-mix(in srgb, var(--md-sys-color-primary) 35%, var(--md-sys-color-outline-variant));
     }
-
     .fp-banner {
-        margin: 0 18px 10px; padding: 8px 12px; border-radius: 10px;
-        font-size: 0.84rem; font-weight: 650;
+        margin: 0 18px 10px; padding: 8px 12px; border-radius: 10px; font-size: 0.84rem; font-weight: 650;
         color: color-mix(in srgb, #0d9488 80%, var(--md-sys-color-on-surface));
         background: color-mix(in srgb, #0d9488 12%, transparent);
         border: 1px solid color-mix(in srgb, #0d9488 22%, transparent);
     }
-
     .fp-loading, .fp-error {
         margin: 0; padding: 28px 18px; text-align: center; color: var(--md-sys-color-on-surface-variant);
     }
@@ -349,12 +328,10 @@
         margin-top: 8px !important; font-size: 0.86rem; max-width: 36rem;
         margin-left: auto; margin-right: auto; line-height: 1.45;
     }
-
     .fp-kpis {
         display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 12px; padding: 4px 18px 18px; min-width: 0;
     }
-
     .fp-kpi {
         position: relative; display: flex; gap: 12px; align-items: center; padding: 14px;
         border-radius: 14px; border: 1px solid var(--md-sys-color-outline-variant);
@@ -363,12 +340,10 @@
         transition: border-color 140ms ease, box-shadow 140ms ease;
         min-width: 0; outline: none;
     }
-
-    .fp-kpi:hover, .fp-kpi:focus-visible {
+    .fp-kpi:hover {
         border-color: color-mix(in srgb, var(--md-sys-color-primary) 28%, var(--md-sys-color-outline-variant));
         box-shadow: 0 6px 16px color-mix(in srgb, black 6%, transparent);
     }
-
     .fp-ico {
         width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center;
         flex-shrink: 0; border: 1px solid transparent;
@@ -377,7 +352,6 @@
     .fp-ico.cogs { background: color-mix(in srgb, #d97706 14%, transparent); border-color: color-mix(in srgb, #d97706 22%, transparent); color: #d97706; }
     .fp-ico.margin { background: color-mix(in srgb, #2563eb 14%, transparent); border-color: color-mix(in srgb, #2563eb 22%, transparent); color: #2563eb; }
     .fp-ico.count { background: color-mix(in srgb, #7c3aed 14%, transparent); border-color: color-mix(in srgb, #7c3aed 22%, transparent); color: #7c3aed; }
-
     .fp-kpi-body { min-width: 0; display: grid; gap: 2px; }
     .fp-label {
         display: inline-flex; align-items: center; gap: 4px;
@@ -391,7 +365,6 @@
         overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .fp-cur { font-size: 0.72rem; font-weight: 750; margin-left: 4px; opacity: 0.75; }
-
     .tip-host { position: relative; }
     .fp-tip {
         position: absolute; z-index: 40; left: 50%; bottom: calc(100% + 10px);
@@ -411,19 +384,14 @@
         border: 6px solid transparent;
         border-top-color: color-mix(in srgb, var(--md-sys-color-surface-container-highest) 94%, black);
     }
-    .tip-host:hover > .fp-tip,
-    .tip-host:focus-visible > .fp-tip,
-    .tip-host:focus-within > .fp-tip {
+    .tip-host:hover > .fp-tip {
         opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); transition-delay: 0s;
     }
     .fp-tip-table {
         left: 12px; right: 12px; width: auto; max-width: none;
         transform: translateX(0) translateY(4px);
     }
-    .tip-host:hover > .fp-tip-table,
-    .tip-host:focus-visible > .fp-tip-table,
-    .tip-host:focus-within > .fp-tip-table { transform: translateX(0) translateY(0); }
-
+    .tip-host:hover > .fp-tip-table { transform: translateX(0) translateY(0); }
     .fp-table-wrap {
         position: relative; margin: 0 18px 18px; overflow: auto; border-radius: 12px;
         border: 1px solid var(--md-sys-color-outline-variant);
@@ -447,11 +415,7 @@
         font-variant-numeric: tabular-nums;
     }
     .fp-table tr:last-child td { border-bottom: none; }
-
-    @media (max-width: 1100px) {
-        .fp-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
-
+    @media (max-width: 1100px) { .fp-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     @media (max-width: 768px) {
         .fp-head { flex-direction: column; align-items: stretch; padding: 14px 14px 10px; }
         .fp-actions { width: 100%; justify-content: space-between; }
@@ -460,26 +424,22 @@
         .fp-banner { margin: 0 14px 10px; }
         .fp-value { font-size: 1.1rem; }
     }
-
     @media (max-width: 560px) {
         .fp-kpis { grid-template-columns: 1fr; }
         .fp-brand-ico { width: 40px; height: 40px; }
         .fp-title { font-size: 1rem; }
         .fp-sub { font-size: 0.78rem; }
         .fp-actions { flex-direction: column; align-items: stretch; }
-        .fp-ranges { width: 100%; justify-content: stretch; }
+        .fp-ranges { width: 100%; }
         .fp-range { flex: 1 1 0; text-align: center; }
         .fp-refresh { width: 100%; justify-content: center; }
         .fp-tip {
             left: 8px; right: 8px; width: auto; max-width: none;
             transform: translateX(0) translateY(4px);
         }
-        .tip-host:hover > .fp-tip,
-        .tip-host:focus-visible > .fp-tip,
-        .tip-host:focus-within > .fp-tip { transform: translateX(0) translateY(0); }
+        .tip-host:hover > .fp-tip { transform: translateX(0) translateY(0); }
         .fp-tip::after { left: 24px; transform: none; }
     }
-
     @media (max-width: 420px) {
         .fp-table thead { display: none; }
         .fp-table tr {
@@ -497,7 +457,6 @@
         }
         .fp-table td:first-child { grid-column: 1 / -1; }
     }
-
     @media (prefers-reduced-motion: reduce) {
         .fp-kpi, .fp-tip { transition: none; }
     }
