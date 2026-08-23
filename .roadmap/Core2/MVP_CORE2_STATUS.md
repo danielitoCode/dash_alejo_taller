@@ -1,7 +1,7 @@
 # Core 2 — Estado MVP Back-office
 
 **Última actualización:** 2026-08-23  
-**Veredicto:** **En curso** — B4.2 ✓ resumen finance; siguiente **B5 reservas**.  
+**Veredicto:** **En curso** — B4 completo ✓; siguiente **B5 reservas de taller**.  
 **Core 2 dash cerrado:** ☐  
 **Rama:** `Core2`  
 **Checklist unificado:** [`CORE2_UNIFIED_CHECKLIST.md`](./CORE2_UNIFIED_CHECKLIST.md)
@@ -13,23 +13,20 @@
 | 2.2 | Operador `salida_venta` + finance | ✓ código (smoke dispositivo ☐) |
 | 2.3 | Panel factura + movements / ajuste | ✓ (B3.1–B3.3) |
 | 2.4 | Reportes + cola UNVERIFIED | ✓ (B4.1 + B4.2) |
-| 2.5 | Reservas de taller | ☐ |
+| 2.5 | Reservas de taller | ☐ ← siguiente |
 | 2.6 | Seguridad + DoD | ☐ |
 
-## Hecho (2026-08-19)
+## Hecho (2026-08-23)
 
-- [x] Collections Appwrite + permisos
-- [x] Soft-hold Core 1 intacto en `master`; trabajo en `Core2`
-- [x] Dominio/DTO/mapper + **net repositories** dash (inventory/purchase/finance)
-- [x] Constantes `APPWRITE_COLLECTIONS`
-- [x] Tests unitarios mapper round-trip
+- [x] B3 inventario formal (entrada, factura, ajuste, listados)
+- [x] B4.1 cola UNVERIFIED por antigüedad
+- [x] B4.2 resumen finance en Dashboard (confirm panel → event; reconcile; UX tooltips/responsive)
 
-## Código baseline (2026-08-23)
+## Pendiente inmediato
 
-- B3.1–B3.3: entrada formal, factura multi-línea, ajuste auditado, vista Inventario
-- B4.1: cola pendientes por antigüedad en Ventas
-- B4.2: resumen ingresos/COGS/margen (sale_finance_event)
-- Siguiente: B5 reservas de taller
+1. **B5** — collection + dominio + panel reservas taller (separado de Sale tienda)
+2. Smokes tuyos: B2 dispositivo; B3.3 ajuste (opcional)
+3. **B6** — permisos, CI final, smoke cruzado, merge a master
 
 ## Cómo cerrar
 

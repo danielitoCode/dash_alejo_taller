@@ -3,7 +3,7 @@
 **Espejo operativo.** Fuente de trabajo compartida con AlejoTaller.  
 **Rama:** `Core2` en **ambos** repos · **master** solo con merges recomendados.
 
-**Última actualización:** 2026-08-23 (B4.2 resumen finance VERIFIED)  
+**Última actualización:** 2026-08-23 (B4.2 cerrado · UX tooltips/responsive)  
 **Core 2 cerrado:** NO
 
 ### Reglas
@@ -70,27 +70,36 @@
 
 ---
 
-## Bloque 4 — Reportes + cola UNVERIFIED (dash)
+## Bloque 4 — Reportes + cola UNVERIFIED (dash) ✓
 
 - [x] Cola por antigüedad (B4.1) — sortSalesForQueue + badges en Ventas
-- [x] Resumen ingresos/COGS/margen (solo VERIFIED) (B4.2) — FinanceSummaryPanel + aggregate
+- [x] Resumen ingresos/COGS/margen solo VERIFIED (B4.2)
+  - [x] `aggregateFinanceSummary` + tests
+  - [x] `FinanceSummaryPanel` en Dashboard (estilo empresarial)
+  - [x] Confirm desde panel → escribe `sale_finance_event` (COGS = last_unit_cost × qty)
+  - [x] Reconciliación de VERIFIED previos sin evento (botón Actualizar)
+  - [x] Tooltips en KPIs + responsivo multi-breakpoint (desktop / tablet / móvil)
 
 ---
 
-## Bloque 5 — Reservas taller
+## Bloque 5 — Reservas taller ← **siguiente**
 
-- [ ] Collection + panel dash
-- [ ] (Opcional) solicitud cliente web
+- [ ] Collection Appwrite (p. ej. `workshop_reservation` o acordada) + permisos staff
+- [ ] Dominio + DTO + net repo + mapper (dash)
+- [ ] Panel dash: listado / alta / estados (no mezclar con Sale de tienda)
+- [ ] (Opcional) solicitud desde cliente web
+- [ ] Tests unitarios case-use / mapper
+- [ ] Smoke en consola Appwrite
 
 ---
 
 ## Bloque 6 — CI, permisos, cierre
 
 - [ ] Permisos auditados (consola Appwrite)
-- [x] CI verde en Core2 (dash quality + operador unit tests)
+- [x] CI verde en Core2 (dash quality + operador unit tests) — revalidar tras B4.2
 - [x] PRs abiertos Core2 → master (dash #1, AlejoTaller #11)
 - [ ] Merge PRs a master (tú en GitHub)
-- [ ] Smoke cruzado entrada → pedido → confirm → salida_venta + finance
+- [ ] Smoke cruzado: entrada → pedido → confirm → salida_venta + finance
 - [ ] STATUS cerrado ambos repos
 
 ---
@@ -98,7 +107,7 @@
 ## Orden
 
 ```text
-B0 ✓ → B1 ✓ → B2 ✓ → B3 ✓ → B4.1 ✓ → B4.2 ✓ resumen finance
+B0 ✓ → B1 ✓ → B2 ✓ → B3 ✓ → B4.1 ✓ → B4.2 ✓
   → B5 reservas taller ← siguiente  ·  B6 cierre
 ```
 
@@ -113,7 +122,7 @@ B0 ✓ → B1 ✓ → B2 ✓ → B3 ✓ → B4.1 ✓ → B4.2 ✓ resumen financ
 | 2026-08-21 | B3.1 Dar entrada → movement entrada | dash RegisterStockEntryCaseUse + unit tests |
 | 2026-08-21 | CI Core2 verde | dash a78b7c4; operador 9ef3378 |
 | 2026-08-21 | PRs merge | dash #1 · AlejoTaller #11 |
-| 2026-08-21 | B3.2 factura multi-línea | dash | RegisterPurchaseEntryCaseUse + UI + tests |
+| 2026-08-21 | B3.2 factura multi-línea | dash RegisterPurchaseEntryCaseUse + UI + tests |
 | 2026-08-23 | B3.3 ajuste + Inventario | dash RegisterStockAdjustment + InventoryTrace UI + RoleConfig inventory |
 | 2026-08-23 | B4.1 cola UNVERIFIED | dash sortSalesByAge + SaleManagement badges |
-| 2026-08-23 | B4.2 resumen finance | dash aggregateFinanceSummary + FinanceSummaryPanel en Dashboard |
+| 2026-08-23 | B4.2 resumen finance | aggregate + panel + confirm escribe event + reconcile + tooltips/responsive |
