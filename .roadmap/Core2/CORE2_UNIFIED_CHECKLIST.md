@@ -3,7 +3,7 @@
 **Espejo operativo.** Fuente de trabajo compartida con AlejoTaller.  
 **Rama:** `Core2` en **ambos** repos · **master** solo con merges recomendados.
 
-**Última actualización:** 2026-08-21 (B3.2 factura)  
+**Última actualización:** 2026-08-23 (B3.3 ajuste + listados Inventario)  
 **Core 2 cerrado:** NO
 
 ### Reglas
@@ -63,9 +63,10 @@
 - [x] Tests case-use (RegisterStockEntry + movement entrada)
 - [x] Factura multi-línea purchase_entry + lines + existence + movement (**B3.2**)
 - [x] Tests case-use RegisterPurchaseEntry + last_unit_cost
-- [ ] Ajuste auditado
-- [ ] Listados movements + facturas
-- [ ] **Smoke tuyo:** Dar entrada / factura → docs en Appwrite
+- [x] Ajuste auditado (B3.3) — RegisterStockAdjustmentCaseUse + UI Ajustar
+- [x] Listados movements + facturas (B3.3) — vista Inventario / InventoryTrace
+- [x] **Smoke tuyo:** factura multi-línea → docs en Appwrite (confirmado 2026-08-23)
+- [ ] **Smoke tuyo (opcional):** ajuste de stock → movement tipo `ajuste` en Appwrite
 
 ---
 
@@ -97,8 +98,8 @@
 ## Orden
 
 ```text
-B0 ✓ → B1 ✓ → B2 ✓ código → B3.1 ✓ → B3.2 ✓ código → smoke (tú)
-  → B3.3 ajuste/listados ← siguiente  ·  B4 → B5 → B6
+B0 ✓ → B1 ✓ → B2 ✓ código → B3.1 ✓ → B3.2 ✓ → B3.3 ✓ (ajuste + listados)
+  → B4.1 cola UNVERIFIED ← siguiente  ·  B4.2 resumen finance → B5 → B6
 ```
 
 ## Registro
@@ -113,3 +114,4 @@ B0 ✓ → B1 ✓ → B2 ✓ código → B3.1 ✓ → B3.2 ✓ código → smoke
 | 2026-08-21 | CI Core2 verde | dash a78b7c4; operador 9ef3378 |
 | 2026-08-21 | PRs merge | dash #1 · AlejoTaller #11 |
 | 2026-08-21 | B3.2 factura multi-línea | dash | RegisterPurchaseEntryCaseUse + UI + tests |
+| 2026-08-23 | B3.3 ajuste + Inventario | dash RegisterStockAdjustment + InventoryTrace UI + RoleConfig inventory |

@@ -2,7 +2,7 @@
 
 **Checklist operativo unificado:** [`CORE2_UNIFIED_CHECKLIST.md`](./CORE2_UNIFIED_CHECKLIST.md)  
 **Rama de trabajo:** `Core2` · merges incrementales a `master` cuando el bloque esté verde.  
-**Última actualización:** 2026-08-18  
+**Última actualización:** 2026-08-23  
 **Estado:** schema Appwrite **✓** · ejecución código formal ~10% (baseline + dominio parcial)  
 **Repos:** dash_alejo_taller + AlejoTaller (operador / web)
 
@@ -14,7 +14,7 @@
 
 ```text
 Rama: Core2
-Fase actual: B1 net repos (schema cloud ✓)
+Fase actual: B3.3 ✓ · siguiente B4.1 cola UNVERIFIED
 Core 2 cerrado: NO
 ```
 
@@ -39,23 +39,23 @@ Core 2 cerrado: NO
 ### Movimientos de stock
 - [x] Collection `stock_movements` en Appwrite
 - [x] Campos canónicos (product_id, type, quantity, balance_after, reason, user_id, sale_id?, …)
-- [ ] Enum `type` cableado en código de repos net
+- [x] Enum `type` cableado en código de repos net
 - [x] Permisos staff/operador (no cliente)
 
 ### Finanzas de entrada
 - [x] `supplier`
 - [x] `purchase_entry`
 - [x] `purchase_entry_line`
-- [ ] Enum concepto en código net
+- [x] Enum concepto en código net
 
 ### Finanzas de venta
 - [x] `sale_finance_event`
 - [x] `last_unit_cost` en product
-- [ ] DTO + **net** repo dash (lectura/escritura según fase)
-- [ ] Test mapper round-trip (completar si falta)
+- [x] DTO + **net** repo dash (lectura/escritura según fase)
+- [x] Test mapper round-trip
 
 **Salida 2.1 cloud:** ✓  
-**Salida 2.1 código (B1):** pendiente net repos
+**Salida 2.1 código (B1):** ✓
 
 ---
 
@@ -63,26 +63,28 @@ Core 2 cerrado: NO
 
 Seguimiento en checklist unificado B2. Dash no es primario.
 
-- [ ] salida_venta + finance al VERIFIED (operador)
+- [x] salida_venta + finance al VERIFIED (operador) — B2 código
 
 ---
 
 ## Fase 2.3 — Panel factura / movements / ajuste (dash)
 
 ### Lectura
-- [ ] Listado stock_movements
-- [ ] Listado/detalle purchase_entry
+- [x] Listado stock_movements (Inventario → Movimientos)
+- [x] Listado/detalle purchase_entry (Inventario → Facturas de entrada)
 
 ### Factura entrada
-- [ ] UX multi-línea + supplier + costs + movement entrada + last_unit_cost
+- [x] UX multi-línea + supplier + costs + movement entrada + last_unit_cost (B3.2)
 
 ### Atajo
-- [x] «Dar entrada» existence (Core 1) — **debe** pasar a escribir movement en B3
-- [ ] Atajo genera movement (+ costo opcional)
+- [x] «Dar entrada» existence (Core 1) formalizado con movement (B3.1)
+- [x] Entrada formal preferida vía factura multi-línea; entrada rápida por ítem retirada de UI
 
 ### Ajuste / devolución
-- [ ] Ajuste auditado
-- [ ] Devolución si aplica política
+- [x] Ajuste auditado (B3.3) — RegisterStockAdjustmentCaseUse + modal
+- [ ] Devolución si aplica política (fuera de B3.3)
+
+**Salida 2.3:** ✓ código (smoke factura confirmado)
 
 ---
 
