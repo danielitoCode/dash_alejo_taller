@@ -1,0 +1,271 @@
+.nested-shell {
+        height: 100dvh;
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        background: var(--md-sys-color-background);
+        color: var(--md-sys-color-on-background);
+        overflow: hidden;
+    }
+
+    .sidebar {
+        border-right: 1px solid var(--md-sys-color-outline-variant);
+        background: var(--md-sys-color-surface);
+        padding: 14px;
+        height: 100%;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .brand {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .brand-logo {
+        width: 44px;
+        height: 44px;
+        object-fit: contain;
+        opacity: 0.95;
+    }
+
+    .brand-meta {
+        min-width: 0;
+        display: grid;
+        gap: 2px;
+    }
+
+    .sidebar-head h2 {
+        margin: 0;
+        font-size: 1.05rem;
+        line-height: 1.15;
+    }
+
+    .sidebar-head p {
+        margin: 0;
+        color: var(--md-sys-color-on-surface-variant);
+        font-size: 0.92rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .sidebar-nav {
+        display: grid;
+        gap: 8px;
+        align-content: start;
+        overflow: auto;
+        min-height: 0;
+        padding-right: 6px;
+    }
+
+    .sidebar-nav button,
+    .logout {
+        text-align: left;
+        border: 1px solid var(--md-sys-color-outline-variant);
+        background: transparent;
+        color: var(--md-sys-color-on-surface);
+        border-radius: 12px;
+        padding: 10px 12px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 650;
+        transition: background-color 160ms ease, border-color 160ms ease, transform 120ms ease;
+    }
+
+    .nav-ico {
+        opacity: 0.92;
+    }
+
+    .sidebar-nav button:hover {
+        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 40%, transparent);
+    }
+
+    .sidebar-nav button:active {
+        transform: translateY(1px);
+    }
+
+    .sidebar-nav button.selected {
+        background: var(--md-sys-color-primary);
+        color: var(--md-sys-color-on-primary);
+        border-color: var(--md-sys-color-primary);
+    }
+
+    .sidebar-nav button.selected .nav-ico {
+        opacity: 1;
+    }
+
+    .logout {
+        margin-top: auto;
+        justify-content: center;
+        color: var(--md-sys-color-on-error-container);
+        background: color-mix(in srgb, var(--md-sys-color-error-container) 72%, transparent);
+        border-color: color-mix(in srgb, var(--md-sys-color-error) 22%, transparent);
+    }
+
+    .content {
+        height: 100%;
+        padding: 16px;
+        min-width: 0;
+        overflow: auto;
+    }
+
+    .route-stage {
+        min-height: 100%;
+        display: grid;
+        align-content: start;
+    }
+
+    .top-mobile {
+        display: none;
+    }
+
+    .scrim {
+        display: none;
+    }
+
+    @media (max-width: 860px) {
+        .nested-shell {
+            grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+            position: fixed;
+            inset: 0 auto 0 0;
+            width: min(84vw, 320px);
+            z-index: 40;
+            transform: translateX(-105%);
+            transition: transform 180ms ease;
+            box-shadow: 0 20px 35px rgba(0, 0, 0, 0.25);
+        }
+
+        .sidebar.open {
+            transform: translateX(0);
+        }
+
+        .content {
+            height: 100dvh;
+            padding: 12px;
+        }
+
+        .top-mobile {
+            display: grid;
+            grid-template-columns: auto 1fr auto auto;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .menu-toggle {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            border: 1px solid var(--md-sys-color-outline-variant);
+            background: var(--md-sys-color-surface);
+            display: grid;
+            place-items: center;
+        }
+
+        .menu-ico {
+            opacity: 0.9;
+        }
+
+        .refresh-role-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            border: 1px solid var(--md-sys-color-outline-variant);
+            background: var(--md-sys-color-surface);
+            display: grid;
+            place-items: center;
+            cursor: pointer;
+            font-size: 20px;
+            transition: all 200ms ease;
+        }
+
+        .refresh-role-btn:hover {
+            background: var(--md-sys-color-surface-dim);
+            border-color: var(--md-sys-color-outline);
+        }
+
+        .refresh-role-btn:active {
+            transform: scale(0.95);
+        }
+
+        .ghost {
+            opacity: 0;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        .scrim {
+            display: block;
+            position: fixed;
+            inset: 0;
+            background: color-mix(in srgb, black 30%, transparent);
+            z-index: 20;
+            border: 0;
+        }
+    }
+
+    @media (min-width: 861px) and (max-width: 1100px) {
+        .nested-shell {
+            grid-template-columns: 84px 1fr;
+        }
+
+        .sidebar {
+            padding: 12px 10px;
+        }
+
+        .brand {
+            justify-content: center;
+        }
+
+        .brand-logo {
+            width: 46px;
+            height: 46px;
+        }
+
+        .brand-meta {
+            display: none;
+        }
+
+        .sidebar-nav button,
+        .logout {
+            justify-content: center;
+            padding: 10px;
+            border-radius: 14px;
+        }
+
+        .sidebar-nav button .nav-label,
+        .logout .logout-label {
+            display: none;
+        }
+
+        .logout {
+            width: 100%;
+        }
+    }
+
+    .sidebar-nav::-webkit-scrollbar,
+    .content::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+
+    .sidebar-nav::-webkit-scrollbar-thumb,
+    .content::-webkit-scrollbar-thumb {
+        background: color-mix(in srgb, var(--md-sys-color-outline) 30%, transparent);
+        border-radius: 999px;
+        border: 2px solid transparent;
+        background-clip: padding-box;
+    }
+
+    .sidebar-nav::-webkit-scrollbar-track,
+    .content::-webkit-scrollbar-track {
+        background: transparent;
+    }
