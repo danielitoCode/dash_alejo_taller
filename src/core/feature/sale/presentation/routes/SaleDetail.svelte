@@ -87,13 +87,14 @@
         const ok = window.confirm(
             "Confirmar esta venta (VERIFIED)?\n\n" +
                 "\u2022 existence -= qty por l\u00ednea\n" +
-                "\u2022 reserved -= qty por l\u00ednea\n"
+                "\u2022 reserved -= qty por l\u00ednea\n" +
+                "\u2022 stock_movements salida_venta + finance"
         );
         if (!ok) return;
         confirming = true;
         try {
             await saleStore.confirmSale(sale.id);
-            toastStore.success("Venta confirmada (VERIFIED). Stock actualizado en panel.");
+            toastStore.success("Venta confirmada (VERIFIED). Stock y movimiento registrados.");
         } catch (e: any) {
             logger.error(e?.message ?? e, e?.stack);
             toastStore.error(e instanceof Error ? e.message : "No se pudo confirmar.");
@@ -107,7 +108,7 @@
         const ok = window.confirm(
             "Rechazar esta venta (DELETED)?\n\n" +
                 "\u2022 reserved -= qty por l\u00ednea\n" +
-                "\u2022 existence NO cambia\n\n"
+                "\u2022 existence NO cambia\n"
         );
         if (!ok) return;
         rejecting = true;
@@ -137,19 +138,14 @@
     </header>
 
     {#if !saleId}
-        <div class="mgmt-card">
-            <p class="mgmt-muted">Falta el id de la venta.</p>
-        </div>
+        <div class="mgmt-card"><p class="mgmt-muted">Falta el id de la venta.</p></div>
     {:else if loading && !sale}
-        <div class="mgmt-card">
-            <p class="mgmt-muted">Cargando...</p>
-        </div>
+        <div class="mgmt-card"><p class="mgmt-muted">Cargando...</p></div>
     {:else if !sale}
-        <div class="mgmt-card">
-            <p class="mgmt-muted">No se encontr\u00f3 la venta.</p>
-        </div>
+        <div class="mgmt-card"><p class="mgmt-muted">No se encontr\u00f3 la venta.</p></div>
     {:else}
         <div class="detail-card">
+            <div class="detail-accent" aria-hidden="true"></div>
             <div class="head">
                 <div class="title">
                     <div class="ico">
@@ -168,24 +164,23 @@
                             <Icon icon={Truck} size={14} ariaLabel="Entrega" />
                             {deliveryLabel(sale.deliveryType)}
                         </p>
-
                         <button
                             type="button"
                             class="details-toggle"
                             aria-expanded={showDetails}
                             on:click={() => (showDetails = !showDetails)}
+                            title="IDs, fechas y reglas de confirmaci\u00f3n/rechazo"
                         >
                             <Icon icon={ChevronDown} size={16} ariaLabel="" />
                             {showDetails ? "Ocultar detalles" : "Ver detalles"}
                         </button>
-
                         {#if showDetails}
                             <div class="meta" id="sale-extra-details">
-                                <span class="meta-item">
+                                <span class="meta-item" title="Identificador del documento sale">
                                     <Icon icon={Hash} size={14} ariaLabel="Id venta" />
                                     <code class="id-full">{sale.id}</code>
                                 </span>
-                                <span class="meta-item">
+                                <span class="meta-item" title="Usuario cliente del pedido">
                                     <Icon icon={User} size={14} ariaLabel="User id" />
                                     <code class="id-full">{sale.userId || "\u2014"}</code>
                                 </span>
@@ -201,9 +196,9 @@
                                     <Icon icon={Clock} size={14} ariaLabel="Actualizado" />
                                     Actualizado: {formatIso(sale.updatedAtIso)}
                                 </span>
-                                <span class="meta-item">
+                                <span class="meta-item" title="Efecto en stock al confirmar o rechazar">
                                     <Icon icon={ShieldCheck} size={14} ariaLabel="Operaci\u00f3n" />
-                                    Confirm: existence\u2212=qty + reserved\u2212=qty \u00b7 Reject: solo reserved\u2212=qty
+                                    Confirm: existence\u2212=qty + reserved\u2212=qty + salida_venta \u00b7 Reject: solo reserved\u2212=qty
                                 </span>
                             </div>
                         {/if}
@@ -211,16 +206,23 @@
                 </div>
 
                 <div class="right">
-                    <span class="pill {saleStateClass(sale.verified)}">
+                    <span
+                        class="pill {saleStateClass(sale.verified)}"
+                        title={sale.verified === BuyState.UNVERIFIED
+                            ? "Pendiente de aprobaci\u00f3n"
+                            : sale.verified === BuyState.VERIFIED
+                              ? "Confirmada: stock y finance aplicados"
+                              : "Rechazada: reserved liberado"}
+                    >
                         {saleStateLabel(sale.verified)}
                         <span class="pill-code">({sale.verified})</span>
                     </span>
-                    <div class="amount">{formatSaleMoney(sale.amount, currencyCode)}</div>
+                    <div class="amount" title="Importe total del pedido">{formatSaleMoney(sale.amount, currencyCode)}</div>
                     <div class="currency-note">
                         {#if currencyCode}
                             Moneda del documento: <strong>{currencyCode}</strong>
                         {:else}
-                            Sin <code>currency</code> en documento (no se fuerza USD)
+                            Sin <code>currency</code> en documento
                         {/if}
                     </div>
 
@@ -230,6 +232,7 @@
                                 class="mgmt-btn primary confirm-btn"
                                 type="button"
                                 disabled={busy}
+                                title="Confirma: baja stock, escribe salida_venta y finance"
                                 on:click={onConfirm}
                             >
                                 <Icon icon={CheckCircle2} size={18} ariaLabel="Confirmar" />
@@ -239,6 +242,7 @@
                                 class="mgmt-btn danger reject-btn"
                                 type="button"
                                 disabled={busy}
+                                title="Rechaza: libera reserved sin salida de mercanc\u00eda"
                                 on:click={onReject}
                             >
                                 <Icon icon={XCircle} size={18} ariaLabel="Rechazar" />
@@ -266,7 +270,7 @@
                                     Unidad: {formatSaleMoney(line.price, currencyCode)}
                                     \u00b7 L\u00ednea: {formatSaleMoney(saleLineTotal(line), currencyCode)}
                                     {#if avail != null}
-                                        \u00b7 <span class="avail">disponible ahora: {avail}</span>
+                                        \u00b7 <span class="avail" title="available = max(0, existence \u2212 reserved)">disponible ahora: {avail}</span>
                                     {/if}
                                 </p>
                             </div>
@@ -280,300 +284,122 @@
 </section>
 
 <style>
-    .sale-detail {
-        gap: 14px;
-    }
-
+    .sale-detail { gap: 14px; }
     .detail-card {
+        position: relative;
         border: 1px solid var(--md-sys-color-outline-variant);
         border-radius: 18px;
-        padding: 16px;
-        background: color-mix(in srgb, var(--md-sys-color-surface) 90%, transparent);
+        padding: 0;
+        background: linear-gradient(
+            165deg,
+            color-mix(in srgb, var(--md-sys-color-surface-variant) 16%, var(--md-sys-color-surface)) 0%,
+            var(--md-sys-color-surface) 40%
+        );
         display: grid;
-        gap: 18px;
+        gap: 0;
+        box-shadow: 0 1px 2px color-mix(in srgb, black 5%, transparent), 0 12px 32px color-mix(in srgb, black 6%, transparent);
+        overflow: hidden;
     }
-
+    .detail-accent {
+        height: 4px;
+        background: linear-gradient(90deg, var(--md-sys-color-primary), color-mix(in srgb, var(--md-sys-color-primary) 40%, #22c55e));
+    }
     .head {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 16px;
-        justify-content: space-between;
-        align-items: flex-start;
+        display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; align-items: flex-start;
+        padding: 16px 18px 8px;
     }
-
-    .title {
-        display: flex;
-        gap: 12px;
-        align-items: flex-start;
-        min-width: 0;
-        flex: 1 1 240px;
-    }
-
-    .title h1 {
-        margin: 0;
-        font-size: 1.2rem;
-        font-weight: 900;
-    }
-
+    .title { display: flex; gap: 12px; align-items: flex-start; min-width: 0; flex: 1 1 240px; }
+    .title h1 { margin: 0; font-size: 1.2rem; font-weight: 900; letter-spacing: -0.02em; }
     .sub-line {
-        margin: 4px 0 0;
-        display: inline-flex;
-        gap: 6px;
-        align-items: center;
-        flex-wrap: wrap;
-        font-size: 0.9rem;
-        color: color-mix(in srgb, var(--md-sys-color-on-background) 75%, transparent);
+        margin: 4px 0 0; display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap;
+        font-size: 0.9rem; color: color-mix(in srgb, var(--md-sys-color-on-background) 75%, transparent);
     }
-
     .ico {
-        width: 38px;
-        height: 38px;
-        border-radius: 14px;
-        display: grid;
-        place-items: center;
-        border: 1px solid var(--md-sys-color-outline-variant);
-        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 32%, transparent);
-        flex-shrink: 0;
+        width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; flex-shrink: 0;
+        border: 1px solid color-mix(in srgb, var(--md-sys-color-primary) 24%, transparent);
+        background: color-mix(in srgb, var(--md-sys-color-primary) 12%, transparent);
+        color: var(--md-sys-color-primary);
     }
-
-    .title-text {
-        min-width: 0;
-    }
-
-    .sub-line.compact {
-        display: inline-flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 6px;
-        margin-top: 4px;
-    }
-
-    .dot {
-        opacity: 0.55;
-    }
-
+    .title-text { min-width: 0; }
+    .sub-line.compact { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 4px; }
+    .dot { opacity: 0.55; }
     .details-toggle {
-        margin-top: 8px;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
+        margin-top: 8px; display: inline-flex; align-items: center; gap: 6px;
         border: 1px solid var(--md-sys-color-outline-variant);
-        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 28%, transparent);
-        color: var(--md-sys-color-on-surface);
-        border-radius: 999px;
-        padding: 6px 12px;
-        font: inherit;
-        font-size: 0.84rem;
-        font-weight: 700;
-        cursor: pointer;
-        transition: background-color 140ms ease, border-color 140ms ease;
+        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 25%, transparent);
+        color: inherit; font: inherit; font-size: 0.84rem; font-weight: 700;
+        padding: 6px 12px; border-radius: 10px; cursor: pointer;
     }
-
-    .details-toggle:hover {
-        border-color: color-mix(in srgb, var(--md-sys-color-outline) 40%, var(--md-sys-color-outline-variant));
-        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 42%, transparent);
-    }
-
-    .details-toggle :global(svg) {
-        transition: transform 160ms ease;
-    }
-
-    .details-toggle[aria-expanded="true"] :global(svg) {
-        transform: rotate(180deg);
-    }
-
     .meta {
-        margin-top: 10px;
-        display: grid;
-        gap: 8px;
-        color: color-mix(in srgb, var(--md-sys-color-on-background) 78%, transparent);
-        font-size: 0.86rem;
-        padding: 10px 12px;
-        border-radius: 12px;
+        margin-top: 10px; display: grid; gap: 8px; font-size: 0.86rem;
+        padding: 10px 12px; border-radius: 12px;
         border: 1px solid var(--md-sys-color-outline-variant);
         background: color-mix(in srgb, var(--md-sys-color-surface-variant) 18%, transparent);
+        color: var(--md-sys-color-on-surface-variant);
     }
-
-    .meta-item {
-        display: inline-flex;
-        gap: 6px;
-        align-items: flex-start;
-        min-width: 0;
-    }
-
-    .id-full {
-        font-size: 0.78rem;
-        word-break: break-all;
-    }
-
-    .right {
-        display: grid;
-        gap: 10px;
-        justify-items: end;
-        min-width: 180px;
-    }
-
-    .amount {
-        font-size: 1.45rem;
-        font-weight: 1000;
-        letter-spacing: -0.02em;
-    }
-
+    .meta-item { display: inline-flex; gap: 6px; align-items: flex-start; min-width: 0; }
+    .id-full { font-size: 0.78rem; word-break: break-all; }
+    .right { display: grid; gap: 10px; justify-items: end; min-width: 180px; }
+    .amount { font-size: 1.45rem; font-weight: 1000; letter-spacing: -0.02em; }
     .currency-note {
-        font-size: 0.8rem;
-        text-align: right;
-        color: color-mix(in srgb, var(--md-sys-color-on-background) 70%, transparent);
-        max-width: 220px;
+        font-size: 0.8rem; text-align: right;
+        color: color-mix(in srgb, var(--md-sys-color-on-background) 70%, transparent); max-width: 220px;
     }
-
-    .decision-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        justify-content: flex-end;
-    }
-
-    .confirm-btn,
-    .reject-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-    }
-
+    .decision-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+    .confirm-btn, .reject-btn { display: inline-flex; align-items: center; gap: 8px; }
     .mgmt-btn.danger {
         border: 1px solid color-mix(in srgb, #ef4444 45%, var(--md-sys-color-outline-variant));
-        background: color-mix(in srgb, #ef4444 18%, transparent);
-        color: #fca5a5;
-        border-radius: 12px;
-        padding: 10px 14px;
-        cursor: pointer;
-        font-weight: 700;
+        background: color-mix(in srgb, #ef4444 18%, transparent); color: #fca5a5;
+        border-radius: 12px; padding: 10px 14px; cursor: pointer; font-weight: 700;
     }
-
-    .mgmt-btn.danger:disabled {
-        opacity: 0.55;
-        cursor: not-allowed;
-    }
-
+    .mgmt-btn.danger:disabled { opacity: 0.55; cursor: not-allowed; }
     .pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 12px;
-        border-radius: 999px;
-        font-size: 0.82rem;
-        font-weight: 800;
-        border: 1px solid var(--md-sys-color-outline-variant);
+        display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px;
+        font-size: 0.82rem; font-weight: 800; border: 1px solid var(--md-sys-color-outline-variant);
+        cursor: help;
     }
-
     .pill.pending {
         background: color-mix(in srgb, #f59e0b 18%, transparent);
-        border-color: color-mix(in srgb, #f59e0b 40%, var(--md-sys-color-outline-variant));
-        color: #fbbf24;
+        border-color: color-mix(in srgb, #f59e0b 40%, var(--md-sys-color-outline-variant)); color: #fbbf24;
     }
-
     .pill.ok {
-        background: color-mix(in srgb, var(--md-sys-color-primary) 16%, transparent);
-        border-color: color-mix(in srgb, var(--md-sys-color-primary) 40%, var(--md-sys-color-outline-variant));
+        background: color-mix(in srgb, #16a34a 14%, transparent);
+        border-color: color-mix(in srgb, #16a34a 28%, transparent); color: #15803d;
     }
-
     .pill.bad {
         background: color-mix(in srgb, #ef4444 16%, transparent);
-        border-color: color-mix(in srgb, #ef4444 40%, var(--md-sys-color-outline-variant));
-        color: #fca5a5;
+        border-color: color-mix(in srgb, #ef4444 40%, var(--md-sys-color-outline-variant)); color: #fca5a5;
     }
-
-    .pill-code {
-        font-weight: 600;
-        opacity: 0.85;
-        font-size: 0.75rem;
-    }
-
+    .pill-code { font-weight: 600; opacity: 0.85; font-size: 0.75rem; }
     .lines-section {
-        display: grid;
-        gap: 10px;
-        border-top: 1px solid var(--md-sys-color-outline-variant);
-        padding-top: 14px;
+        display: grid; gap: 10px; border-top: 1px solid var(--md-sys-color-outline-variant);
+        padding: 14px 18px 18px;
     }
-
-    .lines-head {
-        display: flex;
-        justify-content: space-between;
-        align-items: baseline;
-        gap: 12px;
-        flex-wrap: wrap;
-    }
-
-    .lines-head h2 {
-        margin: 0;
-        font-size: 1rem;
-        font-weight: 850;
-    }
-
-    .lines-sum {
-        font-size: 0.88rem;
-        font-weight: 700;
-        color: color-mix(in srgb, var(--md-sys-color-on-background) 80%, transparent);
-    }
-
-    .lines {
-        display: grid;
-        gap: 8px;
-    }
-
+    .lines-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+    .lines-head h2 { margin: 0; font-size: 1rem; font-weight: 850; }
+    .lines-sum { font-size: 0.88rem; font-weight: 700; color: color-mix(in srgb, var(--md-sys-color-on-background) 80%, transparent); }
+    .lines { display: grid; gap: 8px; }
     .line-row {
-        display: flex;
-        justify-content: space-between;
-        gap: 12px;
-        align-items: flex-start;
-        padding: 12px 14px;
-        border-radius: 14px;
+        display: flex; justify-content: space-between; gap: 12px; align-items: flex-start;
+        padding: 12px 14px; border-radius: 14px;
         border: 1px solid var(--md-sys-color-outline-variant);
-        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 14%, transparent);
+        border-left: 3px solid color-mix(in srgb, var(--md-sys-color-primary) 45%, transparent);
+        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 18%, transparent);
     }
-
-    .line-main {
-        min-width: 0;
-    }
-
-    .line-title {
-        font-weight: 800;
-    }
-
-    .line-sub {
-        margin: 2px 0 0;
-        font-size: 0.84rem;
-        color: color-mix(in srgb, var(--md-sys-color-on-background) 72%, transparent);
-    }
-
+    .line-main { min-width: 0; }
+    .line-title { font-weight: 800; }
+    .line-sub { margin: 2px 0 0; font-size: 0.84rem; color: color-mix(in srgb, var(--md-sys-color-on-background) 72%, transparent); }
     .line-qty {
-        font-weight: 900;
-        white-space: nowrap;
+        font-weight: 900; white-space: nowrap; font-variant-numeric: tabular-nums;
+        padding: 4px 10px; border-radius: 8px;
+        background: color-mix(in srgb, var(--md-sys-color-primary) 10%, transparent);
+        color: var(--md-sys-color-primary); font-size: 0.9rem;
     }
-
-    .avail {
-        color: color-mix(in srgb, var(--md-sys-color-primary) 85%, white);
-        font-weight: 650;
-    }
-
+    .avail { color: color-mix(in srgb, var(--md-sys-color-primary) 85%, white); font-weight: 650; }
     @media (max-width: 720px) {
-        .right {
-            width: 100%;
-            justify-items: stretch;
-        }
-
-        .decision-actions {
-            justify-content: stretch;
-        }
-
-        .decision-actions .mgmt-btn {
-            flex: 1;
-            justify-content: center;
-        }
-
-        .currency-note {
-            text-align: left;
-            max-width: none;
-        }
+        .right { width: 100%; justify-items: stretch; }
+        .decision-actions { justify-content: stretch; }
+        .decision-actions .mgmt-btn { flex: 1; justify-content: center; }
+        .currency-note { text-align: left; max-width: none; }
     }
 </style>
