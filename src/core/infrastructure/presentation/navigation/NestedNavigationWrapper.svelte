@@ -15,9 +15,6 @@
     } from "../../../feature/auth/domain/config/RoleConfig";
     import CategoryManagement from "../../../feature/category/presentation/routes/CategoryManagement.svelte";
     import ProductManagement from "../../../feature/product/presentation/routes/ProductManagement.svelte";
-    import { categoryStore } from "../../../feature/category/presentation/viewmodel/category.store";
-    import { productStore } from "../../../feature/product/presentation/viewmodel/product.store";
-    import { promotionStore } from "../../../feature/notification/presentation/viewmodel/promotion.store";
     import PromoManagement from "../../../feature/notification/presentation/routes/PromoManagement.svelte";
     import SaleManagement from "../../../feature/sale/presentation/routes/SaleManagement.svelte";
     import { saleStore } from "../../../feature/sale/presentation/viewmodel/sale.store";
@@ -32,7 +29,6 @@
     import { logger } from "../util/logger.service";
     import RealtimeDock from "../components/RealtimeDock.svelte";
     import SupportInbox from "../../../feature/support/presentation/routes/SupportInbox.svelte";
-    import { supportInboxStore } from "../../../feature/support/presentation/viewmodel/support-inbox.store";
     import { category, dashboard, inventory, product, promo, reservation, sales, settings, support, users } from "./nested.router";
     import SupportDetail from "../../../feature/support/presentation/routes/SupportDetail.svelte";
     import SaleDetail from "../../../feature/sale/presentation/routes/SaleDetail.svelte";
@@ -184,13 +180,13 @@
                 >
                     <span class="nav-ico-wrap">
                         <Icon icon={item.icon} size={18} className="nav-ico" ariaLabel={item.label} />
-                        {#if navBadge(item.path) > 0}
-                            <span class="nav-badge" aria-label="{navBadge(item.path)} pendientes">
-                                {navBadge(item.path) > 99 ? "99+" : navBadge(item.path)}
-                            </span>
-                        {/if}
                     </span>
                     <span class="nav-label">{item.label}</span>
+                    {#if navBadge(item.path) > 0}
+                        <span class="nav-badge" aria-label="{navBadge(item.path)} pendientes">
+                            {navBadge(item.path) > 99 ? "99+" : navBadge(item.path)}
+                        </span>
+                    {/if}
                 </button>
             {/each}
         </nav>
