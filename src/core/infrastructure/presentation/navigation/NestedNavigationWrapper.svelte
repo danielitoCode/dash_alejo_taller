@@ -15,6 +15,9 @@
     } from "../../../feature/auth/domain/config/RoleConfig";
     import CategoryManagement from "../../../feature/category/presentation/routes/CategoryManagement.svelte";
     import ProductManagement from "../../../feature/product/presentation/routes/ProductManagement.svelte";
+    import { categoryStore } from "../../../feature/category/presentation/viewmodel/category.store";
+    import { productStore } from "../../../feature/product/presentation/viewmodel/product.store";
+    import { promotionStore } from "../../../feature/notification/presentation/viewmodel/promotion.store";
     import PromoManagement from "../../../feature/notification/presentation/routes/PromoManagement.svelte";
     import SaleManagement from "../../../feature/sale/presentation/routes/SaleManagement.svelte";
     import { saleStore } from "../../../feature/sale/presentation/viewmodel/sale.store";
@@ -29,6 +32,7 @@
     import { logger } from "../util/logger.service";
     import RealtimeDock from "../components/RealtimeDock.svelte";
     import SupportInbox from "../../../feature/support/presentation/routes/SupportInbox.svelte";
+    import { supportInboxStore } from "../../../feature/support/presentation/viewmodel/support-inbox.store";
     import { category, dashboard, inventory, product, promo, reservation, sales, settings, support, users } from "./nested.router";
     import SupportDetail from "../../../feature/support/presentation/routes/SupportDetail.svelte";
     import SaleDetail from "../../../feature/sale/presentation/routes/SaleDetail.svelte";
@@ -37,23 +41,24 @@
     import {
         BadgeDollarSign,
         CalendarCheck2,
-        ClipboardList,
         Home,
         LogOut,
-        Megaphone,
         Menu,
         MessageSquareText,
+        Megaphone,
         Package,
+        ClipboardList,
         Settings,
         Tags,
-        Users,
+        Users
     } from "lucide-svelte";
     import { createNestedNavRuntime } from "./nested-nav-runtime";
+    import "./nested-shell.css";
 
     export let navController: NavController;
-    export let navBackStackEntry: NavBackStackEntry<{ id?: string }> | null = null;
+    export let navBackStackEntry: NavBackStackEntry<{ id?: string }>;
 
-    const internalNavController = rememberNavController("nested-shell");
+    const internalNavController = rememberNavController(dashboard.path);
     const userId = navBackStackEntry?.args?.id ?? "usuario";
 
     const currentUser = sessionStore.getCurrentUser();
@@ -71,6 +76,10 @@
         { label: "Reservas", path: reservation.path, icon: CalendarCheck2 },
         { label: "Ajustes", path: settings.path, icon: Settings }
     ];
+
+    function canAccess(path: string): boolean {
+        return canAccessRoute(currentRole, path);
+    }
 
     function firstAllowedPath(role: BusinessRole): string {
         return getFirstAllowedRoute(role);
@@ -117,12 +126,10 @@
 
     const runtime = createNestedNavRuntime({
         getRole: () => currentRole,
-        setRole: (r) => {
-            currentRole = r;
-        },
+        setRole: (r) => { currentRole = r; },
         getPath: () => currentPath,
         firstAllowedPath,
-        internalNavigate: (path) => internalNavController.navigate(path),
+        internalNavigate: (p) => internalNavController.navigate(p),
         outerNavigate: navController,
     });
 
@@ -146,6 +153,7 @@
     onDestroy(() => {
         runtime.destroy();
     });
+
 </script>
 
 <section class="nested-shell">
