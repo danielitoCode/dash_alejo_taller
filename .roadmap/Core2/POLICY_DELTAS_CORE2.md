@@ -1,6 +1,8 @@
 # Core 2 — Deltas de política (respecto a Core 1)
 
-**Fecha:** 2026-08-13  
+**Fecha original:** 2026-08-13  
+**Actualización cierre:** 2026-08-24  
+**Estado:** **vigente / aceptada** en dash + AlejoTaller  
 **Fuente Core 1:** [`../Core1/CANONICAL_RULES_FREEZE.md`](../Core1/CANONICAL_RULES_FREEZE.md)  
 **Canónico ecosistema:** `AlejoTaller/.policies/warehouse`, `AlejoTaller/.policies/sale`
 
@@ -21,59 +23,62 @@
 
 | type | Efecto en `existence` | Quién |
 |------|----------------------|--------|
-| `entrada` | `+= quantity` | staff (dash / operador admin) |
-| `salida_venta` | `-= quantity` | al VERIFIED (operador o dash) |
+| `entrada` | `+= quantity` | staff (dash; preferible vía factura) |
+| `salida_venta` | `-= quantity` | al VERIFIED (operador **o** dash — paridad) |
 | `ajuste` | ± según dirección | staff; post-ajuste `existence ≥ reserved` |
 | `devolucion` | `+= quantity` | staff; solo post-VERIFIED |
 
 Campos mínimos: `product_id`, `type`, `quantity` (>0), `balance_after`, `reason`, `user_id`, `sale_id?`, `created_at`.
 
-### 2. Devolución formal
+### 2. Entrada de mercancía (política UI 2026-08-24)
 
-- Solo sobre venta **VERIFIED** (o línea ya consumida).  
+- **Única vía de alta de stock en panel:** factura de entrada multi-línea (`purchase_entry` + lines).
+- Actualiza `existence`, escribe `stock_movements` tipo `entrada`, y `last_unit_cost` cuando aplica.
+- Producto nuevo se puede definir **dentro** de la factura (luego stock + costo en el mismo flujo).
+- Alta de catálogo suelta: **existence = 0** (sin inventar stock ni costos).
+- Atajo «Dar entrada» por ítem: **retirado** de la UI (no alineado a finanzas Core 2).
+
+### 3. Devolución formal
+
+- Solo sobre venta **VERIFIED**.  
 - `existence += qty` + movimiento `devolucion` + motivo obligatorio.  
 - **No** reabrir el soft-hold de esa venta.
 
-### 3. Ajuste de inventario
+### 4. Ajuste de inventario
 
 - Motivo + `user_id` obligatorios.  
 - Validación: tras el ajuste, `existence >= reserved`.  
-- Preferible escribir siempre fila en `stock_movements`.
+- Siempre fila en `stock_movements` tipo `ajuste`.
 
-### 4. Reservas de taller (MVP Core 2)
+### 5. Reservas de taller (MVP Core 2)
 
-- Dominio **aparte** de `Sale` (p. ej. collection `appointment` / `booking`).  
-- Estados típicos: solicitada → confirmada → realizada / cancelada.  
+- Dominio **aparte** de `Sale` (`workshop_reservation`).  
+- Estados típicos: requested → confirmada → realizada / cancelada.  
 - **No** listar pedidos de tienda en el menú Reservas.  
-- Stock de piezas en cita: **fuera** del MVP mínimo (Core posterior).
-- **Incluidas en el núcleo** (decisión 2026-08-13).
+- Stock de piezas en cita: fuera del MVP mínimo.
 
 ## Competencias por superficie (Core 2)
 
 | Acción | Cliente | Operador | Dash |
 |--------|---------|----------|------|
 | Soft-hold al pedir | Sí | No | No |
-| Confirm/reject + `salida_venta` | No | Primario | Secundario |
-| Entrada / ajuste / devolución | No | Sí (si se expone) | **Sí** |
-| Ver movimientos | No | Lectura | **Sí** |
-| Agenda reservas taller | Solicitar (futuro) | Operar | **Gobernar** |
+| Confirm/reject + `salida_venta` + finance | No | Primario | **Paridad sí** |
+| Factura entrada / ajuste | No | Según exposición | **Sí** |
+| Ver movements / finance | No | Lectura | **Sí** |
+| Agenda reservas taller | Solicitar (opcional futuro) | Operar | **Gobernar** |
 
-## 5. Finanzas (Core 2) — aceptado 2026-08-13
+## 6. Finanzas (Core 2) — aceptado 2026-08-13 · vigente cierre 2026-08-24
 
 | Evento | Stock | Dinero |
 |--------|-------|--------|
-| Registrar entrada (factura) | `existence +=` | Costo en `purchase_entry` (+ líneas) |
+| Registrar factura de entrada | `existence +=` | Costo en `purchase_entry` (+ líneas); `last_unit_cost` |
 | UNVERIFIED | `reserved +=` | **Sin** ingreso |
-| VERIFIED | consume existence/reserved | **Ingreso + COGS + margen** |
+| VERIFIED | consume existence/reserved | **Ingreso + COGS + margen** (`sale_finance_event`) |
 | DELETED | release reserved | **Sin** ingreso |
 
-- Proveedor y referencia de factura son parte del documento de entrada (proveedor opcional si concepto regalía).
-- Crear producto en el flujo de entrada está permitido (datos mínimos).
+- COGS: `last_unit_cost × qty` al VERIFIED. **No promedio.**
 - Detalle: [`FINANCE_MODEL_CORE2.md`](./FINANCE_MODEL_CORE2.md)
-- **COGS (decisión 2026-08-13):** `last_unit_cost × qty` al VERIFIED. **No promedio.**
-- `last_unit_cost` se actualiza en entradas con costo de compra; concepto regalía: costo 0 en línea (no obliga a pisar último costo de compra salvo regla explícita en implementación).
 
-## 6. Reservas de taller (MVP Core 2)
+## 7. Permisos Appwrite (cierre B6)
 
-- Incluidas en el núcleo (decisión 2026-08-13).
-- Collection separada de `Sale`; menú Reservas ≠ Ventas pendientes.
+- Confirmado 2026-08-24: permisos por colección alineados a roles (staff write / cliente sin write en movements, purchase, finance, workshop_reservation).
