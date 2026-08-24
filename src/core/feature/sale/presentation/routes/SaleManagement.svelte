@@ -26,7 +26,7 @@
     import SkeletonTiles from "../../../../infrastructure/presentation/components/SkeletonTiles.svelte";
     import { userManagementStore } from "../../../auth/presentation/viewmodel/user-management.store";
     import { productStore } from "../../../product/presentation/viewmodel/product.store";
-    import { BadgeDollarSign, ChevronRight, CircleHelp, Clock, Inbox, Package, Search, ShieldCheck, Store, User, XCircle } from "lucide-svelte";
+    import { BadgeDollarSign, ChevronRight, Clock, Inbox, Package, Search, ShieldCheck, Store, User, XCircle } from "lucide-svelte";
 
     export let navController: NavController;
 
@@ -34,10 +34,10 @@
         pending: "Pedidos aún no confirmados. Requieren aprobación o rechazo del staff.",
         verified: "Ventas confirmadas: stock descontado y evento financiero registrado.",
         rejected: "Pedidos rechazados; el reserved se liberó sin salida de mercancía.",
-        age: "Tiempo desde el pedido del cliente. En pendientes se atienden los más antiguos primero.",
-        amount: "Importe total del pedido en la moneda del documento.",
-        lines: "Número de líneas de producto incluidas en el pedido.",
-        client: "Cliente asociado al pedido (cuenta o nombre resuelto).",
+        age: "Tiempo desde el pedido. En pendientes se atienden los más antiguos primero.",
+        amount: "Importe total del pedido.",
+        lines: "Líneas de producto del pedido.",
+        client: "Cliente del pedido.",
     } as const;
 
     let query = "";
@@ -45,8 +45,8 @@
 
     onMount(() => {
         saleStore.syncAll().catch(() => toastStore.error("Error al sincronizar ventas"));
-        userManagementStore.syncAll().catch(() => toastStore.error("Error al sincronizar usuarios"));
-        productStore.syncAll().catch(() => toastStore.error("Error al sincronizar productos"));
+        userManagementStore.syncAll().catch(() => {});
+        productStore.syncAll().catch(() => {});
     });
 
     function openDetail(id: string) {
@@ -80,9 +80,11 @@
         const q = query.trim().toLowerCase();
         if (!q) return true;
         const userName = resolveUserSale(sale.id).toLowerCase();
-        const safeId = (sale.id || "").toLowerCase();
-        const safeUserId = (sale.userId || "").toLowerCase();
-        return safeId.includes(q) || safeUserId.includes(q) || userName.includes(q);
+        return (
+            (sale.id || "").toLowerCase().includes(q) ||
+            (sale.userId || "").toLowerCase().includes(q) ||
+            userName.includes(q)
+        );
     });
     $: emptyMessage =
         items.length === 0
@@ -90,10 +92,10 @@
             : statusFilter === BuyState.UNVERIFIED
               ? "No hay pedidos pendientes."
               : statusFilter === BuyState.VERIFIED
-                ? "No hay ventas confirmadas en este filtro."
+                ? "No hay ventas confirmadas."
                 : statusFilter === BuyState.DELETED
-                  ? "No hay ventas rechazadas en este filtro."
-                  : "No hay resultados para la búsqueda.";
+                  ? "No hay ventas rechazadas."
+                  : "Sin resultados.";
 </script>
 
 <section class="mgmt-screen">
@@ -102,41 +104,27 @@
             <div class="mgmt-page-title">
                 <h1 class="mgmt-h1">Ventas</h1>
                 <p class="mgmt-muted">
-                    Pedidos de la tienda: pendientes con stock reservado, confirmadas y rechazadas.
-                    Las citas de taller viven en Reservas.
+                    Pedidos de la tienda. Las citas de taller están en Reservas.
                 </p>
                 {#if statusFilter === BuyState.UNVERIFIED}
-                    <p class="queue-hint" title={SALE_TIPS.age}>
-                        Cola por antigüedad: las más antiguas primero.
-                    </p>
+                    <p class="queue-hint" title={SALE_TIPS.age}>Cola por antigüedad: las más antiguas primero.</p>
                 {/if}
             </div>
             <div class="mgmt-chip-row status-tabs" role="tablist" aria-label="Filtrar por estado">
-                <span class="mgmt-chip origin" title="Pedidos originados en la tienda cliente">
-                    <Icon icon={Store} size={18} ariaLabel="Origen" />
-                    Origen: tienda cliente
-                </span>
-                <button type="button" role="tab" class="mgmt-chip tab" class:active={statusFilter === "all"} aria-selected={statusFilter === "all"} on:click={() => setStatusTab("all")}>
-                    <Icon icon={BadgeDollarSign} size={18} ariaLabel="Total" />
+                <button type="button" role="tab" class="mgmt-chip tab" class:active={statusFilter === "all"} on:click={() => setStatusTab("all")}>
                     {counts.total} total
                 </button>
-                <button type="button" role="tab" class="mgmt-chip tab" class:active={statusFilter === BuyState.UNVERIFIED} aria-selected={statusFilter === BuyState.UNVERIFIED} title={SALE_TIPS.pending} on:click={() => setStatusTab(BuyState.UNVERIFIED)}>
-                    <Icon icon={Inbox} size={18} ariaLabel="Pendientes" />
+                <button type="button" role="tab" class="mgmt-chip tab" class:active={statusFilter === BuyState.UNVERIFIED} title={SALE_TIPS.pending} on:click={() => setStatusTab(BuyState.UNVERIFIED)}>
                     {counts.pending} pendientes
                 </button>
-                <button type="button" role="tab" class="mgmt-chip tab" class:active={statusFilter === BuyState.VERIFIED} aria-selected={statusFilter === BuyState.VERIFIED} title={SALE_TIPS.verified} on:click={() => setStatusTab(BuyState.VERIFIED)}>
-                    <Icon icon={ShieldCheck} size={18} ariaLabel="Confirmadas" />
+                <button type="button" role="tab" class="mgmt-chip tab" class:active={statusFilter === BuyState.VERIFIED} title={SALE_TIPS.verified} on:click={() => setStatusTab(BuyState.VERIFIED)}>
                     {counts.verified} confirmadas
                 </button>
-                <button type="button" role="tab" class="mgmt-chip tab" class:active={statusFilter === BuyState.DELETED} aria-selected={statusFilter === BuyState.DELETED} title={SALE_TIPS.rejected} on:click={() => setStatusTab(BuyState.DELETED)}>
-                    <Icon icon={XCircle} size={18} ariaLabel="Rechazadas" />
+                <button type="button" role="tab" class="mgmt-chip tab" class:active={statusFilter === BuyState.DELETED} title={SALE_TIPS.rejected} on:click={() => setStatusTab(BuyState.DELETED)}>
                     {counts.rejected} rechazadas
                 </button>
                 {#if isRefreshing}
-                    <span class="mgmt-chip" aria-label="Sincronizando">
-                        <LoadingSpinner size={16} label="Sincronizando" subtle />
-                        Sincronizando...
-                    </span>
+                    <span class="mgmt-chip"><LoadingSpinner size={14} label="Sync" subtle /></span>
                 {/if}
             </div>
         </header>
@@ -144,8 +132,8 @@
         <section class="mgmt-card">
             <div class="filters">
                 <label class="filter-field search">
-                    <Icon icon={Search} size={18} ariaLabel="Buscar" />
-                    <input type="search" placeholder="Buscar por venta o cliente..." bind:value={query} />
+                    <Icon icon={Search} size={16} ariaLabel="Buscar" />
+                    <input type="search" placeholder="Buscar venta o cliente…" bind:value={query} />
                 </label>
                 <label class="filter-field">
                     <span>Estado</span>
@@ -159,7 +147,7 @@
             </div>
 
             {#if isInitialLoading}
-                <SkeletonTiles count={6} columns={2} />
+                <SkeletonTiles count={4} columns={2} />
             {:else if filteredItems.length === 0}
                 <p class="mgmt-muted">{emptyMessage}</p>
             {:else}
@@ -180,27 +168,16 @@
                             <button type="button" class="sale-card-hit" on:click={() => openDetail(sale.id)}>
                                 <div class="sale-card-top">
                                     <div class="sale-id-block">
-                                        <span class="sale-ico" aria-hidden="true">
-                                            <Icon icon={BadgeDollarSign} size={18} ariaLabel="" />
-                                        </span>
                                         <div class="sale-id-text">
                                             <strong class="sale-title" title={sale.id}>#{sale.id.slice(0, 8)}…</strong>
-                                            <span class="sale-client" title={SALE_TIPS.client}>
-                                                <Icon icon={User} size={13} ariaLabel="" />
-                                                {resolveUserSale(sale.id)}
-                                            </span>
+                                            <span class="sale-client" title={SALE_TIPS.client}>{resolveUserSale(sale.id)}</span>
                                         </div>
                                     </div>
                                     <span
                                         class="sale-status {saleStateClass(sale.verified)}"
-                                        title={sale.verified === BuyState.UNVERIFIED
-                                            ? SALE_TIPS.pending
-                                            : sale.verified === BuyState.VERIFIED
-                                              ? SALE_TIPS.verified
-                                              : SALE_TIPS.rejected}
+                                        title={sale.verified === BuyState.UNVERIFIED ? SALE_TIPS.pending : sale.verified === BuyState.VERIFIED ? SALE_TIPS.verified : SALE_TIPS.rejected}
                                     >
                                         {saleStateLabel(sale.verified)}
-                                        <span class="tip-ico" aria-hidden="true"><Icon icon={CircleHelp} size={11} ariaLabel="" /></span>
                                     </span>
                                 </div>
                                 <div class="sale-metrics">
@@ -209,30 +186,19 @@
                                         <span class="metric-value">{formatSaleMoney(sale.amount, code)}</span>
                                     </div>
                                     <div class="metric" title={SALE_TIPS.lines}>
-                                        <span class="metric-label">
-                                            <Icon icon={Package} size={12} ariaLabel="" />
-                                            Líneas
-                                        </span>
+                                        <span class="metric-label">Líneas</span>
                                         <span class="metric-value">{lineCount}</span>
                                     </div>
                                     {#if isPending && ageLabel}
-                                        <div
-                                            class="metric age-metric"
-                                            class:warn={ageUrgency === "warn"}
-                                            class:critical={ageUrgency === "critical"}
-                                            title={SALE_TIPS.age}
-                                        >
-                                            <span class="metric-label">
-                                                <Icon icon={Clock} size={12} ariaLabel="" />
-                                                Antigüedad
-                                            </span>
+                                        <div class="metric age-metric" class:warn={ageUrgency === "warn"} class:critical={ageUrgency === "critical"} title={SALE_TIPS.age}>
+                                            <span class="metric-label">Antigüedad</span>
                                             <span class="metric-value">{ageLabel}</span>
                                         </div>
                                     {/if}
                                 </div>
                                 <div class="sale-card-foot">
-                                    <span class="sale-open">Ver detalle</span>
-                                    <Icon icon={ChevronRight} size={18} ariaLabel="" />
+                                    <span>Ver detalle</span>
+                                    <Icon icon={ChevronRight} size={15} ariaLabel="" />
                                 </div>
                             </button>
                         </article>
@@ -244,128 +210,86 @@
 </section>
 
 <style>
-    h1 { margin: 0; font-size: 1.2rem; letter-spacing: -0.01em; font-weight: 1000; }
-    .status-tabs { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-    .mgmt-chip.origin { opacity: 0.95; border-style: dashed; }
+    h1 { margin: 0; font-size: 1.15rem; font-weight: 850; letter-spacing: -0.01em; }
+    .status-tabs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
     .mgmt-chip.tab {
         cursor: pointer; border: 1px solid var(--md-sys-color-outline-variant);
-        background: transparent; font: inherit; color: inherit;
+        background: transparent; font: inherit; color: inherit; font-size: 0.84rem;
     }
-    .mgmt-chip.tab:hover { background: color-mix(in srgb, var(--md-sys-color-surface-variant) 40%, transparent); }
+    .mgmt-chip.tab:hover { background: color-mix(in srgb, var(--md-sys-color-surface-variant) 30%, transparent); }
     .mgmt-chip.tab.active {
-        border-color: var(--md-sys-color-primary);
-        background: color-mix(in srgb, var(--md-sys-color-primary) 18%, transparent);
-        font-weight: 800;
+        border-color: color-mix(in srgb, var(--md-sys-color-primary) 45%, var(--md-sys-color-outline-variant));
+        background: color-mix(in srgb, var(--md-sys-color-primary) 12%, transparent);
+        font-weight: 750;
     }
-    .queue-hint { margin: 8px 0 0; font-size: 0.86rem; font-weight: 650; color: var(--md-sys-color-primary); }
+    .queue-hint { margin: 6px 0 0; font-size: 0.8rem; font-weight: 600; color: var(--md-sys-color-primary); opacity: 0.9; }
     .filters {
-        display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(180px, 0.6fr);
-        gap: 12px; margin-bottom: 12px;
+        display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(140px, 0.45fr);
+        gap: 10px; margin-bottom: 12px;
     }
-    .filter-field { display: grid; gap: 6px; }
-    .filter-field span { font-size: 0.86rem; color: color-mix(in srgb, var(--md-sys-color-on-background) 70%, transparent); }
+    .filter-field { display: grid; gap: 4px; }
+    .filter-field span { font-size: 0.78rem; color: var(--md-sys-color-on-surface-variant); }
     .filter-field.search {
-        display: flex; align-items: center; gap: 10px;
-        border: 1px solid var(--md-sys-color-outline-variant); border-radius: 14px;
-        padding: 0 12px; background: color-mix(in srgb, var(--md-sys-color-surface) 90%, transparent);
+        display: flex; align-items: center; gap: 8px;
+        border: 1px solid var(--md-sys-color-outline-variant); border-radius: 10px;
+        padding: 0 10px; background: var(--md-sys-color-surface);
     }
     .filter-field.search input, .filter-field select {
-        width: 100%; height: 44px; border: 0; outline: 0; background: transparent; color: inherit; font: inherit;
+        width: 100%; height: 38px; border: 0; outline: 0; background: transparent; color: inherit; font: inherit;
     }
     .sales-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
-        gap: 14px;
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+        gap: 10px;
     }
     .sale-card {
-        border-radius: 16px;
+        border-radius: 10px;
         border: 1px solid var(--md-sys-color-outline-variant);
-        border-left: 4px solid var(--md-sys-color-outline-variant);
-        background: linear-gradient(
-            165deg,
-            color-mix(in srgb, var(--md-sys-color-surface-variant) 14%, var(--md-sys-color-surface)) 0%,
-            var(--md-sys-color-surface) 48%
-        );
-        box-shadow: 0 1px 2px color-mix(in srgb, black 5%, transparent), 0 10px 28px color-mix(in srgb, black 6%, transparent);
-        overflow: hidden;
-        transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+        border-left: 3px solid var(--md-sys-color-outline-variant);
+        background: var(--md-sys-color-surface);
+        transition: border-color 120ms ease, background-color 120ms ease;
     }
     .sale-card.is-pending { border-left-color: #d97706; }
     .sale-card[data-status="VERIFIED"] { border-left-color: #16a34a; }
-    .sale-card[data-status="DELETED"] { border-left-color: #94a3b8; opacity: 0.92; }
+    .sale-card[data-status="DELETED"] { border-left-color: #94a3b8; opacity: 0.9; }
     .sale-card.age-warn { border-left-color: #ea580c; }
-    .sale-card.age-critical {
-        border-left-color: #dc2626;
-        box-shadow: 0 0 0 1px color-mix(in srgb, #dc2626 25%, transparent), 0 10px 28px color-mix(in srgb, #dc2626 12%, transparent);
-    }
+    .sale-card.age-critical { border-left-color: #dc2626; }
     .sale-card:hover {
-        border-color: color-mix(in srgb, var(--md-sys-color-primary) 28%, var(--md-sys-color-outline-variant));
-        box-shadow: 0 6px 20px color-mix(in srgb, black 8%, transparent);
-        transform: translateY(-1px);
+        border-color: color-mix(in srgb, var(--md-sys-color-primary) 20%, var(--md-sys-color-outline-variant));
+        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 6%, var(--md-sys-color-surface));
     }
     .sale-card-hit {
         width: 100%; text-align: left; border: 0; background: transparent; color: inherit; font: inherit;
-        padding: 14px 16px; display: grid; gap: 12px; cursor: pointer;
+        padding: 12px 13px; display: grid; gap: 8px; cursor: pointer;
     }
-    .sale-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
-    .sale-id-block { display: flex; gap: 10px; align-items: flex-start; min-width: 0; }
-    .sale-ico {
-        width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; flex-shrink: 0;
-        background: color-mix(in srgb, var(--md-sys-color-primary) 12%, transparent);
-        border: 1px solid color-mix(in srgb, var(--md-sys-color-primary) 22%, transparent);
-        color: var(--md-sys-color-primary);
-    }
-    .sale-id-text { min-width: 0; display: grid; gap: 2px; }
+    .sale-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .sale-id-text { min-width: 0; display: grid; gap: 1px; }
     .sale-title {
-        font-size: 0.95rem; font-weight: 850; letter-spacing: -0.01em;
+        font-size: 0.86rem; font-weight: 750;
         overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .sale-client {
-        display: inline-flex; align-items: center; gap: 4px;
-        font-size: 0.8rem; font-weight: 650; color: var(--md-sys-color-on-surface-variant);
+        font-size: 0.75rem; font-weight: 500; color: var(--md-sys-color-on-surface-variant);
     }
     .sale-status {
-        display: inline-flex; align-items: center; gap: 4px;
-        font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em;
-        padding: 5px 10px; border-radius: 999px; border: 1px solid var(--md-sys-color-outline-variant);
-        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 40%, transparent); white-space: nowrap;
+        font-size: 0.6rem; font-weight: 750; text-transform: uppercase; letter-spacing: 0.04em;
+        padding: 2px 7px; border-radius: 5px; white-space: nowrap;
     }
-    .sale-status.unverified {
-        color: #b45309; background: color-mix(in srgb, #f59e0b 14%, transparent);
-        border-color: color-mix(in srgb, #f59e0b 30%, transparent);
-    }
-    .sale-status.verified {
-        color: #15803d; background: color-mix(in srgb, #16a34a 14%, transparent);
-        border-color: color-mix(in srgb, #16a34a 28%, transparent);
-    }
-    .sale-status.rejected { color: #64748b; background: color-mix(in srgb, #94a3b8 16%, transparent); }
-    .tip-ico { opacity: 0.55; display: inline-flex; }
-    .sale-metrics {
-        display: grid; grid-template-columns: repeat(auto-fit, minmax(88px, 1fr)); gap: 8px;
-    }
-    .metric {
-        padding: 8px 10px; border-radius: 12px; border: 1px solid var(--md-sys-color-outline-variant);
-        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 22%, transparent);
-        display: grid; gap: 2px; min-width: 0; cursor: help;
-    }
+    .sale-status.unverified { color: #b45309; background: color-mix(in srgb, #f59e0b 12%, transparent); }
+    .sale-status.verified { color: #15803d; background: color-mix(in srgb, #16a34a 12%, transparent); }
+    .sale-status.rejected { color: #64748b; background: color-mix(in srgb, #94a3b8 12%, transparent); }
+    .sale-metrics { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+    .metric { display: flex; flex-direction: column; gap: 0; cursor: help; }
     .metric-label {
-        display: inline-flex; align-items: center; gap: 4px;
-        font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em;
-        color: var(--md-sys-color-on-surface-variant);
+        font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
+        color: var(--md-sys-color-on-surface-variant); opacity: 0.8;
     }
-    .metric-value {
-        font-size: 0.95rem; font-weight: 850; font-variant-numeric: tabular-nums;
-        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    }
+    .metric-value { font-size: 0.86rem; font-weight: 700; font-variant-numeric: tabular-nums; }
     .age-metric.warn .metric-value { color: #ea580c; }
-    .age-metric.critical .metric-value { color: #dc2626; }
+    .age-metric.critical .metric-value { color: #dc2626; font-weight: 800; }
     .sale-card-foot {
-        display: flex; justify-content: space-between; align-items: center; padding-top: 4px;
-        border-top: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 80%, transparent);
-        font-size: 0.8rem; font-weight: 750; color: var(--md-sys-color-primary);
+        display: flex; align-items: center; gap: 2px;
+        font-size: 0.74rem; font-weight: 650; color: var(--md-sys-color-primary); opacity: 0.85;
     }
-    @media (max-width: 640px) {
-        .filters { grid-template-columns: 1fr; }
-        .sale-metrics { grid-template-columns: 1fr 1fr; }
-    }
+    @media (max-width: 640px) { .filters { grid-template-columns: 1fr; } }
 </style>
