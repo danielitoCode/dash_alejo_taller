@@ -43,8 +43,11 @@
     }
 
     .sidebar-nav {
-        display: grid;
-        gap: 6px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: stretch;
+        gap: 4px;
         overflow: auto;
         padding-right: 4px;
         flex: 1 1 auto;
@@ -54,6 +57,8 @@
     .sidebar-nav button,
     .logout {
         display: flex;
+        flex-direction: row;
+        justify-content: flex-start;
         align-items: center;
         gap: 10px;
         width: 100%;
@@ -162,7 +167,7 @@
         background: transparent;
     }
 
-/* Badge de pendientes (Ventas / Reservas) */
+/* Badge de pendientes — icono | etiqueta | badge */
 .nav-ico-wrap {
     position: relative;
     display: inline-grid;
@@ -170,22 +175,27 @@
     flex-shrink: 0;
 }
 .nav-badge {
-    position: absolute;
-    top: -6px;
-    right: -8px;
-    min-width: 16px;
-    height: 16px;
-    padding: 0 4px;
+    margin-left: auto;
+    flex-shrink: 0;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
     border-radius: 999px;
-    font-size: 0.62rem;
-    font-weight: 850;
-    line-height: 16px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    line-height: 18px;
     text-align: center;
     color: #fff;
     background: #dc2626;
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--md-sys-color-surface) 90%, transparent);
     pointer-events: none;
 }
 .sidebar-nav button.selected .nav-badge {
     background: #ef4444;
+}
+.nav-label {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
