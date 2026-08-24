@@ -1,34 +1,38 @@
-# Core 2 — Estado MVP Back-office
+# MVP Core 2 — Estado vivo
 
-**Última actualización:** 2026-08-23  
-**Veredicto:** **En curso** — B5 código ✓; siguiente **B6 cierre** (+ smoke reservas).  
-**Core 2 dash cerrado:** ☐  
 **Rama:** `Core2`  
-**Checklist unificado:** [`CORE2_UNIFIED_CHECKLIST.md`](./CORE2_UNIFIED_CHECKLIST.md)
+**Última actualización:** 2026-08-24  
+**Core 2 cerrado:** **NO**
 
-| Fase | Nombre | Estado |
-|------|--------|--------|
-| 2.0 | Alcance + políticas delta | ✓ |
-| 2.1 | Schema Appwrite + dominio | ✓ cloud · ✓ dominio/DTO/mapper · ✓ net repos dash · ✓ operador net |
-| 2.2 | Operador `salida_venta` + finance | ✓ código (smoke dispositivo ☐) |
-| 2.3 | Panel factura + movements / ajuste | ✓ (B3.1–B3.3) |
-| 2.4 | Reportes + cola UNVERIFIED | ✓ (B4.1 + B4.2) |
-| 2.5 | Reservas de taller | ✓ código (smoke UI ☐) |
-| 2.6 | Seguridad + DoD | ☐ ← siguiente |
+## Hecho (código + smokes)
 
-## Hecho (2026-08-23)
+| Bloque | Estado | Notas |
+|--------|--------|-------|
+| B0 Baseline | ✓ | Schema Appwrite + políticas |
+| B1 Dominio/DTO/net | ✓ | Movements, purchase, finance |
+| B2 Operador traza | ✓ código | Smoke dispositivo opcional |
+| B3 Entrada formal | ✓ | Factura multi-línea smoke OK; ajuste opcional |
+| B4 Cola + finance | ✓ | Confirm panel → finance + **salida_venta** (paridad) |
+| B5 Reservas taller | ✓ | Smoke reserva UI → Appwrite OK |
+| UX backoffice | ✓ | Badges nav, cards/detalle ventas, tooltips |
 
-- [x] B3 inventario formal (entrada, factura, ajuste, listados)
-- [x] B4.1 cola UNVERIFIED por antigüedad
-- [x] B4.2 resumen finance en Dashboard
-- [x] B5 reservas taller (dominio + panel Reservas)
+## Pendiente inmediato (B6 — cierre)
 
-## Pendiente inmediato
+1. **Permisos** — auditoría rápida en consola Appwrite (staff escribe movements/finance/purchase/reservation; cliente no).
+2. **Smoke cruzado final (~15 min):**
+   - Factura de entrada (2 líneas) → movements `entrada` + `last_unit_cost`
+   - Pedido cliente → UNVERIFIED + reserved
+   - Confirm desde backoffice → VERIFIED + `salida_venta` + `sale_finance_event` + KPIs
+3. **CI verde** en el último commit de `Core2` (revalidar Actions).
+4. **Merge** PR Core2 → `master` (dash + AlejoTaller).
+5. Marcar **Core 2 cerrado: SÍ** en checklist + status de ambos repos.
 
-1. **Smoke B5:** crear reserva en panel Reservas → doc en Appwrite
-2. Smokes: B2 dispositivo; B3.3 ajuste (opcional)
-3. **B6** — permisos, CI final, smoke cruzado, merge a master
+## Opcional (no bloquea merge)
+
+- Smoke ajuste de stock (B3.3)
+- Smoke confirm desde app operador (B2 dispositivo) — paridad ya cubierta en panel
+- Solicitud de reserva desde cliente web
 
 ## Cómo cerrar
 
-Ver DoD en plan + bloques B5–B6 del checklist unificado.
+Ver DoD en `CORE2_IMPLEMENTATION_PLAN.md` + bloque B6 del checklist unificado.

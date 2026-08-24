@@ -3,8 +3,8 @@
 **Espejo operativo.** Fuente de trabajo compartida con AlejoTaller.  
 **Rama:** `Core2` en **ambos** repos · **master** solo con merges recomendados.
 
-**Última actualización:** 2026-08-23 (B5 reservas taller — código dash)  
-**Core 2 cerrado:** NO
+**Última actualización:** 2026-08-24 (smokes B3–B5 + paridad confirm backoffice + UX ventas)  
+**Core 2 cerrado:** NO — falta B6 (permisos audit, smoke cruzado final, merge)
 
 ### Reglas
 
@@ -37,7 +37,7 @@
 
 ---
 
-## Bloque 1 — Contrato dominio + DTO/repo net
+## Bloque 1 — Contrato dominio + DTO/repo net (hecho)
 
 - [x] Enums en código: movement types + purchase concepts
 - [x] Net repos Appwrite dash: movements, purchase_*, finance
@@ -53,11 +53,12 @@
 - [x] sale_finance_event (revenue, cogs, margin)
 - [x] Sin finance en UNVERIFIED; sin salida en DELETED
 - [x] Idempotencia + tests unitarios
-- [ ] **Smoke tuyo:** confirm en dispositivo → docs en Appwrite
+- [ ] **Smoke tuyo (opcional dispositivo):** confirm en app operador → docs en Appwrite  
+  *(paridad equivalente ya smokeada desde backoffice — ver B4)*
 
 ---
 
-## Bloque 3 — Dash entrada formal + listados
+## Bloque 3 — Dash entrada formal + listados (hecho)
 
 - [x] Dar entrada → también `stock_movements` tipo `entrada` (B3.1)
 - [x] Tests case-use (RegisterStockEntry + movement entrada)
@@ -65,7 +66,7 @@
 - [x] Tests case-use RegisterPurchaseEntry + last_unit_cost
 - [x] Ajuste auditado (B3.3) — RegisterStockAdjustmentCaseUse + UI Ajustar
 - [x] Listados movements + facturas (B3.3) — vista Inventario / InventoryTrace
-- [x] **Smoke tuyo:** factura multi-línea → docs en Appwrite (confirmado 2026-08-23)
+- [x] **Smoke tuyo:** factura multi-línea → docs en Appwrite (2026-08-23)
 - [ ] **Smoke tuyo (opcional):** ajuste de stock → movement tipo `ajuste` en Appwrite
 
 ---
@@ -79,36 +80,41 @@
   - [x] Confirm desde panel → escribe `sale_finance_event` (COGS = last_unit_cost × qty)
   - [x] Reconciliación de VERIFIED previos sin evento (botón Actualizar)
   - [x] Tooltips en KPIs + responsivo multi-breakpoint (desktop / tablet / móvil)
+- [x] **Paridad backoffice:** confirm desde panel → `salida_venta` en `stock_movements` (2026-08-24)
+- [x] **Smoke tuyo:** confirm venta pendiente → VERIFIED + finance + salida_venta (2026-08-24)
+- [x] UX: badge pendientes en nav (Ventas / Reservas) + cards/detalle ventas minimalistas
 
 ---
 
-## Bloque 5 — Reservas taller
+## Bloque 5 — Reservas taller ✓
 
 - [x] Collection Appwrite `workshop_reservation` + permisos staff (consola)
 - [x] Dominio + DTO + net repo + mapper (dash)
 - [x] Panel dash: listado / alta / cambio de estado (Reservas)
-- [ ] (Opcional) solicitud desde cliente web
+- [ ] (Opcional) solicitud desde cliente web — **fuera del DoD de cierre Core2**
 - [x] Tests unitarios mapper / factory
-- [ ] **Smoke tuyo:** crear reserva en UI → documento en Appwrite
+- [x] **Smoke tuyo:** crear reserva en UI → documento en Appwrite (2026-08-24)
 
 ---
 
-## Bloque 6 — CI, permisos, cierre ← **siguiente**
+## Bloque 6 — CI, permisos, cierre ← **siguiente / cierre**
 
-- [ ] Permisos auditados (consola Appwrite)
-- [x] CI verde en Core2 (dash quality + operador unit tests) — revalidar tras B5
+- [ ] Permisos auditados (consola Appwrite) — repaso final staff vs cliente
+- [x] CI verde en Core2 (svelte-check + unit tests) — revalidar tras último push UX
 - [x] PRs abiertos Core2 → master (dash #1, AlejoTaller #11)
-- [ ] Merge PRs a master (tú en GitHub)
-- [ ] Smoke cruzado: entrada → pedido → confirm → salida_venta + finance
-- [ ] STATUS cerrado ambos repos
+- [ ] **Smoke cruzado final (15 min):**  
+  factura entrada → pedido cliente UNVERIFIED → confirm backoffice →  
+  `stock_movements` (`entrada` + `salida_venta`) + `sale_finance_event` + KPIs finance
+- [ ] Merge PRs Core2 → **master** (tú en GitHub, ambos repos)
+- [ ] STATUS cerrado ambos repos (`Core 2 cerrado: SÍ`)
 
 ---
 
 ## Orden
 
 ```text
-B0 ✓ → B1 ✓ → B2 ✓ → B3 ✓ → B4 ✓ → B5 ✓ código dash
-  → B6 cierre ← siguiente (permisos, CI, smoke cruzado, merge)
+B0 ✓ → B1 ✓ → B2 ✓ → B3 ✓ → B4 ✓ → B5 ✓
+  → B6 cierre ← pendiente (permisos, smoke cruzado, merge master)
 ```
 
 ## Registro
@@ -127,3 +133,7 @@ B0 ✓ → B1 ✓ → B2 ✓ → B3 ✓ → B4 ✓ → B5 ✓ código dash
 | 2026-08-23 | B4.1 cola UNVERIFIED | dash sortSalesByAge + SaleManagement badges |
 | 2026-08-23 | B4.2 resumen finance | aggregate + panel + confirm escribe event + reconcile + tooltips/responsive |
 | 2026-08-23 | B5 reservas taller | collection workshop_reservation + dominio/repo/UI Reservas |
+| 2026-08-23 | Smoke B3.2 | Factura 2 productos → Appwrite OK |
+| 2026-08-24 | Paridad confirm panel | ConfirmSaleFromPanel → salida_venta + finance |
+| 2026-08-24 | Smoke B4 + B5 | Confirm venta + reserva taller verificados en Appwrite |
+| 2026-08-24 | UX ventas / nav | Badges pendientes, cards/detalle minimalistas, nombre producto en líneas |
