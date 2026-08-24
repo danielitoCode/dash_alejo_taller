@@ -21,6 +21,7 @@
     import PromoManagement from "../../../feature/notification/presentation/routes/PromoManagement.svelte";
     import SaleManagement from "../../../feature/sale/presentation/routes/SaleManagement.svelte";
     import { saleStore } from "../../../feature/sale/presentation/viewmodel/sale.store";
+    import { reservationStore } from "../../../feature/reservation/presentation/viewmodel/reservation.store";
     import UserManagement from "../../../feature/auth/presentation/routes/UserManagement.svelte";
     import Icon from "../components/Icon.svelte";
     import DashboardHome from "../routes/DashboardHome.svelte";
@@ -33,40 +34,30 @@
     import SupportInbox from "../../../feature/support/presentation/routes/SupportInbox.svelte";
     import { supportInboxStore } from "../../../feature/support/presentation/viewmodel/support-inbox.store";
     import { category, dashboard, inventory, product, promo, reservation, sales, settings, support, users } from "./nested.router";
-    import { subscribePulseChannelAll } from "../../data/alset-pulse/pulse.realtime";
-    import { pulseRefreshTargets } from "../../data/alset-pulse/pulse.refresh-targets";
-    import {
-        parseStockChangedPayload,
-        subscribeStockChanged,
-    } from "../../data/alset-pulse/stock-pulse";
-    import { client } from "../../di/appwrite.config";
-    import { ENV } from "../../env";
     import SupportDetail from "../../../feature/support/presentation/routes/SupportDetail.svelte";
     import SaleDetail from "../../../feature/sale/presentation/routes/SaleDetail.svelte";
     import { supportDetail, salesDetail } from "./nested.router";
-    import { get } from "svelte/store";
     import { BuyState } from "../../../feature/sale/domain/entity/enums";
     import {
         BadgeDollarSign,
         CalendarCheck2,
+        ClipboardList,
         Home,
         LogOut,
+        Megaphone,
         Menu,
         MessageSquareText,
-        Megaphone,
         Package,
-        ClipboardList,
         Settings,
         Tags,
-        Users
+        Users,
     } from "lucide-svelte";
     import { createNestedNavRuntime } from "./nested-nav-runtime";
-    import "./nested-shell.css";
 
     export let navController: NavController;
-    export let navBackStackEntry: NavBackStackEntry<{ id?: string }>;
+    export let navBackStackEntry: NavBackStackEntry | null = null;
 
-    const internalNavController = rememberNavController(dashboard.path);
+    const internalNavController = rememberNavController("nested-shell");
     const userId = navBackStackEntry?.args?.id ?? "usuario";
 
     const currentUser = sessionStore.getCurrentUser();
@@ -97,6 +88,20 @@
     $: internalStack = $internalStackStore;
     $: currentPath = internalStack.at(-1)?.route ?? dashboard.path;
     $: visibleItems = items.filter((item) => canAccessRoute(currentRole, item.path));
+
+    $: pendingSalesCount = ($saleStore.items ?? []).filter(
+        (s) => s.verified === BuyState.UNVERIFIED
+    ).length;
+    $: pendingReservationsCount = ($reservationStore.items ?? []).filter(
+        (r) => r.status === "requested"
+    ).length;
+
+    function navBadge(path: string): number {
+        if (path === sales.path) return pendingSalesCount;
+        if (path === reservation.path) return pendingReservationsCount;
+        return 0;
+    }
+
     $: if (currentRole && currentPath && !canAccessRoute(currentRole, currentPath)) {
         const allowedPath = firstAllowedPath(currentRole);
         if (allowedPath !== currentPath) {
@@ -120,10 +125,12 @@
 
     const runtime = createNestedNavRuntime({
         getRole: () => currentRole,
-        setRole: (r) => { currentRole = r; },
+        setRole: (r) => {
+            currentRole = r;
+        },
         getPath: () => currentPath,
         firstAllowedPath,
-        internalNavigate: (p) => internalNavController.navigate(p),
+        internalNavigate: (path) => internalNavController.navigate(path),
         outerNavigate: navController,
     });
 
@@ -141,12 +148,12 @@
 
     onMount(() => {
         runtime.mount();
+        void reservationStore.load("all").catch(() => {});
     });
 
     onDestroy(() => {
         runtime.destroy();
     });
-
 </script>
 
 <section class="nested-shell">
@@ -173,9 +180,16 @@
                         class:selected={currentPath === item.path}
                         on:click={() => go(item.path)}
                         aria-current={currentPath === item.path ? "page" : undefined}
-                        title={item.label}
+                        title={item.label + (navBadge(item.path) > 0 ? ` (${navBadge(item.path)} pendientes)` : "")}
                 >
-                    <Icon icon={item.icon} size={18} className="nav-ico" ariaLabel={item.label} />
+                    <span class="nav-ico-wrap">
+                        <Icon icon={item.icon} size={18} className="nav-ico" ariaLabel={item.label} />
+                        {#if navBadge(item.path) > 0}
+                            <span class="nav-badge" aria-label="{navBadge(item.path)} pendientes">
+                                {navBadge(item.path) > 99 ? "99+" : navBadge(item.path)}
+                            </span>
+                        {/if}
+                    </span>
                     <span class="nav-label">{item.label}</span>
                 </button>
             {/each}
@@ -212,10 +226,10 @@
         <RealtimeDock navController={internalNavController} />
 
         {#key currentPath}
-            <div class="route-stage" in:fade={{ duration: 180 }} out:fade={{ duration: 120 }}>
+            <div in:fade={{ duration: 120 }}>
                 <NavHost
-                        navController={internalNavController}
-                        routes={[
+                    navController={internalNavController}
+                    routes={[
                         composable(dashboard, () => DashboardHome),
                         composable(support, () => SupportInbox),
                         composable(supportDetail, () => SupportDetail),
@@ -233,8 +247,4 @@
             </div>
         {/key}
     </main>
-
-    {#if sidebarOpen}
-        <button class="scrim" aria-label="Cerrar menú" on:click={() => (sidebarOpen = false)}></button>
-    {/if}
 </section>
