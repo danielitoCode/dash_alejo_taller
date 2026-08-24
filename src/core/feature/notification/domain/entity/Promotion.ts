@@ -1,5 +1,10 @@
 export type PromotionSource = "automatic" | "manual"
 
+/** Política B: descuento de producto vs banner informativo. */
+export type PromotionKind = "product_discount" | "banner"
+
+export type PromotionStatus = "draft" | "active" | "ended" | "cancelled"
+
 export interface Promotion {
     id: string
     productId?: string | null
@@ -11,6 +16,9 @@ export interface Promotion {
     validFromEpochMillis: number
     validUntilEpochMillis: number
     source?: PromotionSource
+    /** Política B — si falta se infiere por productId */
+    kind?: PromotionKind
+    status?: PromotionStatus
 }
 
 export function isPromotionActive(

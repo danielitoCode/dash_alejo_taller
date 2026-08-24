@@ -10,7 +10,8 @@ export class PromotionOfflineFirstRepository implements PromotionRepository {
 
     async create(promotion: Promotion): Promise<void> {
         try {
-            const created = await this.net.create(promotionToDTO(promotion))
+            const payload = promotionToDTO(promotion)
+            const created = await this.net.create(payload, promotion.id || undefined)
             await db.promotions.put(created)
         } catch (error: any) {
             logger.error(

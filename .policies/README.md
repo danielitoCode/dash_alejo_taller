@@ -13,6 +13,7 @@ Complementan (y no contradicen) las políticas canónicas del monorepo de venta/
   warehouse/     → competencia del panel sobre existence/reserved
   product/       → catálogo admin
   panel/         → políticas propias del back-office (UX, secretos, límites)
+  notification/  → promociones (política B)
 ```
 
 ## Relación con AlejoTaller
@@ -24,6 +25,7 @@ Complementan (y no contradicen) las políticas canónicas del monorepo de venta/
 | Auth visitante tienda | `AlejoTaller/.policies/auth` | **No aplica** al panel |
 | Auth staff / roles | — | `.policies/auth` (este repo) |
 | Gobierno del panel | — | `.policies/panel` |
+| Promociones | — | `.policies/notification` (política B; RT Appwrite) |
 
 ## Estado (baseline) — 2026-08-09
 
@@ -34,6 +36,7 @@ Complementan (y no contradicen) las políticas canónicas del monorepo de venta/
 | Warehouse (panel) | Definida; modelo código aún incompleto (`reserved`) |
 | Product | Definida |
 | Panel | Definida |
+| Promociones (B) | **Aceptada 2026-08-13** — ver `notification/PROMOTION_POLICY.md` |
 
 ## Regla de oro
 

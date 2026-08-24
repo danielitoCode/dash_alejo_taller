@@ -8,4 +8,3 @@ export class UpdateSupportStatusCaseUse {
         await this.repo.updateStatus(id, status);
     }
 }
-
