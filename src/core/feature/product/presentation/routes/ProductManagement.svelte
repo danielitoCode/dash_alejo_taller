@@ -15,7 +15,7 @@
     import { productStore } from "../viewmodel/product.store";
     import { subscribeStockChanged } from "../../../../infrastructure/data/alset-pulse/stock-pulse";
     import { parseProductImages, serializeProductImages } from "../util/product.image";
-    import { BadgeDollarSign, FilePlus2, Pencil, Plus, Save, Search, Trash2, X } from "lucide-svelte";
+    import { BadgeDollarSign, FilePlus2, Pencil, Plus, Save, Search, Trash2 } from "lucide-svelte";
     import PurchaseInvoiceModal from "../components/PurchaseInvoiceModal.svelte";
 
     let draftName = "";
@@ -182,144 +182,169 @@
             </div>
         </header>
 
-        <section class="mgmt-card">
-            <div class="filters">
-                <label class="filter-field search">
-                    <Icon icon={Search} size={18} ariaLabel="Buscar" />
-                    <input type="search" placeholder="Buscar producto…" bind:value={query} />
-                </label>
-            </div>
-
-            <div class="product-form">
-                <h2 class="form-title">{editId ? "Editar producto" : "Nuevo producto (catálogo)"}</h2>
-                <div class="form-grid">
-                    <label class="mgmt-field">
-                        <span>Nombre</span>
-                        <input class="mgmt-input" bind:value={draftName} />
-                    </label>
-                    <label class="mgmt-field">
-                        <span>Descripción</span>
-                        <input class="mgmt-input" bind:value={draftDescription} />
-                    </label>
-                    <label class="mgmt-field">
-                        <span>Precio de venta</span>
-                        <input class="mgmt-input" type="number" min="0" step="0.01" bind:value={draftPrice} />
-                    </label>
-                    {#if editId}
-                        <div class="stock-readonly" style="grid-column:1/-1">
-                            <div class="stock-readonly-title">Stock actual (solo lectura)</div>
-                            <div class="stock-chips">
-                                <span class="stock-chip">Existencia <strong>{editExistenceReadOnly}</strong></span>
-                                <span class="stock-chip">Reservado <strong>{reservedReadOnly}</strong></span>
-                                <span class="stock-chip accent">Disponible <strong>{editAvailablePreview}</strong></span>
-                            </div>
-                            <p class="mgmt-hint">
-                                El stock no se edita aquí. Usa <strong>Factura de entrada</strong> para sumar existencia
-                                (movimientos + costo alineados a Core 2).
-                            </p>
-                        </div>
-                    {:else}
-                        <p class="mgmt-hint" style="grid-column:1/-1">
-                            Alta de catálogo con <strong>existencia 0</strong>. Para meter stock (y costo), registra una
-                            <strong>Factura de entrada</strong>. Si el producto es nuevo, puedes crearlo dentro de esa factura.
-                        </p>
-                    {/if}
-                    <label class="mgmt-field">
-                        <span>Categoría</span>
-                        <select class="mgmt-select" bind:value={draftCategoryId}>
-                            <option value="">Seleccione…</option>
-                            {#each availableCategories as category}
-                                <option value={category.id}>{category.name}</option>
-                            {/each}
-                        </select>
-                    </label>
-                    <label class="mgmt-field">
-                        <span>Estado</span>
-                        <select class="mgmt-select" bind:value={draftStatus}>
-                            <option value="active">active</option>
-                            <option value="inactive">inactive</option>
-                        </select>
-                    </label>
-                </div>
-                <div class="product-images-field" style="grid-column:1/-1; margin-top: 10px;">
-                    {#key imageKey}
-                        <MultiImagePicker label="Imágenes del producto" bind:values={draftPhotoUrls} bind:pending={imagePending} />
-                    {/key}
-                </div>
-                <div class="form-actions">
-                    {#if editId}
-                        <button class="mgmt-btn ghost" type="button" on:click={resetForm}>Cancelar</button>
-                        <button class="mgmt-btn primary" type="button" on:click={saveEdit} disabled={!canSubmit}>
-                            <Icon icon={Save} size={18} ariaLabel="Guardar" />
-                            Guardar
-                        </button>
-                    {:else}
-                        <button class="mgmt-btn primary" type="button" on:click={create} disabled={!canSubmit}>
-                            <Icon icon={Plus} size={18} ariaLabel="Crear" />
-                            Crear en catálogo
-                        </button>
-                    {/if}
-                </div>
-            </div>
-
-            {#if isInitialLoading}
-                <SkeletonList rows={6} />
-            {:else if filtered.length === 0}
-                <p class="mgmt-muted">No hay productos.</p>
-            {:else}
-                <div class="mgmt-list">
-                    {#each filtered as product (product.id)}
-                        {@const available = availableStock(product)}
-                        <article class="mgmt-row">
-                            <div class="mgmt-row-left">
-                                {#if getPrimaryProductImage(product.photoUrl ?? "")}
-                                    <img class="thumb" src={getPrimaryProductImage(product.photoUrl ?? "")} alt="" />
-                                {:else}
-                                    <div class="thumb placeholder" aria-hidden="true">
-                                        <Icon icon={BadgeDollarSign} size={18} ariaLabel="" />
-                                    </div>
-                                {/if}
-                                <div class="mgmt-row-main">
-                                    <div class="mgmt-row-title">{product.name}</div>
-                                    <p class="mgmt-row-sub">
-                                        <CategoryName categoryId={product.categoryId} /> · ${product.price.toFixed(2)} · {product.status}
-                                    </p>
-                                    <p class="mgmt-row-sub">
-                                        Stock: {available} disp. (exist. {product.existence} · res. {product.reserved ?? 0})
-                                    </p>
-                                    {#if activePromotionProductIds.has(product.id)}
-                                        <p class="mgmt-row-sub">Promoción activa</p>
-                                    {/if}
+        <div class="products-workspace">
+            <!-- Panel izquierdo: alta / edición de catálogo -->
+            <aside class="product-form-panel" aria-label="Formulario de catálogo">
+                <div class="product-form">
+                    <h2 class="form-title">{editId ? "Editar producto" : "Nuevo producto (catálogo)"}</h2>
+                    <div class="form-grid">
+                        <label class="mgmt-field">
+                            <span>Nombre</span>
+                            <input class="mgmt-input" bind:value={draftName} />
+                        </label>
+                        <label class="mgmt-field">
+                            <span>Descripción</span>
+                            <input class="mgmt-input" bind:value={draftDescription} />
+                        </label>
+                        <label class="mgmt-field">
+                            <span>Precio de venta</span>
+                            <input class="mgmt-input" type="number" min="0" step="0.01" bind:value={draftPrice} />
+                        </label>
+                        {#if editId}
+                            <div class="stock-readonly">
+                                <div class="stock-readonly-title">Stock actual (solo lectura)</div>
+                                <div class="stock-chips">
+                                    <span class="stock-chip">Existencia <strong>{editExistenceReadOnly}</strong></span>
+                                    <span class="stock-chip">Reservado <strong>{reservedReadOnly}</strong></span>
+                                    <span class="stock-chip accent">Disponible <strong>{editAvailablePreview}</strong></span>
                                 </div>
+                                <p class="mgmt-hint">
+                                    El stock no se edita aquí. Usa <strong>Factura de entrada</strong> para sumar existencia
+                                    (movimientos + costo alineados a Core 2).
+                                </p>
                             </div>
-                            <div class="mgmt-row-actions">
-                                <button class="mgmt-btn ghost" type="button" on:click={() => startEdit(product)}>
-                                    <Icon icon={Pencil} size={18} ariaLabel="Editar" />
-                                    Editar
-                                </button>
-                                <button class="mgmt-btn danger" type="button" on:click={() => productStore.removeById(product.id)}>
-                                    <Icon icon={Trash2} size={18} ariaLabel="Eliminar" />
-                                    Eliminar
-                                </button>
-                            </div>
-                        </article>
-                    {/each}
+                        {:else}
+                            <p class="mgmt-hint">
+                                Alta de catálogo con <strong>existencia 0</strong>. Para meter stock (y costo), registra una
+                                <strong>Factura de entrada</strong>. Si el producto es nuevo, puedes crearlo dentro de esa factura.
+                            </p>
+                        {/if}
+                        <label class="mgmt-field">
+                            <span>Categoría</span>
+                            <select class="mgmt-select" bind:value={draftCategoryId}>
+                                <option value="">Seleccione…</option>
+                                {#each availableCategories as category}
+                                    <option value={category.id}>{category.name}</option>
+                                {/each}
+                            </select>
+                        </label>
+                        <label class="mgmt-field">
+                            <span>Estado</span>
+                            <select class="mgmt-select" bind:value={draftStatus}>
+                                <option value="active">active</option>
+                                <option value="inactive">inactive</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="product-images-field">
+                        {#key imageKey}
+                            <MultiImagePicker
+                                label="Imágenes del producto"
+                                bind:values={draftPhotoUrls}
+                                bind:pending={imagePending}
+                            />
+                        {/key}
+                    </div>
+                    <div class="form-actions">
+                        {#if editId}
+                            <button class="mgmt-btn ghost" type="button" on:click={resetForm}>Cancelar</button>
+                            <button class="mgmt-btn primary" type="button" on:click={saveEdit} disabled={!canSubmit}>
+                                <Icon icon={Save} size={18} ariaLabel="Guardar" />
+                                Guardar
+                            </button>
+                        {:else}
+                            <button class="mgmt-btn primary" type="button" on:click={create} disabled={!canSubmit}>
+                                <Icon icon={Plus} size={18} ariaLabel="Crear" />
+                                Crear en catálogo
+                            </button>
+                        {/if}
+                    </div>
                 </div>
-                <div class="mgmt-pagination">
-                    <button class="mgmt-btn ghost" disabled={$productStore.page <= 1 || $productStore.loading} on:click={() => productStore.prevPage()}>
-                        Anterior
-                    </button>
-                    <span class="mgmt-pagination-info">Pág. {$productStore.page}</span>
-                    <button
-                        class="mgmt-btn ghost"
-                        disabled={$productStore.page * $productStore.pageSize >= $productStore.total || $productStore.loading}
-                        on:click={() => productStore.nextPage()}
-                    >
-                        Siguiente
-                    </button>
+            </aside>
+
+            <!-- Panel derecho: listado en stock / catálogo -->
+            <section class="product-list-panel mgmt-card" aria-label="Listado de productos">
+                <div class="list-panel-head">
+                    <h2 class="list-title">Productos en catálogo</h2>
+                    <label class="filter-field search">
+                        <Icon icon={Search} size={18} ariaLabel="Buscar" />
+                        <input type="search" placeholder="Buscar producto…" bind:value={query} />
+                    </label>
                 </div>
-            {/if}
-        </section>
+
+                {#if isInitialLoading}
+                    <SkeletonList rows={6} />
+                {:else if filtered.length === 0}
+                    <p class="mgmt-muted">No hay productos.</p>
+                {:else}
+                    <div class="mgmt-list">
+                        {#each filtered as product (product.id)}
+                            {@const available = availableStock(product)}
+                            <article class="mgmt-row">
+                                <div class="mgmt-row-left">
+                                    {#if getPrimaryProductImage(product.photoUrl ?? "")}
+                                        <img
+                                            class="thumb"
+                                            src={getPrimaryProductImage(product.photoUrl ?? "")}
+                                            alt=""
+                                        />
+                                    {:else}
+                                        <div class="thumb placeholder" aria-hidden="true">
+                                            <Icon icon={BadgeDollarSign} size={18} ariaLabel="" />
+                                        </div>
+                                    {/if}
+                                    <div class="mgmt-row-main">
+                                        <div class="mgmt-row-title">{product.name}</div>
+                                        <p class="mgmt-row-sub">
+                                            <CategoryName categoryId={product.categoryId} /> · ${product.price.toFixed(2)} ·
+                                            {product.status}
+                                        </p>
+                                        <p class="mgmt-row-sub">
+                                            Stock: {available} disp. (exist. {product.existence} · res. {product.reserved ?? 0})
+                                        </p>
+                                        {#if activePromotionProductIds.has(product.id)}
+                                            <p class="mgmt-row-sub">Promoción activa</p>
+                                        {/if}
+                                    </div>
+                                </div>
+                                <div class="mgmt-row-actions">
+                                    <button class="mgmt-btn ghost" type="button" on:click={() => startEdit(product)}>
+                                        <Icon icon={Pencil} size={18} ariaLabel="Editar" />
+                                        Editar
+                                    </button>
+                                    <button
+                                        class="mgmt-btn danger"
+                                        type="button"
+                                        on:click={() => productStore.removeById(product.id)}
+                                    >
+                                        <Icon icon={Trash2} size={18} ariaLabel="Eliminar" />
+                                        Eliminar
+                                    </button>
+                                </div>
+                            </article>
+                        {/each}
+                    </div>
+                    <div class="mgmt-pagination">
+                        <button
+                            class="mgmt-btn ghost"
+                            disabled={$productStore.page <= 1 || $productStore.loading}
+                            on:click={() => productStore.prevPage()}
+                        >
+                            Anterior
+                        </button>
+                        <span class="mgmt-pagination-info">Pág. {$productStore.page}</span>
+                        <button
+                            class="mgmt-btn ghost"
+                            disabled={$productStore.page * $productStore.pageSize >= $productStore.total ||
+                                $productStore.loading}
+                            on:click={() => productStore.nextPage()}
+                        >
+                            Siguiente
+                        </button>
+                    </div>
+                {/if}
+            </section>
+        </div>
     </div>
 </section>
 
@@ -331,30 +356,73 @@
 />
 
 <style>
+    /* Desktop / vistas expandidas: formulario izquierda · listado derecha */
+    .products-workspace {
+        display: grid;
+        grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+        gap: 16px;
+        align-items: start;
+    }
+
+    .product-form-panel {
+        position: sticky;
+        top: 12px;
+        max-height: calc(100dvh - 96px);
+        overflow: auto;
+        border: 1px solid var(--md-sys-color-outline-variant);
+        border-radius: 14px;
+        background: var(--md-sys-color-surface);
+        padding: 14px 16px 16px;
+    }
+
+    .product-list-panel {
+        min-width: 0;
+    }
+
+    .list-panel-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+
+    .list-title {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 750;
+    }
+
     .form-title {
         margin: 0 0 10px;
         font-size: 0.95rem;
         font-weight: 750;
     }
+
     .form-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        grid-template-columns: 1fr;
         gap: 10px;
     }
+
     .form-actions {
         display: flex;
         gap: 8px;
         margin-top: 12px;
         flex-wrap: wrap;
     }
+
     .product-form {
-        margin-bottom: 18px;
-        padding-bottom: 16px;
-        border-bottom: 1px solid var(--md-sys-color-outline-variant);
+        margin: 0;
+        padding: 0;
+        border: 0;
     }
-    .filters {
-        margin-bottom: 12px;
+
+    .product-images-field {
+        margin-top: 10px;
     }
+
     .filter-field.search {
         display: flex;
         align-items: center;
@@ -362,7 +430,11 @@
         border: 1px solid var(--md-sys-color-outline-variant);
         border-radius: 10px;
         padding: 0 12px;
+        flex: 1 1 200px;
+        max-width: 320px;
+        margin-left: auto;
     }
+
     .filter-field.search input {
         width: 100%;
         height: 40px;
@@ -372,17 +444,20 @@
         color: inherit;
         font: inherit;
     }
+
     .stock-readonly-title {
         font-size: 0.78rem;
         font-weight: 700;
         margin-bottom: 6px;
         color: var(--md-sys-color-on-surface-variant);
     }
+
     .stock-chips {
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
     }
+
     .stock-chip {
         font-size: 0.78rem;
         padding: 4px 8px;
@@ -390,10 +465,12 @@
         border: 1px solid var(--md-sys-color-outline-variant);
         background: color-mix(in srgb, var(--md-sys-color-surface-variant) 20%, transparent);
     }
+
     .stock-chip.accent {
         border-color: color-mix(in srgb, var(--md-sys-color-primary) 35%, var(--md-sys-color-outline-variant));
         color: var(--md-sys-color-primary);
     }
+
     .thumb {
         width: 44px;
         height: 44px;
@@ -401,16 +478,41 @@
         object-fit: cover;
         flex-shrink: 0;
     }
+
     .thumb.placeholder {
         display: grid;
         place-items: center;
         background: color-mix(in srgb, var(--md-sys-color-surface-variant) 30%, transparent);
         color: var(--md-sys-color-on-surface-variant);
     }
+
     .mgmt-row-left {
         display: flex;
         gap: 10px;
         align-items: flex-start;
         min-width: 0;
+    }
+
+    /* Tablet / móvil: apilar (formulario arriba, listado abajo) */
+    @media (max-width: 960px) {
+        .products-workspace {
+            grid-template-columns: 1fr;
+        }
+
+        .product-form-panel {
+            position: static;
+            max-height: none;
+        }
+
+        .filter-field.search {
+            max-width: none;
+            margin-left: 0;
+            width: 100%;
+        }
+
+        .list-panel-head {
+            flex-direction: column;
+            align-items: stretch;
+        }
     }
 </style>
