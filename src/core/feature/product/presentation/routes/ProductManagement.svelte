@@ -31,10 +31,56 @@
     let imagePending = false;
     let imageKey = 0;
     let editExistenceReadOnly = 0;
+    let formTried = false;
+    let formSaving = false;
 
     let invoiceOpen = false;
 
     let stopStockSub: (() => void) | null = null;
+
+    type FieldErrors = {
+        name?: string;
+        price?: string;
+        categoryId?: string;
+        images?: string;
+    };
+
+    function validateForm(): FieldErrors {
+        const errors: FieldErrors = {};
+        const name = draftName.trim();
+        if (!name) {
+            errors.name = "El nombre es obligatorio.";
+        } else if (name.length < 2) {
+            errors.name = "Usa al menos 2 caracteres.";
+        } else if (name.length > 120) {
+            errors.name = "Máximo 120 caracteres.";
+        }
+
+        const price = Number(draftPrice);
+        if (draftPrice === "" || draftPrice === null || draftPrice === undefined) {
+            errors.price = "Indica el precio de venta.";
+        } else if (!Number.isFinite(price)) {
+            errors.price = "El precio debe ser un número válido.";
+        } else if (price <= 0) {
+            errors.price = "El precio debe ser mayor que 0.";
+        } else if (price > 1_000_000_000) {
+            errors.price = "El precio es demasiado alto.";
+        }
+
+        if (!draftCategoryId) {
+            errors.categoryId = "Selecciona una categoría.";
+        }
+
+        if (imagePending) {
+            errors.images = "Espera a que terminen de cargar las imágenes.";
+        }
+
+        return errors;
+    }
+
+    $: fieldErrors = formTried ? validateForm() : ({} as FieldErrors);
+    $: hasErrors = Object.keys(validateForm()).length > 0;
+    $: canSubmit = !hasErrors && !imagePending && !formSaving;
 
     onMount(() => {
         productStore.syncAll().catch(() => {});
@@ -63,11 +109,18 @@
         draftExistence = 0;
         reservedReadOnly = 0;
         editExistenceReadOnly = 0;
+        formTried = false;
+        formSaving = false;
         imageKey += 1;
     }
 
     async function create() {
-        if (!draftName.trim() || !draftCategoryId || Number(draftPrice) <= 0) return;
+        formTried = true;
+        const errors = validateForm();
+        if (Object.keys(errors).length > 0) {
+            toastStore.error("Revisa los campos marcados del formulario.", 4000);
+            return;
+        }
         const data: Product = {
             id: `p-${Math.random().toString(36).slice(2, 8)}`,
             name: draftName.trim(),
@@ -79,6 +132,7 @@
             categoryId: draftCategoryId,
             status: draftStatus,
         };
+        formSaving = true;
         try {
             toastStore.info("Creando producto…", 3000);
             await productStore.create(data);
@@ -87,6 +141,7 @@
         } catch (e: any) {
             logger.error(e?.message ?? e, e?.stack);
             toastStore.error(e instanceof Error ? e.message : "No se pudo crear el producto.", 5000);
+            formSaving = false;
         }
     }
 
@@ -101,14 +156,23 @@
         reservedReadOnly = product.reserved ?? 0;
         editExistenceReadOnly = product.existence;
         draftExistence = 0;
+        formTried = false;
+        formSaving = false;
         imageKey += 1;
     }
 
     async function saveEdit(): Promise<void> {
         if (!editId) return;
+        formTried = true;
+        const errors = validateForm();
+        if (Object.keys(errors).length > 0) {
+            toastStore.error("Revisa los campos marcados del formulario.", 4000);
+            return;
+        }
         const old = $productStore.items.find((p) => p.id === editId);
         if (!old) return;
         const nextExistence = old.existence;
+        formSaving = true;
         try {
             toastStore.info("Guardando cambios…", 2500);
             await productStore.updateCatalog({
@@ -127,6 +191,7 @@
         } catch (e: any) {
             logger.error(e?.message ?? e, e?.stack);
             toastStore.error(e instanceof Error ? e.message : "No se pudo guardar el producto.", 5000);
+            formSaving = false;
         }
     }
 
@@ -142,8 +207,6 @@
                       (p.id || "").toLowerCase().includes(q)
                   );
               });
-    $: canSubmit =
-        draftName.trim().length > 0 && draftCategoryId.length > 0 && Number(draftPrice) > 0 && !imagePending;
     $: availableCategories = $categoryStore.items.filter(
         (category) => category.status === "active" || category.id === draftCategoryId
     );
@@ -183,23 +246,57 @@
         </header>
 
         <div class="products-workspace">
-            <!-- Panel izquierdo: alta / edición de catálogo -->
             <aside class="product-form-panel" aria-label="Formulario de catálogo">
-                <div class="product-form">
+                <form
+                    class="product-form"
+                    novalidate
+                    on:submit|preventDefault={() => (editId ? saveEdit() : create())}
+                >
                     <h2 class="form-title">{editId ? "Editar producto" : "Nuevo producto (catálogo)"}</h2>
+
+                    {#if formTried && hasErrors}
+                        <div class="form-banner" role="alert">
+                            Corrige los campos señalados para continuar.
+                        </div>
+                    {/if}
+
                     <div class="form-grid">
-                        <label class="mgmt-field">
-                            <span>Nombre</span>
-                            <input class="mgmt-input" bind:value={draftName} />
+                        <label class="mgmt-field" class:invalid={!!fieldErrors.name}>
+                            <span>Nombre <em class="req" aria-hidden="true">*</em></span>
+                            <input
+                                class="mgmt-input"
+                                bind:value={draftName}
+                                aria-invalid={fieldErrors.name ? "true" : undefined}
+                                aria-describedby={fieldErrors.name ? "err-name" : undefined}
+                                maxlength="120"
+                                autocomplete="off"
+                            />
+                            {#if fieldErrors.name}
+                                <span id="err-name" class="field-error">{fieldErrors.name}</span>
+                            {/if}
                         </label>
+
                         <label class="mgmt-field">
                             <span>Descripción</span>
-                            <input class="mgmt-input" bind:value={draftDescription} />
+                            <input class="mgmt-input" bind:value={draftDescription} maxlength="500" />
                         </label>
-                        <label class="mgmt-field">
-                            <span>Precio de venta</span>
-                            <input class="mgmt-input" type="number" min="0" step="0.01" bind:value={draftPrice} />
+
+                        <label class="mgmt-field" class:invalid={!!fieldErrors.price}>
+                            <span>Precio de venta <em class="req" aria-hidden="true">*</em></span>
+                            <input
+                                class="mgmt-input"
+                                type="number"
+                                min="0.01"
+                                step="0.01"
+                                bind:value={draftPrice}
+                                aria-invalid={fieldErrors.price ? "true" : undefined}
+                                aria-describedby={fieldErrors.price ? "err-price" : undefined}
+                            />
+                            {#if fieldErrors.price}
+                                <span id="err-price" class="field-error">{fieldErrors.price}</span>
+                            {/if}
                         </label>
+
                         {#if editId}
                             <div class="stock-readonly">
                                 <div class="stock-readonly-title">Stock actual (solo lectura)</div>
@@ -219,15 +316,25 @@
                                 <strong>Factura de entrada</strong>. Si el producto es nuevo, puedes crearlo dentro de esa factura.
                             </p>
                         {/if}
-                        <label class="mgmt-field">
-                            <span>Categoría</span>
-                            <select class="mgmt-select" bind:value={draftCategoryId}>
+
+                        <label class="mgmt-field" class:invalid={!!fieldErrors.categoryId}>
+                            <span>Categoría <em class="req" aria-hidden="true">*</em></span>
+                            <select
+                                class="mgmt-select"
+                                bind:value={draftCategoryId}
+                                aria-invalid={fieldErrors.categoryId ? "true" : undefined}
+                                aria-describedby={fieldErrors.categoryId ? "err-cat" : undefined}
+                            >
                                 <option value="">Seleccione…</option>
                                 {#each availableCategories as category}
                                     <option value={category.id}>{category.name}</option>
                                 {/each}
                             </select>
+                            {#if fieldErrors.categoryId}
+                                <span id="err-cat" class="field-error">{fieldErrors.categoryId}</span>
+                            {/if}
                         </label>
+
                         <label class="mgmt-field">
                             <span>Estado</span>
                             <select class="mgmt-select" bind:value={draftStatus}>
@@ -236,7 +343,8 @@
                             </select>
                         </label>
                     </div>
-                    <div class="product-images-field">
+
+                    <div class="product-images-field" class:invalid={!!fieldErrors.images}>
                         {#key imageKey}
                             <MultiImagePicker
                                 label="Imágenes del producto"
@@ -244,25 +352,30 @@
                                 bind:pending={imagePending}
                             />
                         {/key}
+                        {#if fieldErrors.images}
+                            <span class="field-error">{fieldErrors.images}</span>
+                        {/if}
                     </div>
+
                     <div class="form-actions">
                         {#if editId}
-                            <button class="mgmt-btn ghost" type="button" on:click={resetForm}>Cancelar</button>
-                            <button class="mgmt-btn primary" type="button" on:click={saveEdit} disabled={!canSubmit}>
+                            <button class="mgmt-btn ghost" type="button" on:click={resetForm} disabled={formSaving}>
+                                Cancelar
+                            </button>
+                            <button class="mgmt-btn primary" type="submit" disabled={!canSubmit}>
                                 <Icon icon={Save} size={18} ariaLabel="Guardar" />
-                                Guardar
+                                {formSaving ? "Guardando…" : "Guardar"}
                             </button>
                         {:else}
-                            <button class="mgmt-btn primary" type="button" on:click={create} disabled={!canSubmit}>
+                            <button class="mgmt-btn primary" type="submit" disabled={!canSubmit}>
                                 <Icon icon={Plus} size={18} ariaLabel="Crear" />
-                                Crear en catálogo
+                                {formSaving ? "Creando…" : "Crear en catálogo"}
                             </button>
                         {/if}
                     </div>
-                </div>
+                </form>
             </aside>
 
-            <!-- Panel derecho: listado en stock / catálogo -->
             <section class="product-list-panel mgmt-card" aria-label="Listado de productos">
                 <div class="list-panel-head">
                     <h2 class="list-title">Productos en catálogo</h2>
@@ -356,7 +469,6 @@
 />
 
 <style>
-    /* Desktop / vistas expandidas: formulario izquierda · listado derecha */
     .products-workspace {
         display: grid;
         grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
@@ -400,6 +512,17 @@
         font-weight: 750;
     }
 
+    .form-banner {
+        margin: 0 0 12px;
+        padding: 8px 10px;
+        border-radius: 8px;
+        font-size: 0.82rem;
+        font-weight: 650;
+        color: #fecaca;
+        background: color-mix(in srgb, #ef4444 14%, transparent);
+        border: 1px solid color-mix(in srgb, #ef4444 35%, transparent);
+    }
+
     .form-grid {
         display: grid;
         grid-template-columns: 1fr;
@@ -421,6 +544,32 @@
 
     .product-images-field {
         margin-top: 10px;
+    }
+
+    .product-images-field.invalid {
+        outline: 1px solid color-mix(in srgb, #ef4444 50%, transparent);
+        border-radius: 10px;
+        padding: 6px;
+    }
+
+    .mgmt-field.invalid .mgmt-input,
+    .mgmt-field.invalid .mgmt-select {
+        border-color: color-mix(in srgb, #ef4444 55%, var(--md-sys-color-outline-variant));
+        box-shadow: 0 0 0 1px color-mix(in srgb, #ef4444 25%, transparent);
+    }
+
+    .field-error {
+        display: block;
+        margin-top: 4px;
+        font-size: 0.75rem;
+        font-weight: 650;
+        color: #fca5a5;
+    }
+
+    .req {
+        color: #f87171;
+        font-style: normal;
+        font-weight: 800;
     }
 
     .filter-field.search {
@@ -493,7 +642,6 @@
         min-width: 0;
     }
 
-    /* Tablet / móvil: apilar (formulario arriba, listado abajo) */
     @media (max-width: 960px) {
         .products-workspace {
             grid-template-columns: 1fr;
