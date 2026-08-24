@@ -2,7 +2,12 @@
 
 **Dashboard de administración y gobierno de negocio** para [Alejo Taller](https://github.com/danielitoCode/AlejoTaller) — panel staff (owner / admin / sales / viewer) sobre el mismo backend Appwrite que la tienda.
 
-**Estado del núcleo:** **Core 1 cerrado** (2026-08-12) — stock soft-hold, ventas pendientes, confirm/reject y catálogo alineados con el contrato canónico.
+**Estado del núcleo:**
+
+| Núcleo | Estado |
+|--------|--------|
+| **Core 1** | **Cerrado** (2026-08-12) — soft-hold, ventas UNVERIFIED→VERIFIED/DELETED, catálogo |
+| **Core 2** | **Cerrado** (2026-08-24) — factura de entrada, `stock_movements`, finance/COGS, cola, reservas taller; merge PR [#12](https://github.com/danielitoCode/dash_alejo_taller/pull/12) → `master` |
 
 ---
 
@@ -22,44 +27,53 @@
 | Repo | Rol |
 |------|-----|
 | **[dash_alejo_taller](https://github.com/danielitoCode/dash_alejo_taller)** (este) | Back-office web (Svelte + Vite + Appwrite) |
-| **[AlejoTaller](https://github.com/danielitoCode/AlejoTaller)** | Monorepo: tienda Android, operador de escaneo, web cliente, políticas y contratos de stock/venta |
-| Operador / scan | Confirmación en mostrador (primario en tienda física); el dash es supervisión / respaldo con **la misma semántica de stock** |
+| **[AlejoTaller](https://github.com/danielitoCode/AlejoTaller)** | Monorepo: tienda Android, operador de escaneo, web cliente, políticas |
+| Operador / scan | Confirmación en mostrador (primario); dash = supervisión con la misma semántica de stock |
 
-Contrato de stock compartido (no negociable en Core 1):
+Contrato de stock compartido:
 
 ```text
 available = max(0, existence − reserved)
 
 Cliente UNVERIFIED  → reserved += qty
-Confirmar VERIFIED  → existence -= qty, reserved -= qty
+Confirmar VERIFIED  → existence -= qty, reserved -= qty  (+ salida_venta + sale_finance_event)
 Rechazar DELETED    → reserved -= qty
-Dar entrada (panel) → existence += qty
+Factura de entrada  → existence += qty (+ stock_movements entrada + last_unit_cost)
 ```
 
-Detalle: [`.roadmap/Core1/CANONICAL_RULES_FREEZE.md`](.roadmap/Core1/CANONICAL_RULES_FREEZE.md)
+- Soft-hold Core 1: [`.roadmap/Core1/CANONICAL_RULES_FREEZE.md`](.roadmap/Core1/CANONICAL_RULES_FREEZE.md)  
+- Deltas Core 2: [`.roadmap/Core2/POLICY_DELTAS_CORE2.md`](.roadmap/Core2/POLICY_DELTAS_CORE2.md)
 
 ---
 
 ## Qué incluye Core 1 (cerrado)
 
-- **Auth y roles** staff (owner / admin / sales / viewer) con rutas protegidas
-- **Productos:** catálogo, imágenes, «Dar entrada» (delta), stock visible (`existence` / `reserved` / disponible)
-- **Ventas:** listado de pedidos de tienda, pendientes con acento ámbar, detalle con «Ver detalles», confirmar y rechazar
-- **Realtime / refresco:** listados de productos y ventas alineados tras reserva, entrada, confirm y reject (Appwrite RT + fan-out local; Pulse si está configurado)
-- **Usuarios:** listado sin anónimos vacíos; purge de anónimos (límites free plan)
-- **Categorías, promos, support inbox, ajustes** (soporte operativo; no bloquean el DoD de stock)
-- **Reservas (menú):** placeholder de agenda de taller — **fuera** del flujo de ventas B2C
+- **Auth y roles** staff con rutas protegidas
+- **Productos:** catálogo, imágenes, stock visible
+- **Ventas:** listado, pendientes, detalle, confirmar y rechazar
+- **Realtime** productos/ventas; usuarios, categorías, promos, support, ajustes
 
-Estado formal y pendientes post-Core 1: [`.roadmap/Core1/MVP_CORE1_STATUS.md`](.roadmap/Core1/MVP_CORE1_STATUS.md)
+Estado: [`.roadmap/Core1/MVP_CORE1_STATUS.md`](.roadmap/Core1/MVP_CORE1_STATUS.md)
+
+---
+
+## Qué incluye Core 2 (cerrado · 2026-08-24)
+
+- **Factura de entrada** multi-línea: única vía de alta de stock en UI; producto nuevo en factura; catálogo existence 0
+- **`stock_movements`:** `entrada`, `salida_venta` (paridad panel/operador), `ajuste`
+- **Finanzas:** `last_unit_cost`, `sale_finance_event`, KPIs solo VERIFIED
+- **Cola UNVERIFIED** + badges nav (ventas / reservas / mensajes)
+- **Inventario** movements + facturas; **reservas taller** (`workshop_reservation`)
+- Permisos Appwrite: staff write / cliente sin write en movements, purchase, finance, reservation
+
+Checklist: [`.roadmap/Core2/CORE2_UNIFIED_CHECKLIST.md`](.roadmap/Core2/CORE2_UNIFIED_CHECKLIST.md)  
+Estado: [`.roadmap/Core2/MVP_CORE2_STATUS.md`](.roadmap/Core2/MVP_CORE2_STATUS.md)
 
 ---
 
 ## Stack
 
-- **Svelte 5** + **Vite** + TypeScript  
-- **Appwrite** (Auth, Databases, Realtime, Functions)  
-- **Pulse / Pusher** (opcional, fan-out cross-device)  
-- Deploy típico: **Render** (web service) + workers auxiliares (ver `DEPLOYMENT.md`)
+- **Svelte 5** + **Vite** + TypeScript · **Appwrite** · Pulse/Pusher opcional · Deploy **Render** (`DEPLOYMENT.md`)
 
 ---
 
@@ -67,50 +81,33 @@ Estado formal y pendientes post-Core 1: [`.roadmap/Core1/MVP_CORE1_STATUS.md`](.
 
 ```bash
 npm install
-cp .env.example .env   # completar VITE_APPWRITE_* y opcionales Pulse
+cp .env.example .env
 npm run dev
+npm run check && npm run test:unit && npm run build
 ```
 
-Scripts útiles:
-
-```bash
-npm run check        # svelte-check + tsc
-npm run test:unit    # vitest unit
-npm run build        # producción
-npm run ci           # check + unit + build
-```
-
-No commitear `.env`. Plantilla: `.env.example`.
+No commitear `.env`.
 
 ---
 
-## Roadmap Core 1 (documentación)
+## Roadmap
 
-| Documento | Descripción |
-|-----------|-------------|
-| [`.roadmap/Core1/README.md`](.roadmap/Core1/README.md) | Índice de fases 7.x |
-| [`.roadmap/Core1/PHASE_7_3_CORE1_DOD.md`](.roadmap/Core1/PHASE_7_3_CORE1_DOD.md) | Definition of Done + registro de cierre |
-| [`.roadmap/Core1/QA_CORE1_CHECK_plan.md`](.roadmap/Core1/QA_CORE1_CHECK_plan.md) | Checklist QA ~15 min (sesión 2026-08-12) |
-| [`.roadmap/Core1/SMOKE_6_2.md`](.roadmap/Core1/SMOKE_6_2.md) | Smoke confirm / reject |
-| [`.roadmap/Core1/ALIGNMENT_WITH_ALEJOTALLER.md`](.roadmap/Core1/ALIGNMENT_WITH_ALEJOTALLER.md) | Alineación con monorepo |
+| Núcleo | Índice |
+|--------|--------|
+| Core 1 | [`.roadmap/Core1/README.md`](.roadmap/Core1/README.md) |
+| Core 2 | [`.roadmap/Core2/README.md`](.roadmap/Core2/README.md) |
+| Índice | [`.roadmap/README.md`](.roadmap/README.md) |
 
 ---
 
-## Deploy
+## Pendiente no bloqueante (post–Core 2)
 
-Ver [`DEPLOYMENT.md`](./DEPLOYMENT.md) (Render, Cloudflare Workers para Google auth / infra status, variables de entorno).
-
----
-
-## Pendiente no bloqueante (post–Core 1)
-
-1. Validar §6 QA con cuenta **viewer** (solo lectura stock/ventas).  
-2. Core 2 / agenda de **Reservas** de taller (sustituir placeholder).  
-3. Deuda cosmética de UI y hardening de env en deploys.  
-4. Ampliar E2E automatizado tienda ↔ dash cuando el monorepo lo priorice.
+1. Smoke opcional ajuste / confirm operador dispositivo  
+2. Reserva taller desde cliente web  
+3. E2E tienda ↔ dash / deuda UI
 
 ---
 
 ## Licencia / uso
 
-Proyecto privado de operación de **Alejo Taller**. Código y políticas de negocio alineados con el monorepo cliente/operador.
+Proyecto privado de operación de **Alejo Taller**.
