@@ -263,7 +263,7 @@
             </div>
 
             {#if isInitialLoading}
-                <SkeletonList count={6} />
+                <SkeletonList rows={6} />
             {:else if filtered.length === 0}
                 <p class="mgmt-muted">No hay productos.</p>
             {:else}
@@ -272,8 +272,8 @@
                         {@const available = availableStock(product)}
                         <article class="mgmt-row">
                             <div class="mgmt-row-left">
-                                {#if getPrimaryProductImage(product)}
-                                    <img class="thumb" src={getPrimaryProductImage(product)} alt="" />
+                                {#if getPrimaryProductImage(product.photoUrl ?? "")}
+                                    <img class="thumb" src={getPrimaryProductImage(product.photoUrl ?? "")} alt="" />
                                 {:else}
                                     <div class="thumb placeholder" aria-hidden="true">
                                         <Icon icon={BadgeDollarSign} size={18} ariaLabel="" />
