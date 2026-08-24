@@ -10,6 +10,7 @@ import { DeleteProductCaseUse } from "../domain/caseuse/DeleteProductCaseUse"
 import { UpdateProductPriceCaseUse } from "../domain/caseuse/UpdateProductPriceCaseUse"
 import { UpdateProductCatalogCaseUse } from "../domain/caseuse/UpdateProductCatalogCaseUse"
 import { RegisterStockEntryCaseUse } from "../domain/caseuse/RegisterStockEntryCaseUse"
+import { RegisterStockAdjustmentCaseUse } from "../domain/caseuse/RegisterStockAdjustmentCaseUse"
 
 const database = infrastructureContainer.appwrite.databases
 
@@ -41,6 +42,12 @@ const registerStockEntryCaseUse = new RegisterStockEntryCaseUse(
     resolveStaffUserId
 )
 
+const registerStockAdjustmentCaseUse = new RegisterStockAdjustmentCaseUse(
+    productOfflineFirstRepository,
+    inventoryContainer.repositories.stockMovement,
+    resolveStaffUserId
+)
+
 export const productContainer = {
     repositories: {
         net: productNetRepository,
@@ -54,5 +61,6 @@ export const productContainer = {
         updatePrice: modifyProductPriceCaseUse,
         delete: deletedProductCaseUse,
         registerStockEntry: registerStockEntryCaseUse,
+        registerStockAdjustment: registerStockAdjustmentCaseUse,
     },
 }

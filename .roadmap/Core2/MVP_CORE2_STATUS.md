@@ -1,33 +1,38 @@
-# Core 2 — Estado MVP Back-office
+# MVP Core 2 — Estado vivo
 
-**Última actualización:** 2026-08-19  
-**Veredicto:** **En curso** — B1 dash **net repos + tests mapper** listos; siguiente **B2 operador** ∥ **B3 entrada formal**.  
-**Core 2 dash cerrado:** ☐  
 **Rama:** `Core2`  
-**Checklist unificado:** [`CORE2_UNIFIED_CHECKLIST.md`](./CORE2_UNIFIED_CHECKLIST.md)
+**Última actualización:** 2026-08-24  
+**Core 2 cerrado (código + smokes + CI + permisos):** **SÍ**  
+**Merge a `master`:** pendiente de PR
 
-| Fase | Nombre | Estado |
-|------|--------|--------|
-| 2.0 | Alcance + políticas delta | ✓ |
-| 2.1 | Schema Appwrite + dominio | ✓ cloud · ✓ dominio/DTO/mapper · ✓ net repos dash · operador net ☐ |
-| 2.2 | Operador `salida_venta` + finance | ☐ (AlejoTaller) |
-| 2.3 | Panel factura + movements / ajuste | ☐ (entrada rápida existence-only hoy) |
-| 2.4 | Reportes + cola UNVERIFIED | ☐ |
-| 2.5 | Reservas de taller | ☐ |
-| 2.6 | Seguridad + DoD | ☐ |
+## Resumen
 
-## Hecho (2026-08-19)
+| Bloque | Estado |
+|--------|--------|
+| B0 Baseline | ✓ |
+| B1 Dominio/DTO/net | ✓ |
+| B2 Operador traza | ✓ |
+| B3 Entrada formal / factura | ✓ |
+| B4 Cola + finance + paridad | ✓ |
+| B5 Reservas taller | ✓ |
+| B6 CI + permisos + smokes | ✓ |
+| Merge master | ⏳ PR |
 
-- [x] Collections Appwrite + permisos
-- [x] Soft-hold Core 1 intacto en `master`; trabajo en `Core2`
-- [x] Dominio/DTO/mapper + **net repositories** dash (inventory/purchase/finance)
-- [x] Constantes `APPWRITE_COLLECTIONS`
-- [x] Tests unitarios mapper round-trip
+## Políticas Core 2 (vigentes)
 
-## Código baseline
+- Soft-hold: `available = max(0, existence − reserved)`
+- COGS al VERIFIED: `last_unit_cost × qty` (no promedio)
+- Cliente no escribe `stock_movements`, `purchase_*`, `sale_finance_event`, `workshop_reservation`
+- Alta de stock **solo** vía factura de entrada (multi-línea; producto nuevo permitido en factura)
+- Confirm backoffice = paridad operador: `salida_venta` + finance event
+- Reservas taller ≠ ventas de tienda
 
-- «Dar entrada»: `existence += qty` (movement formal = B3)
+## Cierre B6 confirmado
 
-## Cómo cerrar
+1. CI verde (backoffice + cliente/operador) — 2026-08-24
+2. Permisos Appwrite alineados por rol/colección — 2026-08-24
+3. Smoke cruzado pasado — 2026-08-24
 
-Ver DoD en plan + bloques B2–B6 del checklist unificado.
+## Siguiente paso
+
+Merge PR `Core2` → `master` en **dash_alejo_taller** y **AlejoTaller**.

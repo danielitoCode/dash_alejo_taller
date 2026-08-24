@@ -13,7 +13,11 @@ export function createSupplier(input: Supplier): Supplier {
     return {
         id,
         name,
-        contact: input.contact ? String(input.contact) : undefined,
+        // Permitir "" para cumplir required de Appwrite sin forzar datos reales.
+        contact:
+            input.contact !== undefined && input.contact !== null
+                ? String(input.contact)
+                : undefined,
         notes: input.notes ? String(input.notes) : undefined,
     }
 }

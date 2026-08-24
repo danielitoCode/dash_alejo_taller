@@ -1,0 +1,201 @@
+.nested-shell {
+        height: 100dvh;
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        background: var(--md-sys-color-background);
+        color: var(--md-sys-color-on-background);
+        overflow: hidden;
+    }
+
+    .sidebar {
+        border-right: 1px solid var(--md-sys-color-outline-variant);
+        background: var(--md-sys-color-surface);
+        padding: 14px;
+        height: 100%;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .brand {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .brand-logo {
+        width: 44px;
+        height: 44px;
+        object-fit: contain;
+    }
+
+    .brand-meta h2 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 900;
+    }
+
+    .brand-meta p {
+        margin: 2px 0 0;
+        font-size: 0.82rem;
+        color: color-mix(in srgb, var(--md-sys-color-on-background) 70%, transparent);
+    }
+
+    .sidebar-nav {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: stretch;
+        gap: 4px;
+        overflow: auto;
+        padding-right: 4px;
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+
+    .sidebar-nav button,
+    .logout {
+        display: flex;
+        flex-direction: row;
+        justify-content: flex-start;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        text-align: left;
+        padding: 10px 12px;
+        border-radius: 12px;
+        cursor: pointer;
+        font: inherit;
+    }
+
+    .sidebar-nav button:hover {
+        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 45%, transparent);
+    }
+
+    .sidebar-nav button:active {
+        transform: scale(0.99);
+    }
+
+    .sidebar-nav button.selected {
+        background: color-mix(in srgb, var(--md-sys-color-primary) 16%, transparent);
+        color: var(--md-sys-color-primary);
+        font-weight: 800;
+    }
+
+    .sidebar-nav button.selected .nav-ico {
+        opacity: 1;
+    }
+
+    .logout {
+        margin-top: auto;
+        border: 1px solid var(--md-sys-color-outline-variant);
+    }
+
+    .content {
+        min-width: 0;
+        height: 100%;
+        overflow: auto;
+        padding: 16px 18px 28px;
+    }
+
+    .top-mobile {
+        display: none;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+
+    .menu-toggle,
+    .refresh-role-btn {
+        border: 1px solid var(--md-sys-color-outline-variant);
+        background: transparent;
+        color: inherit;
+        border-radius: 10px;
+        width: 40px;
+        height: 40px;
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+    }
+
+    .ghost {
+        margin-left: auto;
+        opacity: 0.35;
+        font-size: 0.75rem;
+    }
+
+    @media (max-width: 900px) {
+        .nested-shell {
+            grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+            position: fixed;
+            z-index: 40;
+            left: 0;
+            top: 0;
+            width: min(300px, 86vw);
+            transform: translateX(-105%);
+            transition: transform 180ms ease;
+            box-shadow: 0 20px 50px color-mix(in srgb, black 25%, transparent);
+            height: 100dvh;
+        }
+
+        .sidebar.open {
+            transform: translateX(0);
+        }
+
+        .top-mobile {
+            display: flex;
+        }
+    }
+
+    .sidebar-nav::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .sidebar-nav::-webkit-scrollbar-thumb {
+        background: color-mix(in srgb, var(--md-sys-color-outline) 45%, transparent);
+        border-radius: 999px;
+    }
+
+    .sidebar-nav::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+/* Badge de pendientes — icono | etiqueta | badge */
+.nav-ico-wrap {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+}
+.nav-badge {
+    margin-left: auto;
+    flex-shrink: 0;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    line-height: 18px;
+    text-align: center;
+    color: #fff;
+    background: #dc2626;
+    pointer-events: none;
+}
+.sidebar-nav button.selected .nav-badge {
+    background: #ef4444;
+}
+.nav-label {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

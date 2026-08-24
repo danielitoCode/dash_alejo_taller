@@ -8,42 +8,43 @@
     import { rememberNavController } from "../../../../lib/navigation/rememberNavController";
     import { authContainer } from "../../../feature/auth/di/auth.container";
     import { sessionStore } from "../../../feature/auth/presentation/viewmodel/session.store";
-    import { normalizeBusinessRole, type BusinessRole } from "../../../feature/auth/domain/entity/BusinessRole";
+    import { type BusinessRole } from "../../../feature/auth/domain/entity/BusinessRole";
     import {
         canAccessRoute,
         getFirstAllowedRoute,
     } from "../../../feature/auth/domain/config/RoleConfig";
     import CategoryManagement from "../../../feature/category/presentation/routes/CategoryManagement.svelte";
     import ProductManagement from "../../../feature/product/presentation/routes/ProductManagement.svelte";
-    import { categoryStore } from "../../../feature/category/presentation/viewmodel/category.store";
-    import { productStore } from "../../../feature/product/presentation/viewmodel/product.store";
-    import { promotionStore } from "../../../feature/notification/presentation/viewmodel/promotion.store";
     import PromoManagement from "../../../feature/notification/presentation/routes/PromoManagement.svelte";
     import SaleManagement from "../../../feature/sale/presentation/routes/SaleManagement.svelte";
     import { saleStore } from "../../../feature/sale/presentation/viewmodel/sale.store";
+    import { reservationStore } from "../../../feature/reservation/presentation/viewmodel/reservation.store";
     import UserManagement from "../../../feature/auth/presentation/routes/UserManagement.svelte";
     import Icon from "../components/Icon.svelte";
     import DashboardHome from "../routes/DashboardHome.svelte";
     import SettingsManagement from "../routes/SettingsManagement.svelte";
     import ReservationManagement from "../routes/ReservationManagement.svelte";
+    import InventoryTrace from "../../../feature/inventory/presentation/routes/InventoryTrace.svelte";
     import { toastStore } from "../viewmodel/toast.store";
     import { logger } from "../util/logger.service";
     import RealtimeDock from "../components/RealtimeDock.svelte";
     import SupportInbox from "../../../feature/support/presentation/routes/SupportInbox.svelte";
     import { supportInboxStore } from "../../../feature/support/presentation/viewmodel/support-inbox.store";
-    import { category, dashboard, product, promo, reservation, sales, settings, support, users } from "./nested.router";
-    import { subscribePulseChannelAll } from "../../data/alset-pulse/pulse.realtime";
-    import { pulseRefreshTargets } from "../../data/alset-pulse/pulse.refresh-targets";
     import {
-        parseStockChangedPayload,
-        subscribeStockChanged,
-    } from "../../data/alset-pulse/stock-pulse";
-    import { client } from "../../di/appwrite.config";
-    import { ENV } from "../../env";
+        category,
+        dashboard,
+        inventory,
+        product,
+        promo,
+        reservation,
+        sales,
+        settings,
+        support,
+        users,
+    } from "./nested.router";
     import SupportDetail from "../../../feature/support/presentation/routes/SupportDetail.svelte";
     import SaleDetail from "../../../feature/sale/presentation/routes/SaleDetail.svelte";
     import { supportDetail, salesDetail } from "./nested.router";
-    import { get } from "svelte/store";
     import { BuyState } from "../../../feature/sale/domain/entity/enums";
     import {
         BadgeDollarSign,
@@ -54,10 +55,13 @@
         MessageSquareText,
         Megaphone,
         Package,
+        ClipboardList,
         Settings,
         Tags,
-        Users
+        Users,
     } from "lucide-svelte";
+    import { createNestedNavRuntime } from "./nested-nav-runtime";
+    import "./nested-shell.css";
 
     export let navController: NavController;
     export let navBackStackEntry: NavBackStackEntry<{ id?: string }>;
@@ -73,16 +77,13 @@
         { label: "Mensajes", path: support.path, icon: MessageSquareText },
         { label: "Usuarios", path: users.path, icon: Users },
         { label: "Productos", path: product.path, icon: Package },
+        { label: "Inventario", path: inventory.path, icon: ClipboardList },
         { label: "Categorías", path: category.path, icon: Tags },
         { label: "Ventas", path: sales.path, icon: BadgeDollarSign },
         { label: "Promos", path: promo.path, icon: Megaphone },
         { label: "Reservas", path: reservation.path, icon: CalendarCheck2 },
-        { label: "Ajustes", path: settings.path, icon: Settings }
+        { label: "Ajustes", path: settings.path, icon: Settings },
     ];
-
-    function canAccess(path: string): boolean {
-        return canAccessRoute(currentRole, path);
-    }
 
     function firstAllowedPath(role: BusinessRole): string {
         return getFirstAllowedRoute(role);
@@ -92,16 +93,31 @@
     $: internalStack = $internalStackStore;
     $: currentPath = internalStack.at(-1)?.route ?? dashboard.path;
     $: visibleItems = items.filter((item) => canAccessRoute(currentRole, item.path));
-    /** Badge Mensajes = hilos con status "nuevo" (solicitudes pendientes). */
-    $: supportPendingNuevo = ($supportInboxStore.items ?? []).filter((m) => m.status === "nuevo").length;
-    $: navItems = visibleItems.map((item) => ({
-        ...item,
-        badge: item.path === support.path ? supportPendingNuevo : 0
-    }));
+
+    // Badges: ventas + reservas + mensajes
+    $: pendingSalesCount = ($saleStore.items ?? []).filter(
+        (s) => s.verified === BuyState.UNVERIFIED
+    ).length;
+    $: pendingReservationsCount = ($reservationStore.items ?? []).filter(
+        (r) => r.status === "requested"
+    ).length;
+    $: supportPendingNuevo = ($supportInboxStore.items ?? []).filter(
+        (m) => m.status === "nuevo"
+    ).length;
+
+    function navBadge(path: string): number {
+        if (path === sales.path) return pendingSalesCount;
+        if (path === reservation.path) return pendingReservationsCount;
+        if (path === support.path) return supportPendingNuevo;
+        return 0;
+    }
+
     $: if (currentRole && currentPath && !canAccessRoute(currentRole, currentPath)) {
         const allowedPath = firstAllowedPath(currentRole);
         if (allowedPath !== currentPath) {
-            logger.info(`[NestedNav] 3.1 ruta bloqueada path=${currentPath} role=${currentRole} → ${allowedPath}`);
+            logger.info(
+                `[NestedNav] 3.1 ruta bloqueada path=${currentPath} role=${currentRole} → ${allowedPath}`
+            );
             toastStore.error("Tu rol no tiene acceso a esta sección.");
             internalNavController.navigate(allowedPath);
         }
@@ -109,18 +125,6 @@
 
     let sidebarOpen = false;
     let stopSupportRt: (() => void) | null = null;
-    let stopPulseRefresh: (() => void) | null = null;
-    let stopStockFanout: (() => void) | null = null;
-    let stopAppwriteProductRt: (() => void) | null = null;
-    let supportSyncTimer: number | null = null;
-    let salesSyncTimer: number | null = null;
-    let stockSyncTimer: number | null = null;
-    let pendingStockIds: string[] = [];
-    let syncingSupport = false;
-    let syncingSales = false;
-    let syncingStock = false;
-    let queuedSupport = false;
-    let queuedSales = false;
 
     function go(path: string) {
         if (!canAccessRoute(currentRole, path)) {
@@ -132,32 +136,20 @@
         sidebarOpen = false;
     }
 
+    // RT + sync de stores: nested-nav-runtime (no duplicar onMount de master)
+    const runtime = createNestedNavRuntime({
+        getRole: () => currentRole,
+        setRole: (r) => {
+            currentRole = r;
+        },
+        getPath: () => currentPath,
+        firstAllowedPath,
+        internalNavigate: (p) => internalNavController.navigate(p),
+        outerNavigate: navController,
+    });
+
     async function refreshUserRole() {
-        try {
-            logger.info("[NestedNav] Refrescando rol del usuario...");
-            const u = await authContainer.useCases.accounts.getCurrentUser();
-            const newRole = normalizeBusinessRole(u.role);
-            const oldRole = currentRole;
-
-            if (newRole !== oldRole) {
-                logger.info(`[NestedNav] Rol actualizado: ${oldRole} → ${newRole}`);
-                currentRole = newRole;
-                toastStore.success(`✅ Rol actualizado a: ${newRole}`);
-
-                const allowedPath = firstAllowedPath(currentRole);
-                if (!canAccessRoute(currentRole, currentPath)) {
-                    internalNavController.navigate(allowedPath);
-                }
-            } else {
-                logger.info(`[NestedNav] El rol sigue siendo: ${currentRole}`);
-                toastStore.info(`El rol es: ${currentRole}`);
-            }
-        } catch (error) {
-            const msg = error instanceof Error ? error.message : String(error);
-            const stack = error instanceof Error ? error.stack : undefined;
-            logger.error(`[NestedNav] Error refrescando rol: ${msg}`, stack);
-            toastStore.error("Error al refrescar rol");
-        }
+        await runtime.refreshUserRole();
     }
 
     async function logout() {
@@ -168,290 +160,19 @@
         }
     }
 
-    function scheduleStockRefresh(productIds: string[]) {
-        for (const id of productIds) {
-            if (id && !pendingStockIds.includes(id)) pendingStockIds.push(id);
-        }
-        if (stockSyncTimer) window.clearTimeout(stockSyncTimer);
-        stockSyncTimer = window.setTimeout(() => {
-            stockSyncTimer = null;
-            void flushStockRefresh();
-        }, 180);
-    }
-
-    async function flushStockRefresh() {
-        if (syncingStock) {
-            if (stockSyncTimer) window.clearTimeout(stockSyncTimer);
-            stockSyncTimer = window.setTimeout(() => {
-                stockSyncTimer = null;
-                void flushStockRefresh();
-            }, 220);
-            return;
-        }
-        const ids = pendingStockIds.splice(0, pendingStockIds.length);
-        syncingStock = true;
-        try {
-            if (ids.length > 0) {
-                await productStore.handleStockChanged(ids);
-            } else {
-                await productStore.syncAll();
-            }
-        } catch (e: any) {
-            logger.error(`[stock-rt] refresh failed: ${e?.message ?? e}`, e?.stack);
-        } finally {
-            syncingStock = false;
-        }
-    }
-
     onMount(() => {
-        authContainer.useCases.accounts
-            .getCurrentUser()
-            .then((u) => {
-                currentRole = normalizeBusinessRole(u.role);
-
-                if (u.role === null || u.role === undefined) {
-                    logger.warn(
-                        `[NestedNav] Usuario sin rol configurado. Labels: ${JSON.stringify(u.labels ?? [])} Prefs.role: ${String((u as any)?.prefs?.role ?? "undefined")}`
-                    );
-                    toastStore.error(
-                        "⚠️ Tu cuenta no tiene rol configurado. Contacta al administrador. " +
-                        "(Se asignó rol por defecto: viewer)"
-                    );
-                }
-
-                if (!["owner", "admin", "sales", "viewer"].includes(currentRole)) {
-                    navController.navigate("unauthorized", {
-                        message: "Tu cuenta no está autorizada para usar el panel de gestión."
-                    });
-                    return;
-                }
-
-                const allowedPath = firstAllowedPath(currentRole);
-                if (!canAccessRoute(currentRole, currentPath)) {
-                    logger.info(`[NestedNav] 3.1 entrada bloqueada → ${allowedPath}`);
-                    internalNavController.navigate(allowedPath);
-                }
-            })
-            .catch(() => {
-                navController.navigate("login");
-            });
-
-        productStore.syncAll().catch(() => {
-            toastStore.error("Error al sincronizar datos");
-        });
-
-        categoryStore.syncAll().catch(() => {
-            toastStore.error("Error al sincronizar datos");
-        });
-
-        promotionStore.syncAll().catch(() => {
-            toastStore.error("Error al sincronizar datos");
-        });
-
-        saleStore.syncAll().catch(() => {
-            toastStore.error("Error al sincronizar ventas");
-        });
-
-        // Badge Mensajes: sync inicial + realtime Appwrite
-        supportInboxStore.syncAll().catch(() => {
-            /* badge opcional; SupportInbox reintentará al abrir */
-        });
+        runtime.mount();
+        void reservationStore.load("all").catch(() => {});
+        supportInboxStore.syncAll().catch(() => {});
         stopSupportRt = supportInboxStore.startRealtime();
-
-        logger.info(
-            `[Pusher] init key=${ENV.pusherKey ? ENV.pusherKey.slice(0, 6) + "…" : "N/A"} cluster=${ENV.pusherCluster ?? "N/A"} channel=${ENV.pusherSupportChannel ?? "support-inbox"}`
-        );
-
-        stopPulseRefresh = subscribePulseChannelAll((eventName, payload) => {
-            try {
-                const summary =
-                    payload && typeof payload === "object"
-                        ? JSON.stringify(payload).slice(0, 800)
-                        : String(payload ?? "");
-                logger.info(`[Pusher] event=${eventName} payload=${summary}`);
-            } catch {
-                logger.info(`[Pusher] event=${eventName}`);
-            }
-
-            const stockFromPulse = parseStockChangedPayload(payload);
-            const name = String(eventName ?? "").toLowerCase();
-            if (stockFromPulse && (name.includes("stock") || name === "stock:changed" || name === "stock-changed")) {
-                scheduleStockRefresh(stockFromPulse.productIds);
-            }
-
-            let targets: ("support" | "sales")[] = [];
-            try {
-                targets = pulseRefreshTargets(eventName, payload);
-            } catch (e: any) {
-                logger.error(`[Pusher] error parsing refresh targets: ${e?.message ?? e}`, e?.stack);
-                toastStore.error("Evento realtime inválido");
-                return;
-            }
-
-            logger.info(`[Pusher] targets=${targets.length ? targets.join(",") : "none"}`);
-            if (targets.length === 0) return;
-
-            toastStore.info(
-                targets.length === 2
-                    ? "Evento realtime: sincronizando todo…"
-                    : targets[0] === "support"
-                        ? "Evento realtime: sincronizando mensajes…"
-                        : "Evento realtime: sincronizando ventas…",
-                1200
-            );
-
-            if (targets.includes("support")) scheduleSupportSync();
-            if (targets.includes("sales")) {
-                scheduleSalesSync();
-                scheduleStockRefresh([]);
-            }
-        });
-
-        stopStockFanout = subscribeStockChanged((body) => {
-            logger.info(
-                `[stock-rt] fanout reason=${body.reason} products=${body.productIds.join(",")}`
-            );
-            scheduleStockRefresh(body.productIds);
-        });
-
-        // Appwrite Realtime: product (patch stock) + sale (reserva desde tienda)
-        if (ENV.databaseId) {
-            const db = ENV.databaseId;
-            const productChannel = `databases.${db}.collections.product.documents`;
-            const saleChannel = `databases.${db}.collections.sale.documents`;
-            try {
-                stopAppwriteProductRt = client.subscribe(
-                    [productChannel, saleChannel],
-                    (response) => {
-                        try {
-                            const events: string[] = Array.isArray((response as any)?.events)
-                                ? (response as any).events
-                                : [];
-                            const payload = (response as any)?.payload ?? response;
-                            const isSaleEvent = events.some(
-                                (e) => typeof e === "string" && e.includes(".collections.sale.")
-                            );
-                            if (isSaleEvent) {
-                                logger.info(`[stock-rt][appwrite] sale event → stock + sales refresh`);
-                                scheduleStockRefresh([]);
-                                scheduleSalesSync();
-                                return;
-                            }
-
-                            const id = String(payload?.$id ?? payload?.id ?? "").trim();
-                            if (!id) return;
-                            const existence = Number(payload?.existence);
-                            const reserved = Number(payload?.reserved);
-                            if (Number.isFinite(existence) && Number.isFinite(reserved)) {
-                                productStore.patchLocalStock(id, {
-                                    existence: Math.max(0, Math.floor(existence)),
-                                    reserved: Math.max(0, Math.floor(reserved)),
-                                });
-                                logger.info(
-                                    `[stock-rt][appwrite] patch id=${id} existence=${existence} reserved=${reserved}`
-                                );
-                            } else {
-                                scheduleStockRefresh([id]);
-                            }
-                        } catch (e: any) {
-                            logger.warn(`[stock-rt][appwrite] ${e?.message ?? e}`);
-                        }
-                    }
-                );
-                logger.info(
-                    `[stock-rt][appwrite] subscribed ${productChannel} + ${saleChannel}`
-                );
-            } catch (e: any) {
-                logger.warn(`[stock-rt][appwrite] subscribe failed: ${e?.message ?? e}`);
-            }
-        } else {
-            logger.warn("[stock-rt][appwrite] VITE_APPWRITE_DATABASE_ID vacío; sin RT de stock");
-        }
     });
 
     onDestroy(() => {
-        if (supportSyncTimer) window.clearTimeout(supportSyncTimer);
-        if (salesSyncTimer) window.clearTimeout(salesSyncTimer);
-        if (stockSyncTimer) window.clearTimeout(stockSyncTimer);
-        supportSyncTimer = null;
-        salesSyncTimer = null;
-        stockSyncTimer = null;
+        runtime.destroy();
         stopSupportRt?.();
         stopSupportRt = null;
         supportInboxStore.stopRealtime();
-        stopPulseRefresh?.();
-        stopPulseRefresh = null;
-        stopStockFanout?.();
-        stopStockFanout = null;
-        stopAppwriteProductRt?.();
-        stopAppwriteProductRt = null;
     });
-
-    function scheduleSupportSync() {
-        if (supportSyncTimer) window.clearTimeout(supportSyncTimer);
-        supportSyncTimer = window.setTimeout(() => {
-            supportSyncTimer = null;
-            syncSupportInbox();
-        }, 220);
-    }
-
-    function scheduleSalesSync() {
-        if (salesSyncTimer) window.clearTimeout(salesSyncTimer);
-        salesSyncTimer = window.setTimeout(() => {
-            salesSyncTimer = null;
-            syncSales();
-        }, 220);
-    }
-
-    async function syncSupportInbox() {
-        const beforeItems = get(supportInboxStore).items;
-        const beforePending = beforeItems.filter((m) => m.status === "nuevo").length;
-        if (syncingSupport) {
-            queuedSupport = true;
-            return;
-        }
-        syncingSupport = true;
-        queuedSupport = false;
-        toastStore.info("Actualizando mensajes…", 1200);
-        try {
-            await supportInboxStore.syncAll();
-            const afterItems = get(supportInboxStore).items;
-            const afterPending = afterItems.filter((m) => m.status === "nuevo").length;
-            const delta = Math.max(0, afterPending - beforePending);
-            toastStore.success(delta > 0 ? `Nuevo mensaje (+${delta})` : "Mensajes actualizados", 1100);
-        } catch (e: any) {
-            logger.error(e?.message ?? e, e?.stack);
-            toastStore.error("No se pudieron actualizar los mensajes");
-        } finally {
-            syncingSupport = false;
-            if (queuedSupport) syncSupportInbox();
-        }
-    }
-
-    async function syncSales() {
-        const beforeItems = get(saleStore).items;
-        const beforePending = beforeItems.filter((s) => s.verified === BuyState.UNVERIFIED).length;
-        if (syncingSales) {
-            queuedSales = true;
-            return;
-        }
-        syncingSales = true;
-        queuedSales = false;
-        toastStore.info("Actualizando ventas...", 1200);
-        try {
-            await saleStore.syncAll();
-            const afterItems = get(saleStore).items;
-            const afterPending = afterItems.filter((s) => s.verified === BuyState.UNVERIFIED).length;
-            const delta = Math.max(0, afterPending - beforePending);
-            toastStore.success(delta > 0 ? `Nueva venta (+${delta})` : "Ventas actualizadas", 1100);
-        } catch (e: any) {
-            logger.error(e?.message ?? e, e?.stack);
-            toastStore.error("No se pudieron actualizar las ventas");
-        } finally {
-            syncingSales = false;
-            if (queuedSales) syncSales();
-        }
-    }
 </script>
 
 <section class="nested-shell">
@@ -473,17 +194,21 @@
         </header>
 
         <nav class="sidebar-nav" aria-label="Menú">
-            {#each navItems as item}
+            {#each visibleItems as item}
+                {@const badge = navBadge(item.path)}
                 <button
-                        class:selected={currentPath === item.path || (item.path === support.path && currentPath === supportDetail.path)}
+                        class:selected={currentPath === item.path ||
+                        (item.path === support.path && currentPath === supportDetail.path)}
                         on:click={() => go(item.path)}
                         aria-current={currentPath === item.path ? "page" : undefined}
-                        title={item.badge > 0 ? `${item.label} (${item.badge} nuevas)` : item.label}
+                        title={badge > 0 ? `${item.label} (${badge} pendientes)` : item.label}
                 >
                     <span class="nav-ico-wrap">
                         <Icon icon={item.icon} size={18} className="nav-ico" ariaLabel={item.label} />
-                        {#if item.badge > 0}
-                            <span class="nav-badge" aria-label={`${item.badge} solicitudes nuevas`}>{item.badge > 99 ? "99+" : item.badge}</span>
+                        {#if badge > 0}
+                            <span class="nav-badge" aria-label="{badge} pendientes">
+                                {badge > 99 ? "99+" : badge}
+                            </span>
                         {/if}
                     </span>
                     <span class="nav-label">{item.label}</span>
@@ -522,7 +247,7 @@
         <RealtimeDock navController={internalNavController} />
 
         {#key currentPath}
-            <div class="route-stage" in:fade={{ duration: 180 }} out:fade={{ duration: 120 }}>
+            <div class="route-stage" in:fade={{ duration: 120 }}>
                 <NavHost
                         navController={internalNavController}
                         routes={[
@@ -531,12 +256,13 @@
                         composable(supportDetail, () => SupportDetail),
                         composable(users, () => UserManagement),
                         composable(product, () => ProductManagement),
+                        composable(inventory, () => InventoryTrace),
                         composable(category, () => CategoryManagement),
                         composable(sales, () => SaleManagement),
                         composable(salesDetail, () => SaleDetail),
                         composable(promo, () => PromoManagement),
                         composable(settings, () => SettingsManagement),
-                        composable(reservation, () => ReservationManagement)
+                        composable(reservation, () => ReservationManagement),
                     ]}
                 />
             </div>
@@ -547,311 +273,3 @@
         <button class="scrim" aria-label="Cerrar menú" on:click={() => (sidebarOpen = false)}></button>
     {/if}
 </section>
-
-<style>
-    .nested-shell {
-        height: 100dvh;
-        display: grid;
-        grid-template-columns: 280px 1fr;
-        background: var(--md-sys-color-background);
-        color: var(--md-sys-color-on-background);
-        overflow: hidden;
-    }
-
-    .sidebar {
-        border-right: 1px solid var(--md-sys-color-outline-variant);
-        background: var(--md-sys-color-surface);
-        padding: 14px;
-        height: 100%;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-    }
-
-    .brand {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-    }
-
-    .brand-logo {
-        width: 44px;
-        height: 44px;
-        object-fit: contain;
-        opacity: 0.95;
-    }
-
-    .brand-meta {
-        min-width: 0;
-        display: grid;
-        gap: 2px;
-    }
-
-    .sidebar-head h2 {
-        margin: 0;
-        font-size: 1.05rem;
-        line-height: 1.15;
-    }
-
-    .sidebar-head p {
-        margin: 0;
-        color: var(--md-sys-color-on-surface-variant);
-        font-size: 0.92rem;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .sidebar-nav {
-        display: grid;
-        gap: 8px;
-        align-content: start;
-        overflow: auto;
-        min-height: 0;
-        padding-right: 6px;
-    }
-
-    .sidebar-nav button,
-    .logout {
-        text-align: left;
-        border: 1px solid var(--md-sys-color-outline-variant);
-        background: transparent;
-        color: var(--md-sys-color-on-surface);
-        border-radius: 12px;
-        padding: 10px 12px;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
-        font-weight: 650;
-        transition: background-color 160ms ease, border-color 160ms ease, transform 120ms ease;
-    }
-
-    .nav-ico {
-        opacity: 0.92;
-    }
-
-    .nav-ico-wrap {
-        position: relative;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-    }
-
-    .nav-badge {
-        position: absolute;
-        top: -8px;
-        right: -10px;
-        min-width: 18px;
-        height: 18px;
-        padding: 0 5px;
-        border-radius: 999px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        background: #d92d20;
-        color: #fff;
-        font-size: 0.68rem;
-        font-weight: 800;
-        line-height: 1;
-        pointer-events: none;
-        border: 2px solid var(--md-sys-color-surface);
-        box-shadow: 0 4px 10px rgb(0 0 0 / 0.2);
-        z-index: 2;
-    }
-
-    .sidebar-nav button.selected .nav-badge {
-        border-color: var(--md-sys-color-primary);
-    }
-
-    .sidebar-nav button:hover {
-        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 40%, transparent);
-    }
-
-    .sidebar-nav button:active {
-        transform: translateY(1px);
-    }
-
-    .sidebar-nav button.selected {
-        background: var(--md-sys-color-primary);
-        color: var(--md-sys-color-on-primary);
-        border-color: var(--md-sys-color-primary);
-    }
-
-    .sidebar-nav button.selected .nav-ico {
-        opacity: 1;
-    }
-
-    .logout {
-        margin-top: auto;
-        justify-content: center;
-        color: var(--md-sys-color-on-error-container);
-        background: color-mix(in srgb, var(--md-sys-color-error-container) 72%, transparent);
-        border-color: color-mix(in srgb, var(--md-sys-color-error) 22%, transparent);
-    }
-
-    .content {
-        height: 100%;
-        padding: 16px;
-        min-width: 0;
-        overflow: auto;
-    }
-
-    .route-stage {
-        min-height: 100%;
-        display: grid;
-        align-content: start;
-    }
-
-    .top-mobile {
-        display: none;
-    }
-
-    .scrim {
-        display: none;
-    }
-
-    @media (max-width: 860px) {
-        .nested-shell {
-            grid-template-columns: 1fr;
-        }
-
-        .sidebar {
-            position: fixed;
-            inset: 0 auto 0 0;
-            width: min(84vw, 320px);
-            z-index: 40;
-            transform: translateX(-105%);
-            transition: transform 180ms ease;
-            box-shadow: 0 20px 35px rgba(0, 0, 0, 0.25);
-        }
-
-        .sidebar.open {
-            transform: translateX(0);
-        }
-
-        .content {
-            height: 100dvh;
-            padding: 12px;
-        }
-
-        .top-mobile {
-            display: grid;
-            grid-template-columns: auto 1fr auto auto;
-            gap: 10px;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-
-        .menu-toggle {
-            width: 42px;
-            height: 42px;
-            border-radius: 12px;
-            border: 1px solid var(--md-sys-color-outline-variant);
-            background: var(--md-sys-color-surface);
-            display: grid;
-            place-items: center;
-        }
-
-        .menu-ico {
-            opacity: 0.9;
-        }
-
-        .refresh-role-btn {
-            width: 42px;
-            height: 42px;
-            border-radius: 12px;
-            border: 1px solid var(--md-sys-color-outline-variant);
-            background: var(--md-sys-color-surface);
-            display: grid;
-            place-items: center;
-            cursor: pointer;
-            font-size: 20px;
-            transition: all 200ms ease;
-        }
-
-        .refresh-role-btn:hover {
-            background: var(--md-sys-color-surface-dim);
-            border-color: var(--md-sys-color-outline);
-        }
-
-        .refresh-role-btn:active {
-            transform: scale(0.95);
-        }
-
-        .ghost {
-            opacity: 0;
-            pointer-events: none;
-            user-select: none;
-        }
-
-        .scrim {
-            display: block;
-            position: fixed;
-            inset: 0;
-            background: color-mix(in srgb, black 30%, transparent);
-            z-index: 20;
-            border: 0;
-        }
-    }
-
-    @media (min-width: 861px) and (max-width: 1100px) {
-        .nested-shell {
-            grid-template-columns: 84px 1fr;
-        }
-
-        .sidebar {
-            padding: 12px 10px;
-        }
-
-        .brand {
-            justify-content: center;
-        }
-
-        .brand-logo {
-            width: 46px;
-            height: 46px;
-        }
-
-        .brand-meta {
-            display: none;
-        }
-
-        .sidebar-nav button,
-        .logout {
-            justify-content: center;
-            padding: 10px;
-            border-radius: 14px;
-        }
-
-        .sidebar-nav button .nav-label,
-        .logout .logout-label {
-            display: none;
-        }
-
-        .logout {
-            width: 100%;
-        }
-    }
-
-    .sidebar-nav::-webkit-scrollbar,
-    .content::-webkit-scrollbar {
-        width: 10px;
-        height: 10px;
-    }
-
-    .sidebar-nav::-webkit-scrollbar-thumb,
-    .content::-webkit-scrollbar-thumb {
-        background: color-mix(in srgb, var(--md-sys-color-outline) 30%, transparent);
-        border-radius: 999px;
-        border: 2px solid transparent;
-        background-clip: padding-box;
-    }
-
-    .sidebar-nav::-webkit-scrollbar-track,
-    .content::-webkit-scrollbar-track {
-        background: transparent;
-    }
-</style>

@@ -87,7 +87,7 @@ function createProductStore() {
                 update((state) => ({
                     ...state,
                     items: state.items.map((item) => (item.id === id ? product : item)),
-                    selected: state.selected?.id === id ? product : state.selected,
+                    selected: state.selected?.id === id ? product : product,
                 }));
             } catch (e: any) {
                 logger.warn(
@@ -204,6 +204,38 @@ function createProductStore() {
         });
     }
 
+    async function registerStockAdjustment(
+        productId: string,
+        delta: number,
+        reason: string
+    ): Promise<Product> {
+        return await runSaving(async () => {
+            const updated = await productContainer.useCases.registerStockAdjustment.execute({
+                productId,
+                delta,
+                reason,
+            });
+            update((state) => ({
+                ...state,
+                items: state.items.map((item) => (item.id === updated.id ? updated : item)),
+                selected: state.selected?.id === updated.id ? updated : state.selected,
+            }));
+            try {
+                const { publishStockChanged } = await import(
+                    "../../../../infrastructure/data/alset-pulse/stock-pulse"
+                );
+                await publishStockChanged({
+                    productIds: [updated.id],
+                    reason: "adjustment",
+                    timestamp: new Date().toISOString(),
+                });
+            } catch (e: any) {
+                logger.warn(`[product.store] publish stock:changed: ${e?.message ?? e}`);
+            }
+            return updated;
+        });
+    }
+
     async function handleStockChanged(productIds: string[]): Promise<void> {
         await refreshStockForProducts(productIds);
     }
@@ -257,6 +289,7 @@ function createProductStore() {
         create,
         updateCatalog,
         registerStockEntry,
+        registerStockAdjustment,
         handleStockChanged,
         updatePrice,
         removeById,

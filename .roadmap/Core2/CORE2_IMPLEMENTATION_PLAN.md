@@ -1,9 +1,9 @@
 # Core 2 — Plan de implementación por fases (dash)
 
 **Checklist operativo unificado:** [`CORE2_UNIFIED_CHECKLIST.md`](./CORE2_UNIFIED_CHECKLIST.md)  
-**Rama de trabajo:** `Core2` · merges incrementales a `master` cuando el bloque esté verde.  
-**Última actualización:** 2026-08-18  
-**Estado:** schema Appwrite **✓** · ejecución código formal ~10% (baseline + dominio parcial)  
+**Rama de trabajo:** `Core2` · merge a `master` vía PR.  
+**Última actualización:** 2026-08-24  
+**Estado:** **Core 2 cerrado** (código + smokes + CI + permisos) · merge master pendiente  
 **Repos:** dash_alejo_taller + AlejoTaller (operador / web)
 
 **Fórmula:** `available = max(0, existence − reserved)` · **COGS:** `last_unit_cost × qty` al VERIFIED.
@@ -14,8 +14,9 @@
 
 ```text
 Rama: Core2
-Fase actual: B1 net repos (schema cloud ✓)
-Core 2 cerrado: NO
+Fase actual: B6 ✓ (CI + permisos + smokes)
+Core 2 cerrado (DoD): SÍ
+Merge master: pendiente PR
 ```
 
 ---
@@ -36,75 +37,62 @@ Core 2 cerrado: NO
 
 ## Fase 2.1 — Schema stock + finanzas
 
-### Movimientos de stock
-- [x] Collection `stock_movements` en Appwrite
-- [x] Campos canónicos (product_id, type, quantity, balance_after, reason, user_id, sale_id?, …)
-- [ ] Enum `type` cableado en código de repos net
-- [x] Permisos staff/operador (no cliente)
+- [x] Collections + permisos staff (no cliente)
+- [x] DTO + net repo + tests mapper
 
-### Finanzas de entrada
-- [x] `supplier`
-- [x] `purchase_entry`
-- [x] `purchase_entry_line`
-- [ ] Enum concepto en código net
-
-### Finanzas de venta
-- [x] `sale_finance_event`
-- [x] `last_unit_cost` en product
-- [ ] DTO + **net** repo dash (lectura/escritura según fase)
-- [ ] Test mapper round-trip (completar si falta)
-
-**Salida 2.1 cloud:** ✓  
-**Salida 2.1 código (B1):** pendiente net repos
+**Salida 2.1:** ✓
 
 ---
 
 ## Fase 2.2 — Operador (AlejoTaller)
 
-Seguimiento en checklist unificado B2. Dash no es primario.
+- [x] salida_venta + finance al VERIFIED
 
-- [ ] salida_venta + finance al VERIFIED (operador)
+**Salida 2.2:** ✓
 
 ---
 
 ## Fase 2.3 — Panel factura / movements / ajuste (dash)
 
-### Lectura
-- [ ] Listado stock_movements
-- [ ] Listado/detalle purchase_entry
+- [x] Listados movements + facturas
+- [x] UX multi-línea + supplier + costs + movement entrada + last_unit_cost
+- [x] Producto nuevo en factura; catálogo sin stock inicial
+- [x] Atajo «Dar entrada» por ítem **retirado** (política Core 2)
+- [x] Ajuste auditado (B3.3)
 
-### Factura entrada
-- [ ] UX multi-línea + supplier + costs + movement entrada + last_unit_cost
-
-### Atajo
-- [x] «Dar entrada» existence (Core 1) — **debe** pasar a escribir movement en B3
-- [ ] Atajo genera movement (+ costo opcional)
-
-### Ajuste / devolución
-- [ ] Ajuste auditado
-- [ ] Devolución si aplica política
+**Salida 2.3:** ✓
 
 ---
 
 ## Fase 2.4 — Reportes y cola
 
-- [ ] Cola UNVERIFIED por antigüedad
-- [ ] Resumen ingresos/COGS/margen (solo VERIFIED)
+- [x] Cola UNVERIFIED por antigüedad
+- [x] Resumen ingresos/COGS/margen (solo VERIFIED)
+- [x] Paridad confirm panel → salida_venta + finance
+
+**Salida 2.4:** ✓
 
 ---
 
-## Fase 2.5 — Reservas
+## Fase 2.5 — Reservas de taller
 
-- [ ] Collection + panel (no mezclar Sale tienda)
+- [x] Collection + permisos + dominio + panel + smoke
+
+**Salida 2.5:** ✓
 
 ---
 
 ## Fase 2.6 — Cierre
 
-- [ ] Permisos + CI + smoke cruzado + STATUS cerrado
+- [x] Permisos Appwrite auditados por rol
+- [x] CI verde (dash + cliente)
+- [x] Smoke cruzado final
+- [ ] Merge Core2 → master (PR)
+
+**Salida 2.6 DoD código/ops:** ✓ · **merge:** pendiente
 
 ---
 
 ## Orden
 
-Ver **CORE2_UNIFIED_CHECKLIST.md** (B1 → B6).
+Ver **CORE2_UNIFIED_CHECKLIST.md**.

@@ -1,6 +1,6 @@
 import { ENV } from "../../env";
 
-export type StockChangeReason = "hold" | "release" | "consume" | "entry";
+export type StockChangeReason = "hold" | "release" | "consume" | "entry" | "adjustment";
 
 export interface StockChangedPayload {
     productIds: string[];

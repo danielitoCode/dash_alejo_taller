@@ -9,3 +9,4 @@ export const salesDetail = { path: "sales-detail" };
 export const promo = { path: "promo" };
 export const settings = { path: "settings" };
 export const reservation = { path: "reservation" };
+export const inventory = { path: "inventory" };
