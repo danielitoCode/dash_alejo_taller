@@ -8,7 +8,7 @@
     import { rememberNavController } from "../../../../lib/navigation/rememberNavController";
     import { authContainer } from "../../../feature/auth/di/auth.container";
     import { sessionStore } from "../../../feature/auth/presentation/viewmodel/session.store";
-    import { normalizeBusinessRole, type BusinessRole } from "../../../feature/auth/domain/entity/BusinessRole";
+    import { type BusinessRole } from "../../../feature/auth/domain/entity/BusinessRole";
     import {
         canAccessRoute,
         getFirstAllowedRoute,
@@ -29,7 +29,19 @@
     import { logger } from "../util/logger.service";
     import RealtimeDock from "../components/RealtimeDock.svelte";
     import SupportInbox from "../../../feature/support/presentation/routes/SupportInbox.svelte";
-    import { category, dashboard, inventory, product, promo, reservation, sales, settings, support, users } from "./nested.router";
+    import { supportInboxStore } from "../../../feature/support/presentation/viewmodel/support-inbox.store";
+    import {
+        category,
+        dashboard,
+        inventory,
+        product,
+        promo,
+        reservation,
+        sales,
+        settings,
+        support,
+        users,
+    } from "./nested.router";
     import SupportDetail from "../../../feature/support/presentation/routes/SupportDetail.svelte";
     import SaleDetail from "../../../feature/sale/presentation/routes/SaleDetail.svelte";
     import { supportDetail, salesDetail } from "./nested.router";
@@ -46,7 +58,7 @@
         ClipboardList,
         Settings,
         Tags,
-        Users
+        Users,
     } from "lucide-svelte";
     import { createNestedNavRuntime } from "./nested-nav-runtime";
     import "./nested-shell.css";
@@ -70,12 +82,8 @@
         { label: "Ventas", path: sales.path, icon: BadgeDollarSign },
         { label: "Promos", path: promo.path, icon: Megaphone },
         { label: "Reservas", path: reservation.path, icon: CalendarCheck2 },
-        { label: "Ajustes", path: settings.path, icon: Settings }
+        { label: "Ajustes", path: settings.path, icon: Settings },
     ];
-
-    function canAccess(path: string): boolean {
-        return canAccessRoute(currentRole, path);
-    }
 
     function firstAllowedPath(role: BusinessRole): string {
         return getFirstAllowedRoute(role);
@@ -86,29 +94,37 @@
     $: currentPath = internalStack.at(-1)?.route ?? dashboard.path;
     $: visibleItems = items.filter((item) => canAccessRoute(currentRole, item.path));
 
+    // Badges: ventas + reservas + mensajes
     $: pendingSalesCount = ($saleStore.items ?? []).filter(
         (s) => s.verified === BuyState.UNVERIFIED
     ).length;
     $: pendingReservationsCount = ($reservationStore.items ?? []).filter(
         (r) => r.status === "requested"
     ).length;
+    $: supportPendingNuevo = ($supportInboxStore.items ?? []).filter(
+        (m) => m.status === "nuevo"
+    ).length;
 
     function navBadge(path: string): number {
         if (path === sales.path) return pendingSalesCount;
         if (path === reservation.path) return pendingReservationsCount;
+        if (path === support.path) return supportPendingNuevo;
         return 0;
     }
 
     $: if (currentRole && currentPath && !canAccessRoute(currentRole, currentPath)) {
         const allowedPath = firstAllowedPath(currentRole);
         if (allowedPath !== currentPath) {
-            logger.info(`[NestedNav] 3.1 ruta bloqueada path=${currentPath} role=${currentRole} → ${allowedPath}`);
+            logger.info(
+                `[NestedNav] 3.1 ruta bloqueada path=${currentPath} role=${currentRole} → ${allowedPath}`
+            );
             toastStore.error("Tu rol no tiene acceso a esta sección.");
             internalNavController.navigate(allowedPath);
         }
     }
 
     let sidebarOpen = false;
+    let stopSupportRt: (() => void) | null = null;
 
     function go(path: string) {
         if (!canAccessRoute(currentRole, path)) {
@@ -120,9 +136,12 @@
         sidebarOpen = false;
     }
 
+    // RT + sync de stores: nested-nav-runtime (no duplicar onMount de master)
     const runtime = createNestedNavRuntime({
         getRole: () => currentRole,
-        setRole: (r) => { currentRole = r; },
+        setRole: (r) => {
+            currentRole = r;
+        },
         getPath: () => currentPath,
         firstAllowedPath,
         internalNavigate: (p) => internalNavController.navigate(p),
@@ -144,12 +163,16 @@
     onMount(() => {
         runtime.mount();
         void reservationStore.load("all").catch(() => {});
+        supportInboxStore.syncAll().catch(() => {});
+        stopSupportRt = supportInboxStore.startRealtime();
     });
 
     onDestroy(() => {
         runtime.destroy();
+        stopSupportRt?.();
+        stopSupportRt = null;
+        supportInboxStore.stopRealtime();
     });
-
 </script>
 
 <section class="nested-shell">
@@ -172,21 +195,23 @@
 
         <nav class="sidebar-nav" aria-label="Menú">
             {#each visibleItems as item}
+                {@const badge = navBadge(item.path)}
                 <button
-                        class:selected={currentPath === item.path}
+                        class:selected={currentPath === item.path ||
+                        (item.path === support.path && currentPath === supportDetail.path)}
                         on:click={() => go(item.path)}
                         aria-current={currentPath === item.path ? "page" : undefined}
-                        title={item.label + (navBadge(item.path) > 0 ? ` (${navBadge(item.path)} pendientes)` : "")}
+                        title={badge > 0 ? `${item.label} (${badge} pendientes)` : item.label}
                 >
                     <span class="nav-ico-wrap">
                         <Icon icon={item.icon} size={18} className="nav-ico" ariaLabel={item.label} />
+                        {#if badge > 0}
+                            <span class="nav-badge" aria-label="{badge} pendientes">
+                                {badge > 99 ? "99+" : badge}
+                            </span>
+                        {/if}
                     </span>
                     <span class="nav-label">{item.label}</span>
-                    {#if navBadge(item.path) > 0}
-                        <span class="nav-badge" aria-label="{navBadge(item.path)} pendientes">
-                            {navBadge(item.path) > 99 ? "99+" : navBadge(item.path)}
-                        </span>
-                    {/if}
                 </button>
             {/each}
         </nav>
@@ -222,10 +247,10 @@
         <RealtimeDock navController={internalNavController} />
 
         {#key currentPath}
-            <div in:fade={{ duration: 120 }}>
+            <div class="route-stage" in:fade={{ duration: 120 }}>
                 <NavHost
-                    navController={internalNavController}
-                    routes={[
+                        navController={internalNavController}
+                        routes={[
                         composable(dashboard, () => DashboardHome),
                         composable(support, () => SupportInbox),
                         composable(supportDetail, () => SupportDetail),
@@ -237,10 +262,14 @@
                         composable(salesDetail, () => SaleDetail),
                         composable(promo, () => PromoManagement),
                         composable(settings, () => SettingsManagement),
-                        composable(reservation, () => ReservationManagement)
+                        composable(reservation, () => ReservationManagement),
                     ]}
                 />
             </div>
         {/key}
     </main>
+
+    {#if sidebarOpen}
+        <button class="scrim" aria-label="Cerrar menú" on:click={() => (sidebarOpen = false)}></button>
+    {/if}
 </section>
