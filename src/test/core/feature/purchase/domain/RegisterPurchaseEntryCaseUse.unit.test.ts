@@ -79,6 +79,9 @@ class FakePurchaseRepo implements PurchaseEntryRepository {
     async listLinesByEntry(entryId: string) {
         return this.lines.filter((l) => l.entryId === entryId)
     }
+    async listLinesByProduct(productId: string) {
+        return this.lines.filter((l) => l.productId === productId)
+    }
 }
 
 class FakeSupplierRepo implements SupplierRepository {
@@ -112,6 +115,9 @@ class FakeMovementRepo implements StockMovementRepository {
     }
     async listRecent() {
         return []
+    }
+    async listByEntry(entryId: string) {
+        return this.created.filter((m) => m.entryId === entryId)
     }
 }
 
