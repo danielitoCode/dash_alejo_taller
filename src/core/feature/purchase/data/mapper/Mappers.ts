@@ -15,27 +15,37 @@ import type {
     PurchaseEntryLineDTO,
 } from "../dto/PurchaseEntryDTO"
 
-export type SupplierWriteDTO = Pick<SupplierDTO, "name" | "contact" | "notes"> & {
+/** Payload de escritura: `contact` siempre string (Appwrite required). */
+export type SupplierWriteDTO = {
     $id?: string
+    name: string
+    contact: string
+    notes?: string
 }
 
 export function supplierFromDTO(dto: SupplierDTO): Supplier {
     return createSupplier({
         id: dto.$id,
         name: dto.name,
-        contact: dto.contact,
-        notes: dto.notes,
+        contact: dto.contact ?? "",
+        notes: dto.notes ?? undefined,
     })
 }
 
 export function supplierToDTO(s: Supplier): SupplierWriteDTO {
-    // Appwrite collection `supplier` exige `contact` (required).
+    // Appwrite collection `supplier` exige `contact` (required) — nunca omitir.
+    const contact =
+        s.contact != null && String(s.contact).trim() !== ""
+            ? String(s.contact).trim()
+            : ""
     const dto: SupplierWriteDTO = {
         $id: s.id,
         name: s.name,
-        contact: s.contact != null && String(s.contact).trim() !== "" ? String(s.contact).trim() : "",
+        contact,
     }
-    if (s.notes) dto.notes = s.notes
+    if (s.notes != null && String(s.notes).trim() !== "") {
+        dto.notes = String(s.notes).trim()
+    }
     return dto
 }
 

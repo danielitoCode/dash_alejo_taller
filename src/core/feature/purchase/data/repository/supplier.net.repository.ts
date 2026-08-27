@@ -21,12 +21,24 @@ export class SupplierNetRepository implements SupplierRepository {
 
     async create(supplier: Supplier): Promise<Supplier> {
         const write = supplierToDTO(supplier)
-        const { $id, ...data } = write
+        const id = write.$id && write.$id.length > 0 ? write.$id : ID.unique()
+        // Payload sin $id: solo atributos de collection (contact siempre string).
+        const data: {
+            name: string
+            contact: string
+            notes?: string
+        } = {
+            name: write.name,
+            contact: write.contact,
+        }
+        if (write.notes !== undefined) {
+            data.notes = write.notes
+        }
         const doc = await this.databases.createDocument<SupplierDTO>(
             this.databaseId,
             this.collectionId,
-            $id && $id.length > 0 ? $id : ID.unique(),
-            data as Omit<SupplierDTO, keyof import("appwrite").Models.Document>
+            id,
+            data
         )
         return supplierFromDTO(doc)
     }
@@ -45,19 +57,37 @@ export class SupplierNetRepository implements SupplierRepository {
     }
 
     async list(limit = 50): Promise<Supplier[]> {
+        const safeLimit = Math.min(Math.max(1, Math.trunc(limit) || 50), 100)
         const res = await this.databases.listDocuments<SupplierDTO>(
             this.databaseId,
             this.collectionId,
-            [Query.orderAsc("name"), Query.limit(Math.min(Math.max(1, limit), 100))]
+            [Query.orderAsc("name"), Query.limit(safeLimit)]
         )
         return res.documents.map(supplierFromDTO)
     }
 
     async update(id: string, patch: Partial<Supplier>): Promise<Supplier> {
-        const data: Record<string, unknown> = {}
-        if (patch.name !== undefined) data.name = patch.name
-        if (patch.contact !== undefined) data.contact = patch.contact
-        if (patch.notes !== undefined) data.notes = patch.notes
+        const data: {
+            name?: string
+            contact?: string
+            notes?: string
+        } = {}
+        if (patch.name !== undefined) {
+            data.name = String(patch.name).trim()
+        }
+        if (patch.contact !== undefined) {
+            // Required en Appwrite: nunca enviar null; vacío → "".
+            data.contact =
+                patch.contact != null && String(patch.contact).trim() !== ""
+                    ? String(patch.contact).trim()
+                    : ""
+        }
+        if (patch.notes !== undefined) {
+            data.notes =
+                patch.notes != null && String(patch.notes).trim() !== ""
+                    ? String(patch.notes).trim()
+                    : ""
+        }
         const doc = await this.databases.updateDocument<SupplierDTO>(
             this.databaseId,
             this.collectionId,
