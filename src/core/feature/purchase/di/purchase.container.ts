@@ -12,6 +12,8 @@ import { RegisterPurchaseEntryCaseUse } from "../domain/caseuse/RegisterPurchase
 import { ListSuppliersCaseUse } from "../domain/caseuse/ListSuppliersCaseUse"
 import { CreateSupplierCaseUse } from "../domain/caseuse/CreateSupplierCaseUse"
 import { UpdateSupplierCaseUse } from "../domain/caseuse/UpdateSupplierCaseUse"
+import { ListPurchaseEntriesCaseUse } from "../domain/caseuse/ListPurchaseEntriesCaseUse"
+import { GetPurchaseEntryDetailCaseUse } from "../domain/caseuse/GetPurchaseEntryDetailCaseUse"
 
 const databases = infrastructureContainer.appwrite.databases
 const supplierNet = new SupplierNetRepository(databases)
@@ -47,5 +49,11 @@ export const purchaseContainer = {
         listSuppliers: new ListSuppliersCaseUse(supplierNet),
         createSupplier: new CreateSupplierCaseUse(supplierNet),
         updateSupplier: new UpdateSupplierCaseUse(supplierNet),
+        listPurchaseEntries: new ListPurchaseEntriesCaseUse(purchaseEntryNet),
+        getPurchaseEntryDetail: new GetPurchaseEntryDetailCaseUse(
+            purchaseEntryNet,
+            supplierNet,
+            inventoryContainer.repositories.stockMovement
+        ),
     },
 }

@@ -12,3 +12,5 @@ export const reservation = { path: "reservation" };
 export const inventory = { path: "inventory" };
 /** Core 3 B1 — catálogo de proveedores */
 export const suppliers = { path: "suppliers" };
+/** Core 3 B2 — historial de facturas de entrada */
+export const purchases = { path: "purchases" };

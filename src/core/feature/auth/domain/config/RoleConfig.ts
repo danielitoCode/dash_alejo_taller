@@ -25,7 +25,8 @@ export const ROLE_ROUTE_ACCESS: Record<BusinessRole, string[]> = {
         "settings",
         "reservation",
         "inventory",
-        "suppliers"
+        "suppliers",
+        "purchases",
     ],
     admin: [
         "dashboard",
@@ -40,7 +41,8 @@ export const ROLE_ROUTE_ACCESS: Record<BusinessRole, string[]> = {
         "settings",
         "reservation",
         "inventory",
-        "suppliers"
+        "suppliers",
+        "purchases",
     ],
     sales: [
         "dashboard",
@@ -48,13 +50,13 @@ export const ROLE_ROUTE_ACCESS: Record<BusinessRole, string[]> = {
         "support-detail",
         "sales",
         "sales-detail",
-        "reservation"
+        "reservation",
     ],
     viewer: [
         "dashboard",
         "support",
-        "support-detail"
-    ]
+        "support-detail",
+    ],
 };
 
 /**
@@ -65,21 +67,21 @@ export const ROLE_LABELS: Record<BusinessRole, string[]> = {
     owner: ["owner", "admin"],
     admin: ["admin"],
     sales: ["sales"],
-    viewer: ["viewer"]
+    viewer: ["viewer"],
 };
 
 export const ROLE_DESCRIPTIONS: Record<BusinessRole, string> = {
     owner: "Propietario - Control total del sistema",
     admin: "Administrador - Acceso a todas las funciones",
     sales: "Ventas - Gestión de ventas y reservas",
-    viewer: "Visualizador - Acceso de solo lectura"
+    viewer: "Visualizador - Acceso de solo lectura",
 };
 
 export const ROLE_COLORS: Record<BusinessRole, string> = {
     owner: "#FF6B6B",
     admin: "#4ECDC4",
     sales: "#45B7D1",
-    viewer: "#95A5A6"
+    viewer: "#95A5A6",
 };
 
 export function isAdminRole(role: string | null | undefined): boolean {
@@ -204,5 +206,5 @@ export default {
     compareRoles,
     canManageRole,
     assignableRoles,
-    assertCanAssignRole
+    assertCanAssignRole,
 };
