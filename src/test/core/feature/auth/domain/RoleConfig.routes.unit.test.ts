@@ -15,6 +15,7 @@ const SHELL_PATHS = [
     "product",
     "inventory",
     "category",
+    "suppliers",
     "sales",
     "sales-detail",
     "promo",
@@ -41,6 +42,7 @@ describe("RoleConfig route gates (Core1 3.1)", () => {
         expect(canAccessRoute("viewer", "sales")).toBe(false)
         expect(canAccessRoute("viewer", "users")).toBe(false)
         expect(canAccessRoute("viewer", "settings")).toBe(false)
+        expect(canAccessRoute("viewer", "suppliers")).toBe(false)
     })
 
     it("sales: ventas/reservas sí; catálogo y users no", () => {
@@ -53,13 +55,15 @@ describe("RoleConfig route gates (Core1 3.1)", () => {
         expect(canAccessRoute("sales", "users")).toBe(false)
         expect(canAccessRoute("sales", "promo")).toBe(false)
         expect(canAccessRoute("sales", "settings")).toBe(false)
+        expect(canAccessRoute("sales", "suppliers")).toBe(false)
     })
 
-    it("admin y owner: catálogo + inventory + users + settings", () => {
+    it("admin y owner: catálogo + inventory + suppliers + users + settings", () => {
         for (const role of ["admin", "owner"] as BusinessRole[]) {
             expect(canAccessRoute(role, "product")).toBe(true)
             expect(canAccessRoute(role, "inventory")).toBe(true)
             expect(canAccessRoute(role, "category")).toBe(true)
+            expect(canAccessRoute(role, "suppliers")).toBe(true)
             expect(canAccessRoute(role, "users")).toBe(true)
             expect(canAccessRoute(role, "settings")).toBe(true)
             expect(canAccessRoute(role, "promo")).toBe(true)
