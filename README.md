@@ -7,7 +7,7 @@
 | Núcleo | Estado |
 |--------|--------|
 | **Core 1** | **Cerrado** (2026-08-12) — soft-hold, ventas UNVERIFIED→VERIFIED/DELETED, catálogo |
-| **Core 2** | **Cerrado** (2026-08-24) — factura de entrada, `stock_movements`, finance/COGS, cola, reservas taller; merge PR [#12](https://github.com/danielitoCode/dash_alejo_taller/pull/12) → `master` |
+| **Core 2** | **Cerrado** (2026-08-24) — factura de entrada, `stock_movements` (`entrada` / `salida_venta`), finance/COGS, cola, reservas taller (dash); merge PR [#12](https://github.com/danielitoCode/dash_alejo_taller/pull/12) → `master` |
 
 ---
 
@@ -59,12 +59,24 @@ Estado: [`.roadmap/Core1/MVP_CORE1_STATUS.md`](.roadmap/Core1/MVP_CORE1_STATUS.m
 
 ## Qué incluye Core 2 (cerrado · 2026-08-24)
 
-- **Factura de entrada** multi-línea: única vía de alta de stock en UI; producto nuevo en factura; catálogo existence 0
-- **`stock_movements`:** `entrada`, `salida_venta` (paridad panel/operador), `ajuste`
-- **Finanzas:** `last_unit_cost`, `sale_finance_event`, KPIs solo VERIFIED
-- **Cola UNVERIFIED** + badges nav (ventas / reservas / mensajes)
-- **Inventario** movements + facturas; **reservas taller** (`workshop_reservation`)
-- Permisos Appwrite: staff write / cliente sin write en movements, purchase, finance, reservation
+Funcionalidades incrementadas respecto a Core 1:
+
+| Área | Entregado |
+|------|-----------|
+| **Alta de stock** | Factura de entrada multi-línea: única vía de alta en UI; producto nuevo en factura; catálogo suelto con existence 0 |
+| **`stock_movements`** | Tipos activos: `entrada` (factura), `salida_venta` (paridad panel/operador al VERIFIED) |
+| **Finanzas** | `last_unit_cost`, `sale_finance_event`, KPIs solo sobre ventas VERIFIED; COGS = `last_unit_cost × qty` |
+| **Cola operativa** | Cola UNVERIFIED + badges nav (ventas / reservas / mensajes) |
+| **Inventario (lectura)** | Listados de movimientos y facturas de entrada |
+| **Reservas taller** | Collection `workshop_reservation` + UI de gobierno en dash (dominio aparte de Sale) |
+| **Permisos** | Staff write / cliente sin write en movements, purchase, finance, workshop_reservation |
+
+**No incluido en Core 2 (implementación futura):**
+
+- **Ajuste de inventario** (UI + flujo auditado tipo `ajuste`) — política y enum en schema definidos; **UI no disponible**
+- Devolución formal post-VERIFIED (UI)
+- Reserva de taller **desde el cliente web** (flujo end-to-end B2C)
+- Smoke opcional en dispositivo físico del operador
 
 Checklist: [`.roadmap/Core2/CORE2_UNIFIED_CHECKLIST.md`](.roadmap/Core2/CORE2_UNIFIED_CHECKLIST.md)  
 Estado: [`.roadmap/Core2/MVP_CORE2_STATUS.md`](.roadmap/Core2/MVP_CORE2_STATUS.md)
@@ -102,9 +114,10 @@ No commitear `.env`.
 
 ## Pendiente no bloqueante (post–Core 2)
 
-1. Smoke opcional ajuste / confirm operador dispositivo  
-2. Reserva taller desde cliente web  
-3. E2E tienda ↔ dash / deuda UI
+1. **Ajuste de inventario (UI)** — futura implementación (política ya documentada)  
+2. Smoke opcional confirm operador en dispositivo físico (`salida_venta` + finance)  
+3. Reserva taller desde cliente web (E2E B2C)  
+4. E2E tienda ↔ dash / deuda UI menor  
 
 ---
 

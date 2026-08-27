@@ -2,6 +2,7 @@
 
 **Fecha original:** 2026-08-13  
 **Actualización cierre:** 2026-08-24  
+**Higiene:** 2026-08-27 (ajuste inventario = futura implementación UI)  
 **Estado:** **vigente / aceptada** en dash + AlejoTaller  
 **Fuente Core 1:** [`../Core1/CANONICAL_RULES_FREEZE.md`](../Core1/CANONICAL_RULES_FREEZE.md)  
 **Canónico ecosistema:** `AlejoTaller/.policies/warehouse`, `AlejoTaller/.policies/sale`
@@ -21,12 +22,12 @@
 
 ### 1. `stock_movements` (traza)
 
-| type | Efecto en `existence` | Quién |
-|------|----------------------|--------|
-| `entrada` | `+= quantity` | staff (dash; preferible vía factura) |
-| `salida_venta` | `-= quantity` | al VERIFIED (operador **o** dash — paridad) |
-| `ajuste` | ± según dirección | staff; post-ajuste `existence ≥ reserved` |
-| `devolucion` | `+= quantity` | staff; solo post-VERIFIED |
+| type | Efecto en `existence` | Quién | Estado en Core 2 |
+|------|----------------------|--------|------------------|
+| `entrada` | `+= quantity` | staff (dash; vía factura) | **Activo** |
+| `salida_venta` | `-= quantity` | al VERIFIED (operador **o** dash — paridad) | **Activo** |
+| `ajuste` | ± según dirección | staff; post-ajuste `existence ≥ reserved` | **Política + schema; UI futura** |
+| `devolucion` | `+= quantity` | staff; solo post-VERIFIED | **Política; UI futura** |
 
 Campos mínimos: `product_id`, `type`, `quantity` (>0), `balance_after`, `reason`, `user_id`, `sale_id?`, `created_at`.
 
@@ -42,20 +43,24 @@ Campos mínimos: `product_id`, `type`, `quantity` (>0), `balance_after`, `reason
 
 - Solo sobre venta **VERIFIED**.  
 - `existence += qty` + movimiento `devolucion` + motivo obligatorio.  
-- **No** reabrir el soft-hold de esa venta.
+- **No** reabrir el soft-hold de esa venta.  
+- **UI:** implementación futura (no cerrada en Core 2).
 
 ### 4. Ajuste de inventario
 
 - Motivo + `user_id` obligatorios.  
 - Validación: tras el ajuste, `existence >= reserved`.  
-- Siempre fila en `stock_movements` tipo `ajuste`.
+- Siempre fila en `stock_movements` tipo `ajuste`.  
+- **UI:** **no disponible** en Core 2 — **implementación futura**.  
+- Schema/enum y reglas de negocio ya documentados para cuando se implemente.
 
 ### 5. Reservas de taller (MVP Core 2)
 
 - Dominio **aparte** de `Sale` (`workshop_reservation`).  
 - Estados típicos: requested → confirmada → realizada / cancelada.  
 - **No** listar pedidos de tienda en el menú Reservas.  
-- Stock de piezas en cita: fuera del MVP mínimo.
+- Stock de piezas en cita: fuera del MVP mínimo.  
+- **Dash:** gobierno implementado. **Cliente web (solicitud E2E):** futura implementación.
 
 ## Competencias por superficie (Core 2)
 
@@ -63,9 +68,10 @@ Campos mínimos: `product_id`, `type`, `quantity` (>0), `balance_after`, `reason
 |--------|---------|----------|------|
 | Soft-hold al pedir | Sí | No | No |
 | Confirm/reject + `salida_venta` + finance | No | Primario | **Paridad sí** |
-| Factura entrada / ajuste | No | Según exposición | **Sí** |
+| Factura entrada | No | Según exposición | **Sí** |
+| Ajuste inventario | No | — | **Futuro** |
 | Ver movements / finance | No | Lectura | **Sí** |
-| Agenda reservas taller | Solicitar (opcional futuro) | Operar | **Gobernar** |
+| Agenda reservas taller | Solicitar (futuro) | Operar | **Gobernar** |
 
 ## 6. Finanzas (Core 2) — aceptado 2026-08-13 · vigente cierre 2026-08-24
 
