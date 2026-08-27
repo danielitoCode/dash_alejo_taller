@@ -66,4 +66,19 @@ export class StockMovementNetRepository implements StockMovementRepository {
         )
         return res.documents.map(stockMovementFromDTO)
     }
+
+    async listByEntry(entryId: string, limit = 100): Promise<StockMovement[]> {
+        const eid = String(entryId || "").trim()
+        if (!eid) return []
+        const res = await this.databases.listDocuments<StockMovementDTO>(
+            this.databaseId,
+            this.collectionId,
+            [
+                Query.equal("entry_id", eid),
+                Query.orderDesc("$createdAt"),
+                Query.limit(Math.min(Math.max(1, limit), 100)),
+            ]
+        )
+        return res.documents.map(stockMovementFromDTO)
+    }
 }
