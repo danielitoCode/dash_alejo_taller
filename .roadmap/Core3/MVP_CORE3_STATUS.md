@@ -6,18 +6,19 @@
 
 | Bloque | Estado |
 |--------|--------|
-| B0 Baseline / política / audit schema / tipos supplier | **Hecho (dash)** — queda check manual consola + espejo AT |
-| B1 Proveedores UI | pendiente |
+| B0 Baseline / política / audit schema / tipos supplier | **Hecho (dash)** |
+| B1 Proveedores UI + selector en factura | **Hecho en código** — validar CI + smoke manual |
 | B2 Historial compras | pendiente |
 | B3 Anulación/corrección | pendiente (opcional 1er release) |
 | B4 Permisos + smoke | pendiente |
 | B5 Espejo AT | pendiente |
 | B6 Merge master | no |
 
-### B0 entregables
+### B1 entregables
 
-- [`POLICY_PURCHASE_CORE3.md`](./POLICY_PURCHASE_CORE3.md)
-- [`SCHEMA_AUDIT_CORE3.md`](./SCHEMA_AUDIT_CORE3.md)
-- `SupplierDTO.contact: string` + `supplierToDTO` / repo create-update tipados
+- Case uses: list / create / update supplier
+- `supplier.store` + pantalla **Proveedores** (ruta `suppliers`, owner/admin)
+- Modal factura: select proveedor existente | sin proveedor | nuevo por nombre
+- Test: `supplier.mapper.test.ts`
 
-Ver [`CORE3_UNIFIED_CHECKLIST.md`](./CORE3_UNIFIED_CHECKLIST.md).
+Ver checklist unificado.
