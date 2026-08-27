@@ -27,7 +27,10 @@ export type PurchaseLineInput = {
 
 export type RegisterPurchaseEntryInput = {
     supplierId?: string
+    /** Alta al vuelo desde factura (nombre obligatorio si no hay supplierId). */
     supplierName?: string
+    /** Contacto opcional al crear proveedor desde factura. */
+    supplierContact?: string
     reference?: string
     notes?: string
     currency?: string
@@ -38,6 +41,7 @@ export type RegisterPurchaseEntryInput = {
 /**
  * Core 2 B3.2 — factura de entrada multi-línea.
  * purchase_entry + lines + existence += + movement entrada + last_unit_cost (si purchase).
+ * Alta de proveedor: preferida desde la factura (supplierName); el panel es catálogo/edición.
  */
 export class RegisterPurchaseEntryCaseUse {
     constructor(
@@ -101,12 +105,13 @@ export class RegisterPurchaseEntryCaseUse {
         let supplierId = String(input.supplierId || "").trim() || undefined
         const supplierName = String(input.supplierName || "").trim()
         if (!supplierId && supplierName) {
+            const contactRaw = String(input.supplierContact || "").trim()
             const created = await this.supplierRepository.create(
                 createSupplier({
                     id: crypto.randomUUID(),
                     name: supplierName,
                     // Appwrite exige contact (required); vacío si solo hay nombre.
-                    contact: "",
+                    contact: contactRaw,
                 })
             )
             supplierId = created.id

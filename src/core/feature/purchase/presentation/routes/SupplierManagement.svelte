@@ -93,8 +93,8 @@
             <div>
                 <h1 class="mgmt-title">Proveedores</h1>
                 <p class="mgmt-subtitle">
-                    Catálogo de proveedores para facturas de entrada (Core 3). Contacto puede quedar vacío en UI;
-                    Appwrite lo guarda como cadena vacía.
+                    Catálogo y edición de proveedores. La vía habitual de <strong>alta</strong> es al registrar una
+                    factura de entrada; aquí completas contacto/notas o corriges datos.
                 </p>
             </div>
             <div class="mgmt-meta">
@@ -114,7 +114,13 @@
 
     <div class="mgmt-layout">
         <section class="mgmt-card mgmt-form-card" aria-label="Formulario">
-            <h2 class="mgmt-card-title">{editId ? "Editar proveedor" : "Nuevo proveedor"}</h2>
+            <h2 class="mgmt-card-title">{editId ? "Editar proveedor" : "Alta manual (opcional)"}</h2>
+            {#if !editId}
+                <p class="mgmt-muted" style="margin:0 0 12px; font-size:0.85rem; line-height:1.4">
+                    Preferible crear el proveedor desde la factura si llega con la mercancía. Usa este formulario si
+                    quieres dar de alta el catálogo por adelantado.
+                </p>
+            {/if}
 
             <div class="mgmt-grid">
                 <label class="mgmt-field" style="grid-column:1/-1">
@@ -178,7 +184,10 @@
                 {#if isInitialLoading}
                     <SkeletonList rows={6} />
                 {:else if filtered.length === 0}
-                    <div class="mgmt-muted">No hay proveedores. Crea el primero o regístralo al facturar entrada.</div>
+                    <div class="mgmt-muted">
+                        Aún no hay proveedores. Créalos al registrar una factura de entrada, o usa el alta manual de la
+                        izquierda.
+                    </div>
                 {/if}
 
                 {#each filtered as s (s.id)}

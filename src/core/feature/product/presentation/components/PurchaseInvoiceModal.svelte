@@ -20,6 +20,7 @@
     /** "" = sin proveedor; "__new__" = crear por nombre; id = proveedor existente */
     let supplierMode: string = "";
     let invoiceSupplierName = "";
+    let invoiceSupplierContact = "";
     let invoiceReference = "";
     let invoiceNotes = "";
 
@@ -56,6 +57,7 @@
     $: if (open) {
         supplierMode = "";
         invoiceSupplierName = "";
+        invoiceSupplierContact = "";
         invoiceReference = "";
         invoiceNotes = "";
         invoiceLines = [emptyLine()];
@@ -181,10 +183,15 @@
                 supplierMode === "__new__"
                     ? invoiceSupplierName.trim() || undefined
                     : undefined;
+            const supplierContact =
+                supplierMode === "__new__"
+                    ? invoiceSupplierContact.trim() || undefined
+                    : undefined;
 
             const entry = await purchaseStore.registerPurchaseEntry({
                 supplierId,
                 supplierName,
+                supplierContact,
                 reference: invoiceReference.trim() || undefined,
                 notes: invoiceNotes.trim() || undefined,
                 lines: resolved,
@@ -217,7 +224,8 @@
                 <div>
                     <h2 id="invoice-title">Factura de entrada</h2>
                     <p class="entry-name">
-                        Única vía de alta de stock · movements + costos. Elige proveedor del catálogo o crea uno al vuelo.
+                        Alta de stock · movements + costos. Puedes elegir un proveedor del catálogo o crear uno aquí al
+                        vuelo (vía principal de alta).
                     </p>
                 </div>
                 <button
@@ -237,7 +245,7 @@
                         <span>Proveedor</span>
                         <select class="mgmt-select" bind:value={supplierMode} disabled={invoiceSubmitting}>
                             <option value="">Sin proveedor</option>
-                            <option value="__new__">+ Nuevo por nombre…</option>
+                            <option value="__new__">+ Nuevo proveedor…</option>
                             {#each supplierOptions as s}
                                 <option value={s.id}>{s.name}</option>
                             {/each}
@@ -253,12 +261,21 @@
                         />
                     </label>
                     {#if supplierMode === "__new__"}
-                        <label class="mgmt-field" style="grid-column:1/-1">
-                            <span>Nombre del proveedor nuevo</span>
+                        <label class="mgmt-field">
+                            <span>Nombre del proveedor *</span>
                             <input
                                 class="mgmt-input"
                                 bind:value={invoiceSupplierName}
                                 placeholder="Ej. Distribuidora Norte"
+                                disabled={invoiceSubmitting}
+                            />
+                        </label>
+                        <label class="mgmt-field">
+                            <span>Contacto (opcional)</span>
+                            <input
+                                class="mgmt-input"
+                                bind:value={invoiceSupplierContact}
+                                placeholder="Teléfono, email…"
                                 disabled={invoiceSubmitting}
                             />
                         </label>
