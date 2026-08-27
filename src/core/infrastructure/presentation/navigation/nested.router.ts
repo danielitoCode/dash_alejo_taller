@@ -10,3 +10,5 @@ export const promo = { path: "promo" };
 export const settings = { path: "settings" };
 export const reservation = { path: "reservation" };
 export const inventory = { path: "inventory" };
+/** Core 3 B1 — catálogo de proveedores */
+export const suppliers = { path: "suppliers" };

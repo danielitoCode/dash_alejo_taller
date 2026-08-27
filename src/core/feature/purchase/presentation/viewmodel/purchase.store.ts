@@ -8,7 +8,7 @@ async function registerPurchaseEntry(input: RegisterPurchaseEntryInput): Promise
 }
 
 async function listSuppliers(limit = 50): Promise<Supplier[]> {
-    return purchaseContainer.repositories.supplier.list(limit)
+    return purchaseContainer.useCases.listSuppliers.execute(limit)
 }
 
 async function listEntries(limit = 50): Promise<PurchaseEntry[]> {

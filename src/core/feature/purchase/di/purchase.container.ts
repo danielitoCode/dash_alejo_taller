@@ -9,6 +9,9 @@ import type {
     SupplierRepository,
 } from "../domain/repository/purchase.repository"
 import { RegisterPurchaseEntryCaseUse } from "../domain/caseuse/RegisterPurchaseEntryCaseUse"
+import { ListSuppliersCaseUse } from "../domain/caseuse/ListSuppliersCaseUse"
+import { CreateSupplierCaseUse } from "../domain/caseuse/CreateSupplierCaseUse"
+import { UpdateSupplierCaseUse } from "../domain/caseuse/UpdateSupplierCaseUse"
 
 const databases = infrastructureContainer.appwrite.databases
 const supplierNet = new SupplierNetRepository(databases)
@@ -41,5 +44,8 @@ export const purchaseContainer = {
     },
     useCases: {
         registerPurchaseEntry: registerPurchaseEntryCaseUse,
+        listSuppliers: new ListSuppliersCaseUse(supplierNet),
+        createSupplier: new CreateSupplierCaseUse(supplierNet),
+        updateSupplier: new UpdateSupplierCaseUse(supplierNet),
     },
 }
