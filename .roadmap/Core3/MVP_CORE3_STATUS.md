@@ -10,29 +10,25 @@
 | B1 Proveedores UI + selector en factura | **Hecho + smoke UI OK** |
 | B2 Historial compras (listado → detalle) | **Hecho + smoke UI OK** |
 | B3 Anulación/corrección | pendiente (opcional 1er release) |
-| B4 Permisos consola + smoke E2E datos | parcial (UI smoke OK; falta consola Appwrite) |
+| B4 Permisos + smoke E2E | **En curso** — guía [`SMOKE_B4.md`](./SMOKE_B4.md) |
 | B5 Espejo AT | pendiente |
 | B6 Merge master | no |
 
-### Smoke verificado 2026-08-27 (dash)
+### Smoke UI ya verificado (2026-08-27)
 
 | Flujo | Resultado |
 |-------|-----------|
-| Subvista **Proveedores** en nav | OK |
-| Crear proveedor desde **factura de entrada** (`+ Nuevo proveedor…`) | OK |
-| Subvista **Compras**: listado de entradas | OK |
-| Click en fila → **detalle** de la compra | OK |
+| Subvista **Proveedores** | OK |
+| Alta proveedor desde **factura de entrada** | OK |
+| Subvista **Compras** listado → detalle | OK |
 
-### B1 entregables
+### B4 — qué falta comprobar
 
-- Case uses: list / create / update supplier (sin delete)
-- Pantalla **Proveedores** (`suppliers`, owner/admin)
-- Modal factura: existente | sin proveedor | nuevo al vuelo
+Ver checklist ejecutable en [`SMOKE_B4.md`](./SMOKE_B4.md):
 
-### B2 entregables
-
-- Listado + detalle + movements por `entry_id`
-- Ruta **Compras** (`purchases`)
-- Filtros fecha / proveedor / usuario / texto
+1. Consola Appwrite (permisos cliente sin write + `entry_id`)
+2. E2E datos: factura multi-línea → stock → movements en detalle
+3. Roles nav (sales/viewer sin Compras/Proveedores)
+4. Frontera AT (opcional en paralelo)
 
 Ver checklist unificado.
