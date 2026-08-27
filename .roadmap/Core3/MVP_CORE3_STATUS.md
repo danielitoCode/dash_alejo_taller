@@ -6,26 +6,33 @@
 
 | Bloque | Estado |
 |--------|--------|
-| B0 Baseline / política / audit schema / tipos supplier | **Hecho (dash)** |
-| B1 Proveedores UI + selector en factura | **Hecho en código** — validar CI + smoke manual |
-| B2 Historial compras | **Hecho en código** — listado/detalle/movements; validar CI + smoke |
+| B0 Baseline / política / audit schema / tipos supplier | **Hecho** |
+| B1 Proveedores UI + selector en factura | **Hecho + smoke UI OK** |
+| B2 Historial compras (listado → detalle) | **Hecho + smoke UI OK** |
 | B3 Anulación/corrección | pendiente (opcional 1er release) |
-| B4 Permisos + smoke | pendiente |
+| B4 Permisos consola + smoke E2E datos | parcial (UI smoke OK; falta consola Appwrite) |
 | B5 Espejo AT | pendiente |
 | B6 Merge master | no |
 
+### Smoke verificado 2026-08-27 (dash)
+
+| Flujo | Resultado |
+|-------|-----------|
+| Subvista **Proveedores** en nav | OK |
+| Crear proveedor desde **factura de entrada** (`+ Nuevo proveedor…`) | OK |
+| Subvista **Compras**: listado de entradas | OK |
+| Click en fila → **detalle** de la compra | OK |
+
 ### B1 entregables
 
-- Case uses: list / create / update supplier
-- `supplier.store` + pantalla **Proveedores** (ruta `suppliers`, owner/admin)
-- Modal factura: select proveedor existente | sin proveedor | nuevo por nombre
-- Test: mapper supplier
+- Case uses: list / create / update supplier (sin delete)
+- Pantalla **Proveedores** (`suppliers`, owner/admin)
+- Modal factura: existente | sin proveedor | nuevo al vuelo
 
 ### B2 entregables
 
-- `ListPurchaseEntriesCaseUse` / `GetPurchaseEntryDetailCaseUse`
-- `StockMovementRepository.listByEntry`
-- UI **Compras** (`purchases`): filtros fecha/proveedor/usuario/texto + detalle líneas + movements
-- Tests: `filterPurchaseEntries`, detail assembly, RoleConfig `purchases`
+- Listado + detalle + movements por `entry_id`
+- Ruta **Compras** (`purchases`)
+- Filtros fecha / proveedor / usuario / texto
 
 Ver checklist unificado.

@@ -33,14 +33,14 @@
 
 **DEP:** B0 (docs + tipos)
 
-- [ ] **DASH** Dominio/DTO/repo `supplier` (CRUD) — repo net ya existe; falta UI y case uses de listado/edición dedicados
-- [ ] **DASH** Case uses: listar, crear, actualizar, (soft) desactivar
-- [ ] **DASH** UI: pantalla o sección **Proveedores** en nav staff
-- [ ] **DASH** Integrar selector de proveedor en flujo existente **Registrar entrada** (buscar + crear rápido)
-- [ ] **DASH** Tests unitarios mapper/repo supplier
+- [x] **DASH** Dominio/DTO/repo `supplier` (CRUD) — case uses list/create/update + net repo
+- [x] **DASH** Case uses: listar, crear, actualizar (**sin** borrado; fuera de alcance)
+- [x] **DASH** UI: pantalla **Proveedores** en nav (`suppliers`, owner/admin) — **smoke OK 2026-08-27**
+- [x] **DASH** Integrar selector de proveedor en **factura de entrada** (existente | sin proveedor | **+ Nuevo proveedor…**) — **smoke OK 2026-08-27**
+- [x] **DASH** Tests unitarios mapper supplier
 - [ ] **AT** Ninguna UI; verificar permisos Appwrite: cliente **sin** write de supplier
 
-**Salida B1:** staff puede mantener proveedores y usarlos al registrar entrada.
+**Salida B1:** staff puede mantener proveedores y usarlos / crearlos al registrar entrada. ✅ (dash)
 
 ---
 
@@ -48,14 +48,14 @@
 
 **DEP:** B1 (proveedor resoluble en listados)
 
-- [ ] **DASH** Listado facturas de entrada: filtros fecha, proveedor, referencia, usuario
-- [ ] **DASH** Detalle de entrada: cabecera + líneas + link a `stock_movements` (`entry_id`)
-- [ ] **DASH** Vista por producto: entradas que afectaron ese SKU (costos históricos)
-- [ ] **DASH** Garantizar que cada `entrada` de movement lleve `entry_id` cuando viene de factura
-- [ ] **DASH** Tests de listado/detalle (unit o integración ligera)
+- [x] **DASH** Listado facturas de entrada: filtros fecha, proveedor, referencia/usuario/texto — ruta **Compras** (`purchases`) — **smoke OK 2026-08-27**
+- [x] **DASH** Detalle de entrada: cabecera + líneas + movements por `entry_id` (click en fila) — **smoke OK 2026-08-27**
+- [ ] **DASH** Vista por producto: entradas que afectaron ese SKU (costos históricos) — repo `listLinesByProduct` listo; UI dedicada pendiente
+- [x] **DASH** Cada `entrada` de movement desde factura lleva `entry_id` (RegisterPurchaseEntryCaseUse + detalle)
+- [x] **DASH** Tests de listado/detalle (`filterPurchaseEntries`, GetPurchaseEntryDetail)
 - [ ] **AT** No aplica UI; opcional: test/lectura que `last_unit_cost` en product sigue siendo la fuente de COGS operador
 
-**Salida B2:** cualquier entrada Core 2/3 es consultable y trazable.
+**Salida B2:** cualquier entrada Core 2/3 es consultable y trazable. ✅ listado+detalle (dash smoke)
 
 ---
 
@@ -69,7 +69,7 @@
 - [ ] **DASH** Tests: no permite dejar `existence < reserved`; idempotencia de anulación
 - [ ] **AT** **DEP B3 dash:** smoke operador confirm VERIFIED tras anulación
 
-**Salida B3:** correcciones auditables sin romper soft-hold.
+**Salida B3:** correcciones auditables sin romper soft-hold. *(opcional 1er release)*
 
 ---
 
@@ -78,7 +78,8 @@
 **DEP:** B1–B2 obligatorios; B3 si entra en el mismo release
 
 - [ ] **DASH** Permisos Appwrite auditados en consola
-- [ ] **DASH** Smoke manual: proveedor → entrada multi-línea → historial → (opcional) anulación
+- [x] **DASH** Smoke manual UI: subvista Proveedores + alta en factura + subvista Compras listado → detalle — **OK 2026-08-27**
+- [ ] **DASH** Smoke end-to-end datos: proveedor → entrada multi-línea → movements visibles en detalle (validar en prod/staging)
 - [ ] **DASH** Verificar badges/nav no se rompen
 - [ ] **AT** Smoke: login cliente no escribe compras; operador confirma venta post-entrada
 
@@ -125,3 +126,4 @@
 |-------|------|
 | 2026-08-27 | Apertura rama `Core3` + checklist inicial |
 | 2026-08-27 | **B0 dash:** política, audit schema, tipado `contact` |
+| 2026-08-27 | **B1+B2 smoke UI:** Proveedores, alta en factura, Compras listado→detalle |
