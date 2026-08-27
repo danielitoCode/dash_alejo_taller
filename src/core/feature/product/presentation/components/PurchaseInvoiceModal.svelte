@@ -1,9 +1,11 @@
 <script lang="ts">
+    import { onMount } from "svelte";
     import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
     import { toastStore } from "../../../../infrastructure/presentation/viewmodel/toast.store";
     import { logger } from "../../../../infrastructure/presentation/util/logger.service";
     import type { Product } from "../../domain/entity/Product";
     import { purchaseStore } from "../../../purchase/presentation/viewmodel/purchase.store";
+    import { supplierStore } from "../../../purchase/presentation/viewmodel/supplier.store";
     import type { PurchaseLineConcept } from "../../../purchase/domain/entity/enums";
     import { productStore } from "../viewmodel/product.store";
     import type { Category } from "../../../category/domain/entity/Category";
@@ -15,6 +17,8 @@
     export let onClose: () => void = () => {};
 
     let invoiceSubmitting = false;
+    /** "" = sin proveedor; "__new__" = crear por nombre; id = proveedor existente */
+    let supplierMode: string = "";
     let invoiceSupplierName = "";
     let invoiceReference = "";
     let invoiceNotes = "";
@@ -45,15 +49,22 @@
 
     let invoiceLines: InvoiceLineDraft[] = [emptyLine()];
 
+    onMount(() => {
+        supplierStore.syncAll().catch(() => {});
+    });
+
     $: if (open) {
+        supplierMode = "";
         invoiceSupplierName = "";
         invoiceReference = "";
         invoiceNotes = "";
         invoiceLines = [emptyLine()];
         invoiceSubmitting = false;
+        void supplierStore.syncAll().catch(() => {});
     }
 
     $: activeCategories = categories.filter((c) => c.status === "active");
+    $: supplierOptions = $supplierStore.items;
 
     function addInvoiceLine(): void {
         invoiceLines = [...invoiceLines, emptyLine()];
@@ -113,6 +124,11 @@
             }
         }
 
+        if (supplierMode === "__new__" && !invoiceSupplierName.trim()) {
+            toastStore.error("Indica el nombre del proveedor nuevo o elige uno del listado.", 4500);
+            return;
+        }
+
         invoiceSubmitting = true;
         toastStore.info("Preparando factura de entrada…", 3000);
 
@@ -157,22 +173,34 @@
 
             toastStore.info(`Registrando factura (${resolved.length} línea(s))…`, 3500);
 
+            const supplierId =
+                supplierMode && supplierMode !== "__new__" && supplierMode !== ""
+                    ? supplierMode
+                    : undefined;
+            const supplierName =
+                supplierMode === "__new__"
+                    ? invoiceSupplierName.trim() || undefined
+                    : undefined;
+
             const entry = await purchaseStore.registerPurchaseEntry({
-                supplierName: invoiceSupplierName.trim() || undefined,
+                supplierId,
+                supplierName,
                 reference: invoiceReference.trim() || undefined,
                 notes: invoiceNotes.trim() || undefined,
                 lines: resolved,
             });
 
             await productStore.syncAll().catch(() => {});
+            await supplierStore.syncAll().catch(() => {});
             invoiceSubmitting = false;
             onClose();
             toastStore.success(
                 `Factura registrada: ${entry.lineCount} línea(s), total ${entry.totalCost}. Stock y costos actualizados.`,
                 6000
             );
-        } catch (e: any) {
-            logger.error(e?.message ?? e, e?.stack);
+        } catch (e: unknown) {
+            const err = e as { message?: string; stack?: string };
+            logger.error(err?.message ?? e, err?.stack);
             toastStore.error(
                 e instanceof Error ? e.message : "No se pudo registrar la factura de entrada.",
                 6000
@@ -189,7 +217,7 @@
                 <div>
                     <h2 id="invoice-title">Factura de entrada</h2>
                     <p class="entry-name">
-                        Única vía de alta de stock (Core 2) · movements + costos. Productos nuevos se crean aquí antes de entrar mercancía.
+                        Única vía de alta de stock · movements + costos. Elige proveedor del catálogo o crea uno al vuelo.
                     </p>
                 </div>
                 <button
@@ -206,23 +234,46 @@
             <div class="entry-body">
                 <div class="invoice-grid">
                     <label class="mgmt-field">
-                        <span>Proveedor (nombre, opcional)</span>
-                        <input
-                            class="mgmt-input"
-                            bind:value={invoiceSupplierName}
-                            placeholder="Ej. Distribuidora Norte"
-                            disabled={invoiceSubmitting}
-                        />
+                        <span>Proveedor</span>
+                        <select class="mgmt-select" bind:value={supplierMode} disabled={invoiceSubmitting}>
+                            <option value="">Sin proveedor</option>
+                            <option value="__new__">+ Nuevo por nombre…</option>
+                            {#each supplierOptions as s}
+                                <option value={s.id}>{s.name}</option>
+                            {/each}
+                        </select>
                     </label>
-                    <label class="mgmt-field">
-                        <span>Referencia factura</span>
-                        <input
-                            class="mgmt-input"
-                            bind:value={invoiceReference}
-                            placeholder="Ej. F-2026-001"
-                            disabled={invoiceSubmitting}
-                        />
-                    </label>
+                    {#if supplierMode === "__new__"}
+                        <label class="mgmt-field">
+                            <span>Nombre del proveedor nuevo</span>
+                            <input
+                                class="mgmt-input"
+                                bind:value={invoiceSupplierName}
+                                placeholder="Ej. Distribuidora Norte"
+                                disabled={invoiceSubmitting}
+                            />
+                        </label>
+                    {:else}
+                        <label class="mgmt-field">
+                            <span>Referencia factura</span>
+                            <input
+                                class="mgmt-input"
+                                bind:value={invoiceReference}
+                                placeholder="Ej. F-2026-001"
+                                disabled={invoiceSubmitting}
+                            />
+                        </label>
+                    {/if}
+                    {#if supplierMode === "__new__"}
+                        <label class="mgmt-field">
+                            <span>Referencia factura</span>
+                            <input
+                                class="mgmt-input"oolish                                bind:value={invoiceReference}
+                                placeholder="Ej. F-2026-001"
+                                disabled={invoiceSubmitting}
+                            />
+                        </label>
+                    {/if}
                     <label class="mgmt-field" style="grid-column:1/-1">
                         <span>Notas</span>
                         <input
