@@ -5,6 +5,7 @@ import {
 
 /**
  * Línea de factura de entrada (Core 2).
+ * unitCost / lineCost están en la moneda de la factura (USD o CUP).
  */
 export interface PurchaseEntryLine {
     id: string
@@ -19,6 +20,7 @@ export interface PurchaseEntryLine {
 /**
  * Cabecera de factura de entrada.
  * Moneda principal del negocio: USD. CUP solo cuando la compra real fue en CUP.
+ * Si CUP: snapshot de tasa (CUP por 1 USD) inmutable.
  */
 export interface PurchaseEntry {
     id: string
@@ -31,6 +33,10 @@ export interface PurchaseEntry {
     notes?: string
     lineCount: number
     lines?: PurchaseEntryLine[]
+    /** CUP por 1 USD — solo si currency = CUP */
+    exchangeRate?: number
+    exchangeRateAt?: string
+    exchangeRateSource?: "DIRECTORIO_CUBANO" | "manual"
 }
 
 export function createPurchaseEntryLine(input: PurchaseEntryLine): PurchaseEntryLine {
@@ -75,8 +81,8 @@ export function createPurchaseEntry(input: PurchaseEntry): PurchaseEntry {
     if (!id) throw new Error("purchase entry id is required")
     const userId = String(input.userId || "").trim()
     if (!userId) throw new Error("userId is required")
-    // Principal: USD. CUP solo si la compra real fue en pesos.
-    const currency = String(input.currency || "").trim().toUpperCase() || "USD"
+    const currencyRaw = String(input.currency || "").trim().toUpperCase() || "USD"
+    const currency = currencyRaw === "CUP" ? "CUP" : "USD"
     const entryDateIso = String(input.entryDateIso || "").trim()
     if (!entryDateIso) throw new Error("entryDateIso is required")
 
@@ -90,6 +96,25 @@ export function createPurchaseEntry(input: PurchaseEntry): PurchaseEntry {
         throw new Error("lineCount must be an integer >= 0")
     }
 
+    let exchangeRate = input.exchangeRate
+    let exchangeRateAt = input.exchangeRateAt
+    let exchangeRateSource = input.exchangeRateSource
+
+    if (currency === "CUP") {
+        const rate = Number(exchangeRate)
+        if (!Number.isFinite(rate) || rate <= 0) {
+            throw new Error("exchangeRate (CUP por 1 USD) is required and must be > 0 when currency is CUP")
+        }
+        exchangeRate = rate
+        exchangeRateAt = String(exchangeRateAt || "").trim() || new Date().toISOString()
+        exchangeRateSource =
+            exchangeRateSource === "manual" ? "manual" : "DIRECTORIO_CUBANO"
+    } else {
+        exchangeRate = undefined
+        exchangeRateAt = undefined
+        exchangeRateSource = undefined
+    }
+
     return {
         id,
         supplierId: input.supplierId ? String(input.supplierId) : undefined,
@@ -101,6 +126,9 @@ export function createPurchaseEntry(input: PurchaseEntry): PurchaseEntry {
         notes: input.notes ? String(input.notes) : undefined,
         lineCount,
         lines: input.lines,
+        exchangeRate,
+        exchangeRateAt,
+        exchangeRateSource,
     }
 }
 

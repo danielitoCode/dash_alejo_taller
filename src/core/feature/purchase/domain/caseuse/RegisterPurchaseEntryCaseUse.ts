@@ -1,6 +1,7 @@
 import type { ProductRepository } from "../../../product/domain/repository/product.repository"
 import type { StockMovementRepository } from "../../../inventory/domain/repository/stock-movement.repository"
 import { createStockMovement } from "../../../inventory/domain/entity/StockMovement"
+import { cupToUsd } from "../../../exchange/domain/entity/CupExchange"
 import {
     createPurchaseEntry,
     createPurchaseEntryLine,
@@ -21,30 +22,35 @@ export type ResolveStaffUserId = () => Promise<string>
 export type PurchaseLineInput = {
     productId: string
     quantity: number
+    /** En la moneda de la factura (USD o CUP). */
     unitCost: number
     concept: PurchaseLineConcept
 }
 
 export type RegisterPurchaseEntryInput = {
     supplierId?: string
-    /** Alta al vuelo desde factura (nombre obligatorio si no hay supplierId). */
     supplierName?: string
-    /** Contacto opcional al crear proveedor desde factura. */
     supplierContact?: string
     reference?: string
     notes?: string
-    /** USD (principal) | CUP. Default USD. */
+    /** USD (default) | CUP */
     currency?: string
     entryDateIso?: string
     lines: PurchaseLineInput[]
+    /**
+     * Obligatorio si currency = CUP.
+     * CUP por 1 USD (tasa de sesión API o manual del staff).
+     */
+    exchangeRate?: number
+    exchangeRateAt?: string
+    exchangeRateSource?: "DIRECTORIO_CUBANO" | "manual"
 }
 
 /**
- * Core 2 B3.2 / Core 3 B4 — factura de entrada multi-línea.
- * purchase_entry + lines + existence += + movement entrada + last_unit_cost (si purchase).
- * Moneda: USD es la principal/referencial. CUP solo cuando la compra real fue en CUP.
- * last_unit_cost del producto se guarda en la misma unidad del unitCost de la línea
- * (para compras en CUP el panel debe convertir a USD antes de enviar unitCost — ver POLICY).
+ * Factura de entrada multi-línea.
+ * - USD: last_unit_cost = unitCost
+ * - CUP: montos de línea en CUP; last_unit_cost = unitCostCUP / exchangeRate (USD)
+ * @see .policies/exchange/EXCHANGE_POLICY.md
  */
 export class RegisterPurchaseEntryCaseUse {
     constructor(
@@ -61,12 +67,34 @@ export class RegisterPurchaseEntryCaseUse {
             throw new Error("La factura debe tener al menos una línea")
         }
 
+        const currencyRaw = String(input.currency || "USD").trim().toUpperCase()
+        const currency = currencyRaw === "CUP" ? "CUP" : "USD"
+
+        let exchangeRate: number | undefined
+        let exchangeRateAt: string | undefined
+        let exchangeRateSource: "DIRECTORIO_CUBANO" | "manual" | undefined
+
+        if (currency === "CUP") {
+            const rate = Number(input.exchangeRate)
+            if (!Number.isFinite(rate) || rate <= 0) {
+                throw new Error(
+                    "Compra en CUP requiere tasa de cambio (CUP por 1 USD) > 0. Actualiza la tasa al iniciar sesión o indica una tasa manual."
+                )
+            }
+            exchangeRate = rate
+            exchangeRateAt =
+                String(input.exchangeRateAt || "").trim() || new Date().toISOString()
+            exchangeRateSource =
+                input.exchangeRateSource === "manual" ? "manual" : "DIRECTORIO_CUBANO"
+        }
+
         const normalized: Array<{
             productId: string
             quantity: number
             unitCost: number
             concept: PurchaseLineConcept
             lineCost: number
+            unitCostUsd: number
         }> = []
 
         for (const raw of linesIn) {
@@ -90,19 +118,22 @@ export class RegisterPurchaseEntryCaseUse {
             const product = await this.productRepository.getById(productId)
             if (!product) throw new Error(`Product with id ${productId} not found`)
 
+            const unitCostUsd =
+                currency === "CUP" && exchangeRate
+                    ? cupToUsd(unitCost, exchangeRate)
+                    : unitCost
+
             normalized.push({
                 productId,
                 quantity,
                 unitCost,
                 concept: raw.concept,
                 lineCost: quantity * unitCost,
+                unitCostUsd,
             })
         }
 
         const userId = (await this.resolveUserId()).trim() || "staff"
-        // Principal del negocio: USD. No default a CUP (bug Core3 B4).
-        const currencyRaw = String(input.currency || "USD").trim().toUpperCase()
-        const currency = currencyRaw === "CUP" ? "CUP" : "USD"
         const entryDateIso =
             String(input.entryDateIso || "").trim() || new Date().toISOString()
         const totalCost = normalized.reduce((s, l) => s + l.lineCost, 0)
@@ -115,7 +146,6 @@ export class RegisterPurchaseEntryCaseUse {
                 createSupplier({
                     id: crypto.randomUUID(),
                     name: supplierName,
-                    // Appwrite exige contact (required); vacío si solo hay nombre.
                     contact: contactRaw,
                 })
             )
@@ -133,6 +163,9 @@ export class RegisterPurchaseEntryCaseUse {
             userId,
             notes: input.notes ? String(input.notes).trim() : undefined,
             lineCount: normalized.length,
+            exchangeRate,
+            exchangeRateAt,
+            exchangeRateSource,
         })
 
         const savedEntry = await this.purchaseEntryRepository.createEntry(entry)
@@ -167,9 +200,8 @@ export class RegisterPurchaseEntryCaseUse {
                 existence: nextExistence,
             }
             if (shouldUpdateLastUnitCost(line)) {
-                // last_unit_cost es el costo referencial en la unidad enviada.
-                // Política: unitCost debe llegar ya en USD (si la compra fue CUP, convertir en UI).
-                patch.lastUnitCost = line.unitCost
+                // Siempre USD (convertido si la factura fue CUP)
+                patch.lastUnitCost = line.unitCostUsd
             }
             await this.productRepository.update(line.productId, patch)
 

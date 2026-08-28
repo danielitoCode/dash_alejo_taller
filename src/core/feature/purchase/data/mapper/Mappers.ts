@@ -33,7 +33,6 @@ export function supplierFromDTO(dto: SupplierDTO): Supplier {
 }
 
 export function supplierToDTO(s: Supplier): SupplierWriteDTO {
-    // Appwrite collection `supplier` exige `contact` (required) — nunca omitir.
     const contact =
         s.contact != null && String(s.contact).trim() !== ""
             ? String(s.contact).trim()
@@ -59,6 +58,9 @@ export type PurchaseEntryWriteDTO = Pick<
     | "user_id"
     | "notes"
     | "line_count"
+    | "exchange_rate"
+    | "exchange_rate_at"
+    | "exchange_rate_source"
 > & { $id?: string }
 
 export type PurchaseEntryLineWriteDTO = Pick<
@@ -72,17 +74,26 @@ export type PurchaseEntryLineWriteDTO = Pick<
 > & { $id?: string }
 
 export function purchaseEntryFromDTO(dto: PurchaseEntryDTO): PurchaseEntry {
+    const currency = (dto.currency || "USD").toUpperCase() === "CUP" ? "CUP" : "USD"
+    const rate =
+        dto.exchange_rate != null && Number.isFinite(Number(dto.exchange_rate))
+            ? Number(dto.exchange_rate)
+            : undefined
     return createPurchaseEntry({
         id: dto.$id,
         supplierId: dto.supplier_id,
         reference: dto.reference,
         entryDateIso: dto.entry_date,
         totalCost: Number(dto.total_cost) || 0,
-        // Principal USD; legacy sin currency → USD (no CUP).
-        currency: dto.currency || "USD",
+        currency,
         userId: dto.user_id,
         notes: dto.notes,
         lineCount: Math.trunc(Number(dto.line_count) || 0),
+        // createPurchaseEntry exige rate si CUP; legacy sin rate no debe romper listados
+        exchangeRate: currency === "CUP" ? rate ?? 1 : undefined,
+        exchangeRateAt: dto.exchange_rate_at,
+        exchangeRateSource:
+            dto.exchange_rate_source === "manual" ? "manual" : "DIRECTORIO_CUBANO",
     })
 }
 
@@ -98,6 +109,11 @@ export function purchaseEntryToDTO(e: PurchaseEntry): PurchaseEntryWriteDTO {
     if (e.supplierId) dto.supplier_id = e.supplierId
     if (e.reference) dto.reference = e.reference
     if (e.notes) dto.notes = e.notes
+    if (e.currency === "CUP" && e.exchangeRate != null && e.exchangeRate > 0) {
+        dto.exchange_rate = e.exchangeRate
+        if (e.exchangeRateAt) dto.exchange_rate_at = e.exchangeRateAt
+        if (e.exchangeRateSource) dto.exchange_rate_source = e.exchangeRateSource
+    }
     return dto
 }
 

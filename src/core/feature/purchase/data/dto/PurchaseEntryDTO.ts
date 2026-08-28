@@ -9,6 +9,10 @@ export interface PurchaseEntryDTO extends Models.Document {
     user_id: string
     notes?: string
     line_count: number
+    /** CUP por 1 USD — Appwrite: añadir atributos si aún no existen */
+    exchange_rate?: number
+    exchange_rate_at?: string
+    exchange_rate_source?: string
 }
 
 export interface PurchaseEntryLineDTO extends Models.Document {
