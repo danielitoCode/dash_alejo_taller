@@ -62,10 +62,11 @@
         return s?.name ?? supplierId.slice(0, 8);
     }
 
-    function formatMoney(n: number, currency = "CUP"): string {
+    function formatMoney(n: number, currency = "USD"): string {
         const v = Number(n);
         if (!Number.isFinite(v)) return "—";
-        return `${v.toLocaleString("es", { maximumFractionDigits: 2 })} ${currency}`;
+        const c = (currency || "USD").toUpperCase();
+        return `${v.toLocaleString("es", { maximumFractionDigits: 2 })} ${c}`;
     }
 
     function formatDate(iso: string): string {
@@ -101,7 +102,7 @@
             <div>
                 <h1 class="mgmt-title">Historial de entradas</h1>
                 <p class="mgmt-subtitle">
-                    Facturas de compra registradas: cabecera, líneas y movements de stock (`entry_id`).
+                    Facturas de compra registradas: cabecera, líneas y movements de stock (`entry_id`). Moneda principal USD.
                 </p>
             </div>
             <div class="mgmt-meta">
@@ -143,6 +144,7 @@
                             </dd>
                         </div>
                         <div><dt>Usuario</dt><dd>{detail.entry.userId}</dd></div>
+                        <div><dt>Moneda</dt><dd>{(detail.entry.currency || "USD").toUpperCase()}</dd></div>
                         <div>
                             <dt>Total</dt>
                             <dd>{formatMoney(detail.entry.totalCost, detail.entry.currency)}</dd>

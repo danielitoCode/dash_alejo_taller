@@ -23,6 +23,8 @@
     let invoiceSupplierContact = "";
     let invoiceReference = "";
     let invoiceNotes = "";
+    /** Moneda de la factura. USD = principal del negocio. CUP solo si se pagó en pesos. */
+    let invoiceCurrency: "USD" | "CUP" = "USD";
 
     type InvoiceLineDraft = {
         mode: "existing" | "new";
@@ -60,6 +62,7 @@
         invoiceSupplierContact = "";
         invoiceReference = "";
         invoiceNotes = "";
+        invoiceCurrency = "USD";
         invoiceLines = [emptyLine()];
         invoiceSubmitting = false;
         void supplierStore.syncAll().catch(() => {});
@@ -194,6 +197,7 @@
                 supplierContact,
                 reference: invoiceReference.trim() || undefined,
                 notes: invoiceNotes.trim() || undefined,
+                currency: invoiceCurrency,
                 lines: resolved,
             });
 
@@ -202,7 +206,7 @@
             invoiceSubmitting = false;
             onClose();
             toastStore.success(
-                `Factura registrada: ${entry.lineCount} línea(s), total ${entry.totalCost}. Stock y costos actualizados.`,
+                `Factura registrada (${entry.currency}): ${entry.lineCount} línea(s), total ${entry.totalCost}. Stock y costos actualizados.`,
                 6000
             );
         } catch (e: unknown) {
@@ -224,8 +228,8 @@
                 <div>
                     <h2 id="invoice-title">Factura de entrada</h2>
                     <p class="entry-name">
-                        Alta de stock · movements + costos. Puedes elegir un proveedor del catálogo o crear uno aquí al
-                        vuelo (vía principal de alta).
+                        Alta de stock · movements + costos. Moneda principal: <strong>USD</strong>. Usa CUP solo si
+                        pagaste en pesos (el cambio se aplica al momento).
                     </p>
                 </div>
                 <button
@@ -249,6 +253,13 @@
                             {#each supplierOptions as s}
                                 <option value={s.id}>{s.name}</option>
                             {/each}
+                        </select>
+                    </label>
+                    <label class="mgmt-field">
+                        <span>Moneda *</span>
+                        <select class="mgmt-select" bind:value={invoiceCurrency} disabled={invoiceSubmitting}>
+                            <option value="USD">USD (principal)</option>
+                            <option value="CUP">CUP (pesos)</option>
                         </select>
                     </label>
                     <label class="mgmt-field">
@@ -291,9 +302,17 @@
                     </label>
                 </div>
 
+                {#if invoiceCurrency === "CUP"}
+                    <p class="currency-hint">
+                        Costos en CUP. El valor referencial de <code>last_unit_cost</code> debe quedar en USD (tasa del
+                        momento). Si aún no hay conversión automática, introduce el costo ya convertido a USD o
+                        documenta la tasa en notas.
+                    </p>
+                {/if}
+
                 <div class="invoice-lines">
                     <div class="invoice-lines-head">
-                        <strong>Líneas de compra</strong>
+                        <strong>Líneas de compra ({invoiceCurrency})</strong>
                         <button
                             class="mgmt-btn ghost"
                             type="button"
@@ -365,8 +384,7 @@
                                     <label class="mgmt-field">
                                         <span>Precio de venta</span>
                                         <input
-                                            class="mgmt-input"
-                                            type="number"
+                                            class="mgmt-input"	eg type="number"
                                             min="0.01"
                                             step="0.01"
                                             bind:value={line.newSalePrice}
@@ -389,7 +407,7 @@
                                     />
                                 </label>
                                 <label class="mgmt-field">
-                                    <span>Costo unitario</span>
+                                    <span>Costo unitario ({invoiceCurrency})</span>
                                     <input
                                         class="mgmt-input"
                                         type="number"
@@ -486,6 +504,15 @@
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 12px;
+    }
+    .currency-hint {
+        margin: 0;
+        padding: 10px 12px;
+        border-radius: 10px;
+        font-size: 0.8rem;
+        line-height: 1.4;
+        background: color-mix(in srgb, var(--md-sys-color-tertiary) 12%, transparent);
+        border: 1px solid color-mix(in srgb, var(--md-sys-color-tertiary) 30%, var(--md-sys-color-outline-variant));
     }
     .invoice-lines {
         display: grid;
