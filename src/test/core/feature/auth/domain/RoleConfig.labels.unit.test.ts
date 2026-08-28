@@ -56,6 +56,11 @@ describe("ROLE_LABELS / resolveBusinessRole (Core1 3.3)", () => {
         expect(resolveBusinessRole({ labels: [], role: null })).toBe("viewer")
     })
 
+    it("label operator resuelve a sales", () => {
+        expect(businessRoleFromLabels(["operator"])).toBe("sales")
+        expect(resolveBusinessRole({ role: "operator" })).toBe("sales")
+    })
+
     it("round-trip: cada rol → labels → mismo rol", () => {
         for (const role of ROLE_HIERARCHY as BusinessRole[]) {
             const labels = getRoleLabels(role)

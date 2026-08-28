@@ -13,7 +13,7 @@ export const ADMIN_ROLES: BusinessRole[] = ["admin", "owner"];
 export const STAFF_ROLES: BusinessRole[] = ["owner", "admin", "sales"];
 
 /** Jerarquía de mayor a menor privilegio. */
-export const ROLE_HIERARCHY: BusinessRole[] = ["owner", "admin", "sales", "viewer"  ];
+export const ROLE_HIERARCHY: BusinessRole[] = ["owner", "admin", "sales", "viewer"];
 
 export const ROLE_ROUTE_ACCESS: Record<BusinessRole, string[]> = {
     owner: [

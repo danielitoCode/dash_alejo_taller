@@ -42,10 +42,19 @@ Marca cada casilla al completar. Cuando todo esté OK, actualizar `CORE3_UNIFIED
 
 ## B. Smoke panel dash (owner o admin)
 
-### B1 — Nav y roles
-- [ ] Login como **owner** o **admin**: en el menú aparecen **Proveedores** y **Compras**
-- [ ] Login como **sales** (si tienes cuenta): **no** aparecen Proveedores ni Compras
-- [ ] Login como **viewer**: solo rutas de lectura permitidas; sin Proveedores/Compras
+### B1 — Nav y roles (entrada al panel)
+Staff que **entra** al dashboard: **owner**, **admin**, **sales** (label Appwrite `operator` = sales).
+**Viewer / cliente B2C** → unauthorized (no entra).
+
+| Rol | Entra al panel | Proveedores / Compras | Productos / Inventario / Users | Ventas / Reservas / Mensajes |
+|-----|----------------|------------------------|--------------------------------|------------------------------|
+| owner / admin | sí | sí | sí | sí |
+| sales / operator | sí | no | no | sí |
+| viewer / cliente | no | — | — | — |
+
+- [ ] Login **owner** o **admin**: menú con **Proveedores** y **Compras**
+- [ ] Login **sales** o label **operator**: entra; **no** ve Proveedores ni Compras; sí Ventas/Reservas/Mensajes
+- [ ] Login **viewer**/cliente: pantalla unauthorized
 - [ ] Badges de Ventas / Mensajes / Reservas siguen mostrando conteos (no se rompen)
 
 ### B2 — Proveedores

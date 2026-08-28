@@ -1,6 +1,7 @@
 ﻿<script lang="ts">
     import type { NavController } from "../../../../../lib/navigation/NavController";
     import { authContainer } from "../../di/auth.container";
+    import { canAccessDashboard, dashboardDeniedMessage } from "../../domain/config/RoleConfig";
     import FrameModal from "../components/FrameModal.svelte";
     import { ENV } from "../../../../infrastructure/env";
     import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
@@ -36,8 +37,8 @@
                 password
             );
             const current = await authContainer.useCases.accounts.getCurrentUser();
-            if (current.role !== "admin") {
-                navController.navigate("unauthorized", { message: "Tu cuenta existe, pero no tiene permisos de administrador." });
+            if (!canAccessDashboard(current.role)) {
+                navController.navigate("unauthorized", { message: dashboardDeniedMessage() });
                 return;
             }
             navController.navigate("home", { id: userId });
@@ -88,10 +89,10 @@
             try {
                 const userId = await authContainer.useCases.sessions.openSession.openCustomSession(profile.email, profile.sub);
                 const current = await authContainer.useCases.accounts.getCurrentUser();
-                if (current.role !== "admin") {
-                    navController.navigate("unauthorized", { message: "Tu cuenta existe, pero no tiene permisos de administrador." });
-                    return;
-                }
+                if (!canAccessDashboard(current.role)) {
+                navController.navigate("unauthorized", { message: dashboardDeniedMessage() });
+                return;
+            }
                 navController.navigate("home", { id: userId });
                 return;
             } catch {
@@ -127,8 +128,8 @@
             });
 
             const current = await authContainer.useCases.accounts.getCurrentUser();
-            if (current.role !== "admin") {
-                navController.navigate("unauthorized", { message: "Tu cuenta existe, pero no tiene permisos de administrador." });
+            if (!canAccessDashboard(current.role)) {
+                navController.navigate("unauthorized", { message: dashboardDeniedMessage() });
                 return;
             }
 
@@ -175,8 +176,8 @@
             });
 
             const current = await authContainer.useCases.accounts.getCurrentUser();
-            if (current.role !== "admin") {
-                navController.navigate("unauthorized", { message: "Cuenta creada, pero sin permisos para el panel de gestión." });
+            if (!canAccessDashboard(current.role)) {
+                navController.navigate("unauthorized", { message: dashboardDeniedMessage() });
                 return;
             }
             navController.navigate("home", { id: current.id });

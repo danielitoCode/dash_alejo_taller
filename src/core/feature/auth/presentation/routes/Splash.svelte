@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { authContainer } from "../../di/auth.container";
-    import { isAdminRole } from "../../domain/config/RoleConfig";
+    import { canAccessDashboard, dashboardDeniedMessage } from "../../domain/config/RoleConfig";
     import alejoIcon from "/alejoicon_clean.svg";
 
     export let navController;
@@ -38,11 +38,10 @@
         try {
             const user = await authContainer.useCases.accounts.getCurrentUser();
 
-            if (!isAdminRole(user.role)) {
+            if (!canAccessDashboard(user.role)) {
                 await holdStatus("unauthorized", resolveDisplayName(user));
                 navController.navigate("unauthorized", {
-                    message:
-                        "Tu cuenta existe, pero no tiene permisos de administrador.",
+                    message: dashboardDeniedMessage(),
                 });
                 return;
             }
@@ -70,9 +69,9 @@
         status === "loading"
             ? "Comprobando permisos del equipo"
             : status === "welcome"
-              ? "Entrando al panel de administración"
+              ? "Entrando al panel de gestión"
               : status === "unauthorized"
-                ? "Esta cuenta no tiene rol de administrador"
+                ? "Esta cuenta no tiene acceso al panel de gestión"
                 : "Inicia sesión con tu cuenta de staff";
 
     $: showDots = status === "loading";

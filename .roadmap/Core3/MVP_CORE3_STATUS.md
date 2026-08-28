@@ -10,7 +10,7 @@
 | B1 Proveedores UI + selector en factura | **Hecho + smoke UI OK** |
 | B2 Historial compras (listado → detalle) | **Hecho + smoke UI OK** |
 | B3 Anulación/corrección | pendiente (opcional 1er release) |
-| B4 Permisos + smoke E2E | **En curso** — guía [`SMOKE_B4.md`](./SMOKE_B4.md) |
+| B4 Permisos + smoke E2E | **En curso** — consola Appwrite OK (usuario); gate panel owner/admin + sales/operator |
 | B5 Espejo AT | pendiente |
 | B6 Merge master | no |
 

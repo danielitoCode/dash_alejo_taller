@@ -78,6 +78,72 @@ describe("Login route", () => {
         });
     });
 
+    it("inicia sesión y navega al home cuando el usuario es owner", async () => {
+        openCustomSession.mockResolvedValue("user-owner");
+        getCurrentUser.mockResolvedValue({ role: "owner" });
+        const navController = new NavController("login");
+        navController.navigate = vi.fn();
+
+        render(Login, { navController });
+
+        await fireEvent.input(screen.getByPlaceholderText("correo@dominio.com"), {
+            target: { value: "owner@example.com" }
+        });
+        await fireEvent.input(screen.getByPlaceholderText("••••••••"), {
+            target: { value: "secret-123" }
+        });
+        await fireEvent.click(screen.getByRole("button", { name: /entrar/i }));
+
+        await waitFor(() => {
+            expect(navController.navigate).toHaveBeenCalledWith("home", { id: "user-owner" });
+        });
+    });
+
+    it("inicia sesión y navega al home cuando el usuario es sales/operator", async () => {
+        openCustomSession.mockResolvedValue("user-sales");
+        getCurrentUser.mockResolvedValue({ role: "sales" });
+        const navController = new NavController("login");
+        navController.navigate = vi.fn();
+
+        render(Login, { navController });
+
+        await fireEvent.input(screen.getByPlaceholderText("correo@dominio.com"), {
+            target: { value: "sales@example.com" }
+        });
+        await fireEvent.input(screen.getByPlaceholderText("••••••••"), {
+            target: { value: "secret-123" }
+        });
+        await fireEvent.click(screen.getByRole("button", { name: /entrar/i }));
+
+        await waitFor(() => {
+            expect(navController.navigate).toHaveBeenCalledWith("home", { id: "user-sales" });
+        });
+    });
+
+    it("bloquea viewer/cliente hacia unauthorized", async () => {
+        openCustomSession.mockResolvedValue("user-v");
+        getCurrentUser.mockResolvedValue({ role: "viewer" });
+        const navController = new NavController("login");
+        navController.navigate = vi.fn();
+
+        render(Login, { navController });
+
+        await fireEvent.input(screen.getByPlaceholderText("correo@dominio.com"), {
+            target: { value: "cliente@example.com" }
+        });
+        await fireEvent.input(screen.getByPlaceholderText("••••••••"), {
+            target: { value: "secret-123" }
+        });
+        await fireEvent.click(screen.getByRole("button", { name: /entrar/i }));
+
+        await waitFor(() => {
+            expect(navController.navigate).toHaveBeenCalledWith(
+                "unauthorized",
+                expect.objectContaining({ message: expect.stringMatching(/panel/i) })
+            );
+        });
+    });
+
     it("abre el modal de Google con el iframe configurado", async () => {
         const navController = new NavController("login");
         render(Login, { navController });
