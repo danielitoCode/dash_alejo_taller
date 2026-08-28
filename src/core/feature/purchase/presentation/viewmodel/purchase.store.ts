@@ -24,9 +24,17 @@ async function listLinesByEntry(entryId: string): Promise<PurchaseEntryLine[]> {
     return purchaseContainer.repositories.purchaseEntry.listLinesByEntry(entryId)
 }
 
+async function listLinesByProduct(
+    productId: string,
+    limit = 50
+): Promise<PurchaseEntryLine[]> {
+    return purchaseContainer.repositories.purchaseEntry.listLinesByProduct(productId, limit)
+}
+
 export const purchaseStore = {
     registerPurchaseEntry,
     listSuppliers,
     listEntries,
     listLinesByEntry,
+    listLinesByProduct,
 }
