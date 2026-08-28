@@ -18,4 +18,7 @@ export interface ProductDTO extends Models.Document {
     rating?: number
     /** Core 2 — último costo; ausente en docs Core 1 → mapper 0/undefined */
     last_unit_cost?: number
+    /** Core 3 — protección de precio (gap Appwrite hasta migrar). */
+    price_protected_at?: string
+    price_protection_entry_id?: string
 }

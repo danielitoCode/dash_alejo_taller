@@ -1,7 +1,10 @@
 import type { ProductRepository } from "../../../product/domain/repository/product.repository"
 import type { StockMovementRepository } from "../../../inventory/domain/repository/stock-movement.repository"
 import { createStockMovement } from "../../../inventory/domain/entity/StockMovement"
-import { cupToUsd } from "../../../exchange/domain/entity/CupExchange"
+import {
+    cupToUsd,
+    decidePriceProtection,
+} from "../../../exchange/domain/entity/CupExchange"
 import {
     createPurchaseEntry,
     createPurchaseEntryLine,
@@ -46,10 +49,24 @@ export type RegisterPurchaseEntryInput = {
     exchangeRateSource?: "DIRECTORIO_CUBANO" | "manual"
 }
 
+/** Resultado de protección de precio aplicada en el registro. */
+export type PriceProtectionApplied = {
+    productId: string
+    previousPrice: number
+    newPrice: number
+    unitCostUsd: number
+}
+
+export type RegisterPurchaseEntryResult = PurchaseEntry & {
+    /** Productos cuyo price se auto-ajustó (+30 % sobre costo USD). */
+    priceProtections?: PriceProtectionApplied[]
+}
+
 /**
  * Factura de entrada multi-línea.
  * - USD: last_unit_cost = unitCost
  * - CUP: montos de línea en CUP; last_unit_cost = unitCostCUP / exchangeRate (USD)
+ * - Protección precio: si unitCostUsd > price → price = unitCostUsd × 1.30
  * @see .policies/exchange/EXCHANGE_POLICY.md
  */
 export class RegisterPurchaseEntryCaseUse {
@@ -61,7 +78,7 @@ export class RegisterPurchaseEntryCaseUse {
         private readonly resolveUserId: ResolveStaffUserId = async () => "staff"
     ) {}
 
-    async execute(input: RegisterPurchaseEntryInput): Promise<PurchaseEntry> {
+    async execute(input: RegisterPurchaseEntryInput): Promise<RegisterPurchaseEntryResult> {
         const linesIn = input.lines ?? []
         if (!Array.isArray(linesIn) || linesIn.length === 0) {
             throw new Error("La factura debe tener al menos una línea")
@@ -171,6 +188,8 @@ export class RegisterPurchaseEntryCaseUse {
         const savedEntry = await this.purchaseEntryRepository.createEntry(entry)
 
         const savedLines: PurchaseEntryLine[] = []
+        const priceProtections: PriceProtectionApplied[] = []
+
         for (const line of normalized) {
             const lineEntity = createPurchaseEntryLine({
                 id: crypto.randomUUID(),
@@ -196,13 +215,39 @@ export class RegisterPurchaseEntryCaseUse {
                 )
             }
 
-            const patch: { existence: number; lastUnitCost?: number } = {
+            const patch: {
+                existence: number
+                lastUnitCost?: number
+                price?: number
+                priceProtectedAt?: string
+                priceProtectionEntryId?: string
+            } = {
                 existence: nextExistence,
             }
+
             if (shouldUpdateLastUnitCost(line)) {
                 // Siempre USD (convertido si la factura fue CUP)
                 patch.lastUnitCost = line.unitCostUsd
+
+                // Protección de precio de venta (EXCHANGE_POLICY §5)
+                const decision = decidePriceProtection(
+                    line.unitCostUsd,
+                    Number(product.price) || 0
+                )
+                if (decision.applied) {
+                    const protectedAt = new Date().toISOString()
+                    patch.price = decision.newPrice
+                    patch.priceProtectedAt = protectedAt
+                    patch.priceProtectionEntryId = savedEntry.id
+                    priceProtections.push({
+                        productId: line.productId,
+                        previousPrice: decision.previousPrice,
+                        newPrice: decision.newPrice,
+                        unitCostUsd: decision.unitCostUsd,
+                    })
+                }
             }
+
             await this.productRepository.update(line.productId, patch)
 
             try {
@@ -225,6 +270,10 @@ export class RegisterPurchaseEntryCaseUse {
             }
         }
 
-        return { ...savedEntry, lines: savedLines }
+        return {
+            ...savedEntry,
+            lines: savedLines,
+            priceProtections: priceProtections.length > 0 ? priceProtections : undefined,
+        }
     }
 }

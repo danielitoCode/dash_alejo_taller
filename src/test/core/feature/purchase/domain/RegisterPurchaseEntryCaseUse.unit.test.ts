@@ -151,6 +151,7 @@ describe("RegisterPurchaseEntryCaseUse B3.2", () => {
         expect(result.totalCost).toBe(37.5)
         expect(result.userId).toBe("staff-9")
         expect(result.reference).toBe("F-001")
+        expect(result.currency).toBe("USD")
         expect(suppliers.items).toHaveLength(1)
         expect(suppliers.items[0].name).toBe("Proveedor X")
         expect(purchase.entries).toHaveLength(1)
@@ -158,8 +159,16 @@ describe("RegisterPurchaseEntryCaseUse B3.2", () => {
 
         expect(products.store.get("p1")!.existence).toBe(8)
         expect(products.store.get("p1")!.lastUnitCost).toBe(12.5)
+        // 12.5 > price 10 → protección 12.5 * 1.3 = 16.25
+        expect(products.store.get("p1")!.price).toBeCloseTo(16.25)
+        expect(products.store.get("p1")!.priceProtectedAt).toBeTruthy()
+        expect(products.store.get("p1")!.priceProtectionEntryId).toBe(result.id)
+        expect(result.priceProtections).toHaveLength(1)
+        expect(result.priceProtections![0].productId).toBe("p1")
+
         expect(products.store.get("p2")!.existence).toBe(2)
         expect(products.store.get("p2")!.lastUnitCost).toBeUndefined()
+        expect(products.store.get("p2")!.price).toBe(10)
 
         expect(movements.created).toHaveLength(2)
         expect(movements.created.every((m) => m.type === "entrada")).toBe(true)
@@ -179,7 +188,7 @@ describe("RegisterPurchaseEntryCaseUse B3.2", () => {
     })
 
     it("CUP converts lastUnitCost to USD with exchangeRate; line stays in CUP", async () => {
-        const products = new FakeProductRepo([product({ id: "p1", existence: 0 })])
+        const products = new FakeProductRepo([product({ id: "p1", existence: 0, price: 5 })])
         const purchase = new FakePurchaseRepo()
         const uc = new RegisterPurchaseEntryCaseUse(
             purchase,
@@ -200,8 +209,12 @@ describe("RegisterPurchaseEntryCaseUse B3.2", () => {
         expect(result.exchangeRate).toBe(350)
         expect(result.totalCost).toBe(1400)
         expect(purchase.lines[0].unitCost).toBe(700)
+        // 700/350 = 2 USD last cost
         expect(products.store.get("p1")!.lastUnitCost).toBe(2)
         expect(products.store.get("p1")!.existence).toBe(2)
+        // 2 < price 5 → no protection
+        expect(products.store.get("p1")!.price).toBe(5)
+        expect(result.priceProtections).toBeUndefined()
     })
 
     it("rejects CUP without valid exchangeRate", async () => {
@@ -217,5 +230,69 @@ describe("RegisterPurchaseEntryCaseUse B3.2", () => {
                 lines: [{ productId: "p1", quantity: 1, unitCost: 100, concept: "purchase" }],
             })
         ).rejects.toThrow(/tasa/i)
+    })
+
+    it("CUP with high cost triggers price protection on USD-converted cost", async () => {
+        // unitCost 3500 CUP / 350 = 10 USD; price actual 5 → new price 13
+        const products = new FakeProductRepo([
+            product({ id: "p1", existence: 1, reserved: 0, price: 5 }),
+        ])
+        const uc = new RegisterPurchaseEntryCaseUse(
+            new FakePurchaseRepo(),
+            new FakeSupplierRepo(),
+            products,
+            new FakeMovementRepo()
+        )
+
+        const result = await uc.execute({
+            currency: "CUP",
+            exchangeRate: 350,
+            lines: [{ productId: "p1", quantity: 1, unitCost: 3500, concept: "purchase" }],
+        })
+
+        expect(products.store.get("p1")!.lastUnitCost).toBe(10)
+        expect(products.store.get("p1")!.price).toBe(13)
+        expect(products.store.get("p1")!.existence).toBe(2)
+        expect(products.store.get("p1")!.reserved).toBe(0)
+        expect(result.priceProtections).toHaveLength(1)
+        expect(result.priceProtections![0].previousPrice).toBe(5)
+        expect(result.priceProtections![0].newPrice).toBe(13)
+        expect(result.priceProtections![0].unitCostUsd).toBe(10)
+    })
+
+    it("does not apply price protection when unitCostUsd <= price", async () => {
+        const products = new FakeProductRepo([product({ id: "p1", price: 20 })])
+        const uc = new RegisterPurchaseEntryCaseUse(
+            new FakePurchaseRepo(),
+            new FakeSupplierRepo(),
+            products,
+            new FakeMovementRepo()
+        )
+
+        const result = await uc.execute({
+            lines: [{ productId: "p1", quantity: 1, unitCost: 15, concept: "purchase" }],
+        })
+
+        expect(products.store.get("p1")!.lastUnitCost).toBe(15)
+        expect(products.store.get("p1")!.price).toBe(20)
+        expect(result.priceProtections).toBeUndefined()
+    })
+
+    it("royalty does not update lastUnitCost nor price", async () => {
+        const products = new FakeProductRepo([product({ id: "p1", price: 3, existence: 0 })])
+        const uc = new RegisterPurchaseEntryCaseUse(
+            new FakePurchaseRepo(),
+            new FakeSupplierRepo(),
+            products,
+            new FakeMovementRepo()
+        )
+
+        await uc.execute({
+            lines: [{ productId: "p1", quantity: 5, unitCost: 100, concept: "royalty" }],
+        })
+
+        expect(products.store.get("p1")!.lastUnitCost).toBeUndefined()
+        expect(products.store.get("p1")!.price).toBe(3)
+        expect(products.store.get("p1")!.existence).toBe(5)
     })
 })

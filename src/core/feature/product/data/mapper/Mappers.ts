@@ -25,6 +25,8 @@ export type ProductWriteDTO = Pick<
     | "existence"
     | "reserved"
     | "last_unit_cost"
+    | "price_protected_at"
+    | "price_protection_entry_id"
 >
 
 /** Payload de catálogo sin tocar soft-hold (no envía reserved). */
@@ -47,6 +49,16 @@ export function productFromDTO(dto: ProductDTO): Product {
             ? undefined
             : toNonNegNumber(rawCost, 0)
 
+    const priceProtectedAt =
+        dto.price_protected_at != null && String(dto.price_protected_at).trim() !== ""
+            ? String(dto.price_protected_at).trim()
+            : undefined
+    const priceProtectionEntryId =
+        dto.price_protection_entry_id != null &&
+        String(dto.price_protection_entry_id).trim() !== ""
+            ? String(dto.price_protection_entry_id).trim()
+            : undefined
+
     return {
         id: dto.$id,
         name: dto.name,
@@ -59,6 +71,8 @@ export function productFromDTO(dto: ProductDTO): Product {
         status: dto.status === "inactive" ? "inactive" : "active",
         rating: dto.rating ?? 0,
         lastUnitCost,
+        priceProtectedAt,
+        priceProtectionEntryId,
     }
 }
 
@@ -80,6 +94,12 @@ export function productToDTO(product: Product): ProductWriteDTO {
     }
     if (product.lastUnitCost !== undefined && product.lastUnitCost !== null) {
         dto.last_unit_cost = toNonNegNumber(product.lastUnitCost, 0)
+    }
+    if (product.priceProtectedAt) {
+        dto.price_protected_at = product.priceProtectedAt
+    }
+    if (product.priceProtectionEntryId) {
+        dto.price_protection_entry_id = product.priceProtectionEntryId
     }
     return dto
 }

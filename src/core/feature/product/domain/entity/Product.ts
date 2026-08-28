@@ -5,7 +5,8 @@ export type ProductStatus = "active" | "inactive"
  * - existence: unidades físicas
  * - reserved: soft-hold (pedidos UNVERIFIED); no editable a mano en panel Core 1
  * - available = max(0, existence - reserved)
- * - lastUnitCost: Core 2 — último costo de compra (base COGS)
+ * - lastUnitCost: Core 2 — último costo de compra (base COGS) siempre USD
+ * - price: siempre USD; puede auto-subir por protección de compra (EXCHANGE_POLICY §5)
  */
 export interface Product {
     id: string
@@ -22,9 +23,16 @@ export interface Product {
     createdAtIso?: string
     /**
      * Core 2 — último costo unitario de compra (base COGS).
-     * undefined/0 si nunca hubo entrada con costo.
+     * undefined/0 si nunca hubo entrada con costo. Siempre USD.
      */
     lastUnitCost?: number
+    /**
+     * Core 3 — cuándo se auto-ajustó el precio por protección (costo > precio).
+     * Opcional hasta existir atributo en Appwrite.
+     */
+    priceProtectedAt?: string
+    /** Traza a purchase_entry que disparó la protección. */
+    priceProtectionEntryId?: string
 }
 
 /** available = max(0, existence − reserved) — misma fórmula que tienda y operador. */
@@ -35,7 +43,7 @@ export function availableStock(product: Pick<Product, "existence" | "reserved">)
 }
 
 /**
- * Factory con validaciones de dominio (Core 1 + lastUnitCost Core 2).
+ * Factory con validaciones de dominio (Core 1 + lastUnitCost Core 2 + protección Core 3).
  */
 export function createProduct(product: Product): Product {
     if (!product.id || product.id.trim() === "") {
@@ -70,12 +78,21 @@ export function createProduct(product: Product): Product {
         lastUnitCost = c
     }
 
+    const priceProtectedAt = product.priceProtectedAt
+        ? String(product.priceProtectedAt).trim() || undefined
+        : undefined
+    const priceProtectionEntryId = product.priceProtectionEntryId
+        ? String(product.priceProtectionEntryId).trim() || undefined
+        : undefined
+
     return {
         rating: 0.0,
         ...product,
         existence,
         reserved,
         lastUnitCost,
+        priceProtectedAt,
+        priceProtectionEntryId,
     }
 }
 
