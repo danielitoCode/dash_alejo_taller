@@ -11,7 +11,6 @@
     import type { Category } from "../../../category/domain/entity/Category";
     import { FilePlus2, Plus, Trash2, X } from "lucide-svelte";
     import { exchangeStore } from "../../../exchange/presentation/viewmodel/exchange.store";
-    import { cupToUsd } from "../../../exchange/domain/entity/CupExchange";
 
     export let open = false;
     export let products: Product[] = [];
@@ -30,7 +29,6 @@
     /** Tasa CUP por 1 USD: por defecto la de sesión (API); el staff puede particularizar. */
     let useCustomRate = false;
     let customRate: number | string = "";
-    let rateHint = "";
 
     type InvoiceLineDraft = {
         mode: "existing" | "new";
@@ -58,11 +56,14 @@
 
     let invoiceLines: InvoiceLineDraft[] = [emptyLine()];
 
+    /** Evita re-ejecutar el reset en cada ciclo reactivo (freeze del navegador). */
+    let prevOpen = false;
+
     onMount(() => {
         supplierStore.syncAll().catch(() => {});
     });
 
-    $: if (open) {
+    function resetInvoiceForm(): void {
         supplierMode = "";
         invoiceSupplierName = "";
         invoiceSupplierContact = "";
@@ -71,14 +72,26 @@
         invoiceCurrency = "USD";
         useCustomRate = false;
         customRate = "";
-        rateHint = "";
         invoiceLines = [emptyLine()];
         invoiceSubmitting = false;
+    }
+
+    /**
+     * Solo al pasar de cerrado → abierto.
+     * NO usar `$: if (open) { … asignaciones … }`: cada asignación
+     * re-dispara el bloque y congela la página (loop infinito).
+     */
+    $: if (open && !prevOpen) {
+        prevOpen = true;
+        resetInvoiceForm();
         void supplierStore.syncAll().catch(() => {});
-        void exchangeStore.loadCached();
-        if (!$exchangeStore.exchange) {
-            void exchangeStore.refreshOnSession();
-        }
+        void exchangeStore.loadCached().then(() => {
+            // Best-effort refresh sin depender de $exchangeStore dentro del $:
+            // (eso también re-entraría el bloque al actualizar el store).
+            void exchangeStore.refreshOnSession().catch(() => {});
+        });
+    } else if (!open && prevOpen) {
+        prevOpen = false;
     }
 
     $: activeCategories = categories.filter((c) => c.status === "active");
@@ -224,6 +237,35 @@
                     ? invoiceSupplierContact.trim() || undefined
                     : undefined;
 
+            // Snapshot de tasa leído una vez al confirmar (no en $: de apertura).
+            let exchangeSnapshot: {
+                exchangeRate: number;
+                exchangeRateAt: string;
+                exchangeRateSource: "DIRECTORIO_CUBANO" | "manual";
+            } | undefined;
+
+            if (invoiceCurrency === "CUP" && effectiveRate) {
+                let rateAt = new Date().toISOString();
+                // Lectura puntual del store sin reactividad en este path
+                let unsub: (() => void) | undefined;
+                const current = await new Promise<{
+                    updatedAt?: string;
+                } | null>((resolve) => {
+                    unsub = exchangeStore.subscribe((s) => {
+                        resolve(s.exchange);
+                    });
+                });
+                unsub?.();
+                if (!useCustomRate && current?.updatedAt) {
+                    rateAt = current.updatedAt;
+                }
+                exchangeSnapshot = {
+                    exchangeRate: effectiveRate,
+                    exchangeRateAt: rateAt,
+                    exchangeRateSource: rateSource as "DIRECTORIO_CUBANO" | "manual",
+                };
+            }
+
             const entry = await purchaseStore.registerPurchaseEntry({
                 supplierId,
                 supplierName,
@@ -232,24 +274,20 @@
                 notes: invoiceNotes.trim() || undefined,
                 currency: invoiceCurrency,
                 lines: resolved,
-                ...(invoiceCurrency === "CUP" && effectiveRate
-                    ? {
-                          exchangeRate: effectiveRate,
-                          exchangeRateAt:
-                              useCustomRate
-                                  ? new Date().toISOString()
-                                  : $exchangeStore.exchange?.updatedAt ?? new Date().toISOString(),
-                          exchangeRateSource: rateSource as "DIRECTORIO_CUBANO" | "manual",
-                      }
-                    : {}),
+                ...(exchangeSnapshot ?? {}),
             });
 
             await productStore.syncAll().catch(() => {});
             await supplierStore.syncAll().catch(() => {});
             invoiceSubmitting = false;
             onClose();
+
+            const protectionNote =
+                entry.priceProtections && entry.priceProtections.length > 0
+                    ? ` · ${entry.priceProtections.length} precio(s) auto-ajustado(s) (+30%).`
+                    : "";
             toastStore.success(
-                `Factura registrada (${entry.currency}): ${entry.lineCount} línea(s), total ${entry.totalCost}. Stock y costos actualizados.`,
+                `Factura registrada (${entry.currency}): ${entry.lineCount} línea(s), total ${entry.totalCost}.${protectionNote}`,
                 6000
             );
         } catch (e: unknown) {
@@ -512,8 +550,8 @@
                                         disabled={invoiceSubmitting}
                                     >
                                         <option value="purchase">Compra</option>
-                                        <option value="adjustment">Ajuste</option>
-                                        <option value="return">Devolución</option>
+                                        <option value="royalty">Royalty</option>
+                                        <option value="other">Otro</option>
                                     </select>
                                 </label>
                                 <button
