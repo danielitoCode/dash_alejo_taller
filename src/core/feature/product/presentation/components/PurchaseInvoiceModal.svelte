@@ -384,7 +384,8 @@
                                     <label class="mgmt-field">
                                         <span>Precio de venta</span>
                                         <input
-                                            class="mgmt-input"	eg type="number"
+                                            class="mgmt-input"
+                                            type="number"
                                             min="0.01"
                                             step="0.01"
                                             bind:value={line.newSalePrice}
