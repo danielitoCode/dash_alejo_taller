@@ -18,6 +18,7 @@ export interface PurchaseEntryLine {
 
 /**
  * Cabecera de factura de entrada.
+ * Moneda principal del negocio: USD. CUP solo cuando la compra real fue en CUP.
  */
 export interface PurchaseEntry {
     id: string
@@ -74,7 +75,8 @@ export function createPurchaseEntry(input: PurchaseEntry): PurchaseEntry {
     if (!id) throw new Error("purchase entry id is required")
     const userId = String(input.userId || "").trim()
     if (!userId) throw new Error("userId is required")
-    const currency = String(input.currency || "").trim() || "CUP"
+    // Principal: USD. CUP solo si la compra real fue en pesos.
+    const currency = String(input.currency || "").trim().toUpperCase() || "USD"
     const entryDateIso = String(input.entryDateIso || "").trim()
     if (!entryDateIso) throw new Error("entryDateIso is required")
 

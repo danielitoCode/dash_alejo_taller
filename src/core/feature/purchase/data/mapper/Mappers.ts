@@ -78,7 +78,8 @@ export function purchaseEntryFromDTO(dto: PurchaseEntryDTO): PurchaseEntry {
         reference: dto.reference,
         entryDateIso: dto.entry_date,
         totalCost: Number(dto.total_cost) || 0,
-        currency: dto.currency || "CUP",
+        // Principal USD; legacy sin currency → USD (no CUP).
+        currency: dto.currency || "USD",
         userId: dto.user_id,
         notes: dto.notes,
         lineCount: Math.trunc(Number(dto.line_count) || 0),
@@ -90,7 +91,7 @@ export function purchaseEntryToDTO(e: PurchaseEntry): PurchaseEntryWriteDTO {
         $id: e.id,
         entry_date: e.entryDateIso,
         total_cost: e.totalCost,
-        currency: e.currency,
+        currency: e.currency || "USD",
         user_id: e.userId,
         line_count: e.lineCount,
     }

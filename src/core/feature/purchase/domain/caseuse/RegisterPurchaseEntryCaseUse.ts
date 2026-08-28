@@ -33,15 +33,18 @@ export type RegisterPurchaseEntryInput = {
     supplierContact?: string
     reference?: string
     notes?: string
+    /** USD (principal) | CUP. Default USD. */
     currency?: string
     entryDateIso?: string
     lines: PurchaseLineInput[]
 }
 
 /**
- * Core 2 B3.2 — factura de entrada multi-línea.
+ * Core 2 B3.2 / Core 3 B4 — factura de entrada multi-línea.
  * purchase_entry + lines + existence += + movement entrada + last_unit_cost (si purchase).
- * Alta de proveedor: preferida desde la factura (supplierName); el panel es catálogo/edición.
+ * Moneda: USD es la principal/referencial. CUP solo cuando la compra real fue en CUP.
+ * last_unit_cost del producto se guarda en la misma unidad del unitCost de la línea
+ * (para compras en CUP el panel debe convertir a USD antes de enviar unitCost — ver POLICY).
  */
 export class RegisterPurchaseEntryCaseUse {
     constructor(
@@ -97,7 +100,9 @@ export class RegisterPurchaseEntryCaseUse {
         }
 
         const userId = (await this.resolveUserId()).trim() || "staff"
-        const currency = String(input.currency || "CUP").trim() || "CUP"
+        // Principal del negocio: USD. No default a CUP (bug Core3 B4).
+        const currencyRaw = String(input.currency || "USD").trim().toUpperCase()
+        const currency = currencyRaw === "CUP" ? "CUP" : "USD"
         const entryDateIso =
             String(input.entryDateIso || "").trim() || new Date().toISOString()
         const totalCost = normalized.reduce((s, l) => s + l.lineCost, 0)
@@ -162,6 +167,8 @@ export class RegisterPurchaseEntryCaseUse {
                 existence: nextExistence,
             }
             if (shouldUpdateLastUnitCost(line)) {
+                // last_unit_cost es el costo referencial en la unidad enviada.
+                // Política: unitCost debe llegar ya en USD (si la compra fue CUP, convertir en UI).
                 patch.lastUnitCost = line.unitCost
             }
             await this.productRepository.update(line.productId, patch)
