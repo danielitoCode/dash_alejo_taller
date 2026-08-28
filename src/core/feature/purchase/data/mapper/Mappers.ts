@@ -79,7 +79,26 @@ export function purchaseEntryFromDTO(dto: PurchaseEntryDTO): PurchaseEntry {
         dto.exchange_rate != null && Number.isFinite(Number(dto.exchange_rate))
             ? Number(dto.exchange_rate)
             : undefined
-    return createPurchaseEntry({
+
+    if (currency === "CUP" && rate != null && rate > 0) {
+        return createPurchaseEntry({
+            id: dto.$id,
+            supplierId: dto.supplier_id,
+            reference: dto.reference,
+            entryDateIso: dto.entry_date,
+            totalCost: Number(dto.total_cost) || 0,
+            currency,
+            userId: dto.user_id,
+            notes: dto.notes,
+            lineCount: Math.trunc(Number(dto.line_count) || 0),
+            exchangeRate: rate,
+            exchangeRateAt: dto.exchange_rate_at,
+            exchangeRateSource:
+                dto.exchange_rate_source === "manual" ? "manual" : "DIRECTORIO_CUBANO",
+        })
+    }
+
+    return {
         id: dto.$id,
         supplierId: dto.supplier_id,
         reference: dto.reference,
@@ -89,12 +108,11 @@ export function purchaseEntryFromDTO(dto: PurchaseEntryDTO): PurchaseEntry {
         userId: dto.user_id,
         notes: dto.notes,
         lineCount: Math.trunc(Number(dto.line_count) || 0),
-        // createPurchaseEntry exige rate si CUP; legacy sin rate no debe romper listados
-        exchangeRate: currency === "CUP" ? rate ?? 1 : undefined,
+        exchangeRate: currency === "CUP" ? rate : undefined,
         exchangeRateAt: dto.exchange_rate_at,
         exchangeRateSource:
-            dto.exchange_rate_source === "manual" ? "manual" : "DIRECTORIO_CUBANO",
-    })
+            dto.exchange_rate_source === "manual" ? "manual" : undefined,
+    }
 }
 
 export function purchaseEntryToDTO(e: PurchaseEntry): PurchaseEntryWriteDTO {

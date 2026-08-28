@@ -2,6 +2,7 @@
     import { onMount } from "svelte";
     import { authContainer } from "../../di/auth.container";
     import { canAccessDashboard, dashboardDeniedMessage } from "../../domain/config/RoleConfig";
+    import { exchangeStore } from "../../../exchange/presentation/viewmodel/exchange.store";
     import alejoIcon from "/alejoicon_clean.svg";
 
     export let navController;
@@ -45,6 +46,9 @@
                 });
                 return;
             }
+
+            // Tasa del día al recuperar sesión (best-effort; no bloquea entrada)
+            void exchangeStore.refreshOnSession();
 
             await holdStatus("welcome", resolveDisplayName(user));
             navController.navigate("home", { id: user.id });
