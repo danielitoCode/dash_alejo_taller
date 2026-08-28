@@ -1,8 +1,8 @@
 # Core 3 — Política de compras y abastecimiento
 
-**Fecha:** 2026-08-27  
+**Fecha:** 2026-08-28  
 **Rama:** `Core3`  
-**Estado:** aceptada para B0 (baseline)  
+**Estado:** aceptada para B0 (baseline) + moneda (ver POLICY_CURRENCY_CORE3)  
 **No altera** soft-hold Core 1 ni COGS Core 2 (`last_unit_cost × qty` al VERIFIED).
 
 ## 1. Quién escribe
@@ -29,6 +29,10 @@
 - Por cada línea: `existence += qty`, movement `type: "entrada"` con `entry_id`, y si `concept === "purchase"` y `unitCost > 0` → actualiza `last_unit_cost`.
 - Tras cualquier cambio de stock: **`existence >= reserved`** (nunca violar soft-hold).
 - Líneas: `quantity` entero > 0, `unit_cost` ≥ 0, `concept` ∈ `purchase | royalty | other`.
+- **Moneda:** ver [`POLICY_CURRENCY_CORE3.md`](./POLICY_CURRENCY_CORE3.md).  
+  - Default **USD**.  
+  - `last_unit_cost` del producto **siempre en USD**.  
+  - Si `currency = CUP`, convertir con tasa del momento antes de escribir `last_unit_cost`.
 
 ## 4. Inmutabilidad vs anulación (B3 — no implementar en B0)
 
@@ -44,6 +48,8 @@ Toda entrada debe permitir reconstruir:
 - cuándo (`entry_date` / `$createdAt`)
 - proveedor (`supplier_id` o ausencia)
 - costos por línea y `total_cost`
+- moneda (`currency`)
+- si CUP: tasa, momento y fuente del cambio
 - movements ligados por `entry_id`
 
 ## 6. Tipos (contrato código ↔ Appwrite)
@@ -59,4 +65,4 @@ Evitar `null` en writes de `contact` (Appwrite required). Preferir `""`.
 ## 7. Relación con AlejoTaller
 
 - Monorepo **no** expone UI ni tools MCP de compras.
-- Operador solo consume `last_unit_cost` al VERIFIED; nuevas entradas en dash no requieren cambio de operador si el campo se actualiza en `product`.
+- Operador solo consume `last_unit_cost` al VERIFIED; nuevas entradas en dash no requieren cambio de operador si el campo se actualiza en `product` en **USD**.
