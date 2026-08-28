@@ -9,11 +9,11 @@
     import { supplierStore } from "../viewmodel/supplier.store";
     import { purchaseHistoryStore } from "../viewmodel/purchase-history.store";
     import { purchaseStore } from "../viewmodel/purchase.store";
+    import { userManagementStore } from "../../../auth/presentation/viewmodel/user-management.store";
+    import type { BusinessRole } from "../../../auth/domain/entity/BusinessRole";
     import { filterPurchaseEntries } from "../../domain/util/filterPurchaseEntries";
     import type { PurchaseEntry } from "../../domain/entity/PurchaseEntry";
     import {
-        ArrowDownWideNarrow,
-        ArrowUpWideNarrow,
         Building2,
         CalendarDays,
         ChevronLeft,
@@ -46,6 +46,7 @@
     onMount(() => {
         void supplierStore.syncAll().catch(() => {});
         void productStore.syncAll().catch(() => {});
+        void userManagementStore.syncAll().catch(() => {});
         void reloadList();
     });
 
@@ -85,6 +86,49 @@
         if (!supplierId) return "Sin proveedor";
         const s = $supplierStore.items.find((x) => x.id === supplierId);
         return s?.name ?? supplierId.slice(0, 8);
+    }
+
+    function roleLabel(role: BusinessRole | string | null | undefined): string {
+        switch (String(role || "").toLowerCase()) {
+            case "owner":
+                return "Propietario";
+            case "admin":
+                return "Administrador";
+            case "sales":
+                return "Ventas";
+            case "viewer":
+                return "Visualizador";
+            default:
+                return role ? String(role) : "Sin rol";
+        }
+    }
+
+    /** Resuelve nombre + rol para auditoría (fallback al id si no está en el directorio). */
+    function resolveStaff(userId: string | undefined | null): {
+        id: string;
+        name: string;
+        role: string;
+        known: boolean;
+    } {
+        const id = String(userId || "").trim();
+        if (!id) {
+            return { id: "", name: "Sin usuario", role: "—", known: false };
+        }
+        const u = $userManagementStore.items.find((x) => x.id === id);
+        if (u) {
+            return {
+                id,
+                name: u.name || u.email || id,
+                role: roleLabel(u.role),
+                known: true,
+            };
+        }
+        return {
+            id,
+            name: id.length > 14 ? id.slice(0, 14) + "…" : id,
+            role: "Usuario no listado",
+            known: false,
+        };
     }
 
     function entryCurrency(e: Pick<PurchaseEntry, "currency"> | string | undefined): "USD" | "CUP" {
@@ -205,7 +249,13 @@
     $: detail = $purchaseHistoryStore.detail;
     $: isInitialLoading = $purchaseHistoryStore.loading && items.length === 0;
     $: isRefreshing = $purchaseHistoryStore.loading && items.length > 0;
-    $: uniqueUsers = [...new Set(items.map((e) => e.userId).filter(Boolean))].sort();
+
+    /** userIds presentes en el historial, ordenados por nombre de staff. */
+    $: uniqueUserIds = [...new Set(items.map((e) => e.userId).filter(Boolean))];
+    $: userFilterOptions = uniqueUserIds
+        .map((id) => resolveStaff(id))
+        .sort((a, b) => a.name.localeCompare(b.name, "es"));
+
     $: productOptions = [...$productStore.items].sort((a, b) =>
         a.name.localeCompare(b.name, "es")
     );
@@ -216,6 +266,7 @@
         detail?.entry.exchangeRate != null && Number(detail.entry.exchangeRate) > 0
             ? Number(detail.entry.exchangeRate)
             : undefined;
+    $: detailStaff = detail ? resolveStaff(detail.entry.userId) : null;
 
     $: statsUsd = items.filter((e) => entryCurrency(e) === "USD").length;
     $: statsCup = items.filter((e) => entryCurrency(e) === "CUP").length;
@@ -287,10 +338,15 @@
                             <Icon icon={Building2} size={14} ariaLabel="" />
                             {detail.supplier?.name ?? supplierName(detail.entry.supplierId)}
                         </span>
-                        <span class="meta-chip">
-                            <Icon icon={User} size={14} ariaLabel="" />
-                            {detail.entry.userId}
-                        </span>
+                        {#if detailStaff}
+                            <span class="meta-chip user-chip" title={detailStaff.id}>
+                                <Icon icon={User} size={14} ariaLabel="" />
+                                <span class="user-chip-text">
+                                    <span class="user-name">{detailStaff.name}</span>
+                                    <span class="user-role">{detailStaff.role}</span>
+                                </span>
+                            </span>
+                        {/if}
                         <span class="meta-chip chip-total">
                             <Icon icon={Wallet} size={14} ariaLabel="" />
                             {formatMoney(detail.entry.totalCost, detailCurrency)}
@@ -449,7 +505,7 @@
                     <Icon icon={Search} size={16} ariaLabel="Buscar" />
                     <input
                         type="search"
-                        placeholder="Buscar id, referencia, notas, usuario…"
+                        placeholder="Buscar id, referencia, notas…"
                         bind:value={query}
                     />
                 </label>
@@ -483,8 +539,8 @@
                     <span>Usuario</span>
                     <select bind:value={userFilter}>
                         <option value="">Todos</option>
-                        {#each uniqueUsers as uid}
-                            <option value={uid}>{uid}</option>
+                        {#each userFilterOptions as u}
+                            <option value={u.id}>{u.name} — {u.role}</option>
                         {/each}
                     </select>
                 </label>
@@ -520,6 +576,7 @@
                                 ? Number(e.exchangeRate)
                                 : undefined}
                         {@const usdTotal = isCup ? cupToUsdDisplay(e.totalCost, rate) : null}
+                        {@const staff = resolveStaff(e.userId)}
                         <button type="button" class="entry-card" on:click={() => openDetail(e.id)}>
                             <span class="entry-icon" class:cup={isCup} aria-hidden="true">
                                 <Icon icon={FileText} size={22} ariaLabel="" />
@@ -541,9 +598,12 @@
                                         <Icon icon={Truck} size={14} ariaLabel="" />
                                         {supplierName(e.supplierId)}
                                     </span>
-                                    <span class="meta-chip" title="Usuario">
+                                    <span class="meta-chip user-chip" title={staff.id}>
                                         <Icon icon={User} size={14} ariaLabel="" />
-                                        {e.userId.length > 12 ? e.userId.slice(0, 12) + "…" : e.userId}
+                                        <span class="user-chip-text">
+                                            <span class="user-name">{staff.name}</span>
+                                            <span class="user-role">{staff.role}</span>
+                                        </span>
                                     </span>
                                     <span class="meta-chip" title="Líneas">
                                         <Icon icon={Package} size={14} ariaLabel="" />
@@ -767,6 +827,28 @@
         border: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 90%, transparent);
         max-width: 100%;
     }
+    .user-chip {
+        align-items: flex-start;
+        padding-top: 4px;
+        padding-bottom: 4px;
+    }
+    .user-chip-text {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        line-height: 1.2;
+        min-width: 0;
+    }
+    .user-name {
+        font-weight: 750;
+        font-size: 0.82rem;
+    }
+    .user-role {
+        font-size: 0.68rem;
+        font-weight: 600;
+        color: var(--md-sys-color-on-surface-variant);
+        letter-spacing: 0.02em;
+    }
     .chip-total {
         background: color-mix(in srgb, var(--md-sys-color-primary) 12%, transparent);
         border-color: color-mix(in srgb, var(--md-sys-color-primary) 28%, transparent);
@@ -843,7 +925,6 @@
         padding: 4px 12px;
     }
 
-    /* Detail */
     .detail-shell {
         margin-top: 12px;
         padding: 0;
