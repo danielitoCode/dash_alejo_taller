@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
     import type { NavController } from "../../../../../lib/navigation/NavController";
     import { authContainer } from "../../di/auth.container";
     import { canAccessDashboard, dashboardDeniedMessage } from "../../domain/config/RoleConfig";
@@ -8,6 +8,7 @@
     import { parseGoogleIdToken, type GoogleIdTokenProfile } from "../util/google-id-token";
     import { registerStore } from "../viewmodel/register.store";
     import { Chrome, LogIn, Link2, UserPlus } from "lucide-svelte";
+    import { exchangeStore } from "../../../exchange/presentation/viewmodel/exchange.store";
 
     export let navController: NavController;
 
@@ -41,6 +42,7 @@
                 navController.navigate("unauthorized", { message: dashboardDeniedMessage() });
                 return;
             }
+            void exchangeStore.refreshOnSession();
             navController.navigate("home", { id: userId });
         } catch (e) {
             error = e instanceof Error ? e.message : "No se pudo iniciar sesión";
@@ -93,6 +95,7 @@
                 navController.navigate("unauthorized", { message: dashboardDeniedMessage() });
                 return;
             }
+                void exchangeStore.refreshOnSession();
                 navController.navigate("home", { id: userId });
                 return;
             } catch {
@@ -135,6 +138,7 @@
 
             linkOpen = false;
             linkPassword = "";
+            void exchangeStore.refreshOnSession();
             navController.navigate("home", { id: userId });
         } catch (e: any) {
             const code = typeof e?.code === "number" ? e.code : null;
@@ -180,6 +184,7 @@
                 navController.navigate("unauthorized", { message: dashboardDeniedMessage() });
                 return;
             }
+            void exchangeStore.refreshOnSession();
             navController.navigate("home", { id: current.id });
         } catch (e: any) {
             const code = typeof e?.code === "number" ? e.code : null;
@@ -678,7 +683,3 @@
         cursor: not-allowed;
     }
 </style>
-
-
-
-
