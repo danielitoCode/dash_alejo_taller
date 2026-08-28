@@ -177,4 +177,45 @@ describe("RegisterPurchaseEntryCaseUse B3.2", () => {
         )
         await expect(uc.execute({ lines: [] })).rejects.toThrow(/al menos una línea/)
     })
+
+    it("CUP converts lastUnitCost to USD with exchangeRate; line stays in CUP", async () => {
+        const products = new FakeProductRepo([product({ id: "p1", existence: 0 })])
+        const purchase = new FakePurchaseRepo()
+        const uc = new RegisterPurchaseEntryCaseUse(
+            purchase,
+            new FakeSupplierRepo(),
+            products,
+            new FakeMovementRepo(),
+            async () => "staff-9"
+        )
+
+        const result = await uc.execute({
+            currency: "CUP",
+            exchangeRate: 350,
+            exchangeRateSource: "DIRECTORIO_CUBANO",
+            lines: [{ productId: "p1", quantity: 2, unitCost: 700, concept: "purchase" }],
+        })
+
+        expect(result.currency).toBe("CUP")
+        expect(result.exchangeRate).toBe(350)
+        expect(result.totalCost).toBe(1400)
+        expect(purchase.lines[0].unitCost).toBe(700)
+        expect(products.store.get("p1")!.lastUnitCost).toBe(2)
+        expect(products.store.get("p1")!.existence).toBe(2)
+    })
+
+    it("rejects CUP without valid exchangeRate", async () => {
+        const uc = new RegisterPurchaseEntryCaseUse(
+            new FakePurchaseRepo(),
+            new FakeSupplierRepo(),
+            new FakeProductRepo([product({ id: "p1" })]),
+            new FakeMovementRepo()
+        )
+        await expect(
+            uc.execute({
+                currency: "CUP",
+                lines: [{ productId: "p1", quantity: 1, unitCost: 100, concept: "purchase" }],
+            })
+        ).rejects.toThrow(/tasa/i)
+    })
 })
