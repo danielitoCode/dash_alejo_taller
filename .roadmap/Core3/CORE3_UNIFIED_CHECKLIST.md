@@ -1,6 +1,6 @@
 # Core 3 — Checklist unificado (dash + AlejoTaller)
 
-**Última actualización:** 2026-08-27  
+**Última actualización:** 2026-08-28  
 **Rama de trabajo:** `Core3` en ambos repos  
 **Trabajo centralizado:** seguir este archivo + el espejo en AlejoTaller; marcar `[x]` solo tras verificar.
 
@@ -25,7 +25,8 @@
 - [ ] **DASH** Verificación manual consola: índices purchase_entry + `stock_movements.entry_id` + permisos cliente
 - [ ] **AT** Espejar política en `.roadmap/Core3/` (cuando se trabaje B0 en monorepo)
 
-**Salida B0:** política aceptada + gaps de schema listados + tipos supplier alineados a Appwrite real.
+**Salida B0:** política aceptada + gaps de schema listados + tipos supplier alineados a Appwrite real.  
+**2026-08-28:** Confirmado “casi cerrado” (política, audit schema, tipado `contact`). Restan solo consola + espejo AT. Se inicia **B4** en paralelo.
 
 ---
 
@@ -83,6 +84,8 @@
 - [ ] **DASH** Verificar badges/nav no se rompen
 - [ ] **AT** Smoke: login cliente no escribe compras; operador confirma venta post-entrada
 
+**2026-08-28:** B4 iniciado. Ejecutar checklist completo en [`SMOKE_B4.md`](./SMOKE_B4.md).
+
 ---
 
 ## B5 — Espejo AlejoTaller (AT)
@@ -127,3 +130,4 @@
 | 2026-08-27 | Apertura rama `Core3` + checklist inicial |
 | 2026-08-27 | **B0 dash:** política, audit schema, tipado `contact` |
 | 2026-08-27 | **B1+B2 smoke UI:** Proveedores, alta en factura, Compras listado→detalle |
+| 2026-08-28 | **B0 confirmado casi cerrado** (política/audit/tipado). Restan consola + espejo AT. **Inicio B4** |

@@ -1,16 +1,16 @@
 # MVP Core 3 — Estado vivo (dash)
 
-**Última actualización:** 2026-08-27  
+**Última actualización:** 2026-08-28  
 **Rama:** `Core3`  
 **Core 3 cerrado:** **NO**
 
 | Bloque | Estado |
 |--------|--------|
-| B0 Baseline / política / audit schema / tipos supplier | **Hecho** |
+| B0 Baseline / política / audit schema / tipado supplier | **Confirmado casi cerrado** (política, audit schema, tipado `contact` hechos). Restan: verificación manual consola (índices `purchase_entry` + `stock_movements.entry_id` + permisos cliente) y espejo AT |
 | B1 Proveedores UI + selector en factura | **Hecho + smoke UI OK** |
 | B2 Historial compras (listado → detalle) | **Hecho + smoke UI OK** |
 | B3 Anulación/corrección | pendiente (opcional 1er release) |
-| B4 Permisos + smoke E2E | **En curso** — consola Appwrite OK (usuario); gate panel owner/admin + sales/operator |
+| B4 Permisos + smoke E2E | **En curso** — iniciar ahora (ver `SMOKE_B4.md`) |
 | B5 Espejo AT | pendiente |
 | B6 Merge master | no |
 
