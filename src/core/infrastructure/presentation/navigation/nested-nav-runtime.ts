@@ -20,6 +20,7 @@ import { ENV } from "../../env"
 import { get } from "svelte/store"
 import { BuyState } from "../../../feature/sale/domain/entity/enums"
 import type { NavController } from "../../../../lib/navigation/NavController"
+import type { SaleDTO } from "../../../feature/sale/data/dto/SaleDTO"
 
 export type NestedNavRuntimeCtx = {
     getRole: () => BusinessRole
@@ -145,6 +146,36 @@ export function createNestedNavRuntime(ctx: NestedNavRuntimeCtx) {
         }
     }
 
+    /**
+     * Appwrite Realtime sobre `sale`: aplica delta al espejo (sin listar toda la colección).
+     * create/update → upsert; delete → remove.
+     */
+    async function applySaleRealtimeDelta(events: string[], payload: unknown) {
+        const ev = events.map((e) => String(e).toLowerCase())
+        const isDelete = ev.some((e) => e.includes(".delete"))
+        const dto = payload as Partial<SaleDTO> | null
+        const id = String(dto?.$id ?? "").trim()
+
+        if (isDelete) {
+            if (id) await saleStore.removeRealtimeSale(id)
+            return
+        }
+
+        if (id && dto && typeof dto === "object") {
+            await saleStore.applyRealtimeSale(dto as SaleDTO)
+            const beforePending = get(saleStore).items.filter(
+                (s) => s.verified === BuyState.UNVERIFIED && s.id !== id
+            ).length
+            // toast only for brand-new pending-ish traffic is noisy; keep subtle log
+            logger.info(`[sale-rt] delta applied id=${id}`)
+            void beforePending
+            return
+        }
+
+        // Payload incompleto → smart sync (incremental / full según meta)
+        scheduleSalesSync()
+    }
+
     async function refreshUserRole() {
         try {
             logger.info("[NestedNav] Refrescando rol del usuario...")
@@ -247,6 +278,7 @@ export function createNestedNavRuntime(ctx: NestedNavRuntimeCtx) {
             )
             if (targets.includes("support")) scheduleSupportSync()
             if (targets.includes("sales")) {
+                // Pusher no trae el documento: smartSync (incremental o full)
                 scheduleSalesSync()
                 scheduleStockRefresh([])
             }
@@ -277,8 +309,8 @@ export function createNestedNavRuntime(ctx: NestedNavRuntimeCtx) {
                                     typeof e === "string" && e.includes(".collections.sale.")
                             )
                             if (isSaleEvent) {
+                                void applySaleRealtimeDelta(events, payload)
                                 scheduleStockRefresh([])
-                                scheduleSalesSync()
                                 return
                             }
                             const id = String(payload?.$id ?? payload?.id ?? "").trim()
