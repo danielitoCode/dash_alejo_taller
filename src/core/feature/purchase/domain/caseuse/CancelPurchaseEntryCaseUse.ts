@@ -34,9 +34,6 @@ export class CancelPurchaseEntryCaseUse {
     async execute(entryIdInput: string): Promise<CancelPurchaseEntryResult> {
         const entryId = String(entryIdInput || "").trim()
         if (!entryId) throw new Error("entryId is required")
-        if (!this.purchaseEntryRepository.updateEntry) {
-            throw new Error("El adaptador de compras no soporta anulación de entradas")
-        }
 
         return this.transactionRunner.run(async (transactionId) => {
             const entry = await this.purchaseEntryRepository.getEntryById(entryId, transactionId)
