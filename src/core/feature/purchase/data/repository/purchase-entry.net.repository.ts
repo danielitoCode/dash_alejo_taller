@@ -68,6 +68,22 @@ export class PurchaseEntryNetRepository implements PurchaseEntryRepository {
         }
     }
 
+    async updateEntry(id: string, patch: Partial<PurchaseEntry>, transactionId?: TransactionId): Promise<PurchaseEntry> {
+        const data: Record<string, unknown> = {}
+        if (patch.status !== undefined) data.status = patch.status
+        if (patch.reference !== undefined) data.reference = patch.reference
+        if (patch.notes !== undefined) data.notes = patch.notes
+
+        const doc = await this.databases.updateDocument<PurchaseEntryDTO>({
+            databaseId: this.databaseId,
+            collectionId: APPWRITE_COLLECTIONS.purchaseEntry,
+            documentId: id,
+            data,
+            transactionId,
+        })
+        return purchaseEntryFromDTO(doc)
+    }
+
     async listEntries(limitOrOpts: number | ListPurchaseEntriesOpts = 50): Promise<PurchaseEntry[]> {
         const opts: ListPurchaseEntriesOpts =
             typeof limitOrOpts === "number" ? { limit: limitOrOpts } : limitOrOpts ?? {}
