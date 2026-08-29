@@ -1,5 +1,10 @@
 import { afterAll, describe, expect, it } from "vitest"
 
+/**
+ * Live Appwrite B3.1 — must run in vitest project `appwrite` (node, no MSW).
+ * CI: npx vitest run --project appwrite
+ */
+
 const endpoint = process.env.APPWRITE_ENDPOINT?.replace(/\/$/, "")
 const projectId = process.env.APPWRITE_PROJECT_ID
 const databaseId = process.env.APPWRITE_DATABASE_ID
@@ -96,6 +101,19 @@ async function finishTransaction(transactionId: string, action: "commit" | "roll
     })
 }
 
+async function firstCategoryId(): Promise<string> {
+    try {
+        const res = await appwriteRequest<{ documents: AppwriteDocument[] }>(
+            `/databases/${databaseId}/collections/category/documents?queries[]=${encodeURIComponent("limit(1)")}`,
+        )
+        const id = res.documents?.[0]?.$id
+        if (typeof id === "string" && id) return id
+    } catch {
+        // category collection may be empty or named differently
+    }
+    return "core3-b31-uncategorized"
+}
+
 describe.skipIf(!enabled)("B3.1 Appwrite transaction integration", () => {
     const runId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     const productId = `core3-b31-product-${runId}`
@@ -106,7 +124,6 @@ describe.skipIf(!enabled)("B3.1 Appwrite transaction integration", () => {
     const rollbackEntryId = `core3-b31-rollback-entry-${runId}`
 
     afterAll(async () => {
-        // Cleanup is deliberately outside the tested transactions.
         await Promise.allSettled([
             deleteDocument("stock_movements", movementId),
             deleteDocument("purchase_entry_line", lineId),
@@ -117,13 +134,23 @@ describe.skipIf(!enabled)("B3.1 Appwrite transaction integration", () => {
         ])
     })
 
-    it("cancels an entry atomically and persists the compensating movement", async () => {
-        await createDocument("product", productId, {
-            name: "Core3 B3.1 integration product",
+    async function seedProduct(id: string, name: string, lastUnitCost: number) {
+        const categoryId = await firstCategoryId()
+        return createDocument("product", id, {
+            name,
+            description: "Core3 B3.1 integration fixture",
             existence: 10,
             reserved: 2,
-            last_unit_cost: 25,
+            price: 100,
+            photo_url: "",
+            category_id: categoryId,
+            status: "active",
+            last_unit_cost: lastUnitCost,
         })
+    }
+
+    it("cancels an entry atomically and persists the compensating movement", async () => {
+        await seedProduct(productId, "Core3 B3.1 integration product", 25)
         await createDocument("purchase_entry", entryId, {
             entry_date: new Date().toISOString(),
             total_cost: 75,
@@ -137,7 +164,7 @@ describe.skipIf(!enabled)("B3.1 Appwrite transaction integration", () => {
             product_id: productId,
             quantity: 3,
             unit_cost: 25,
-            concept: "integration",
+            concept: "other",
             line_cost: 75,
         })
 
@@ -150,7 +177,9 @@ describe.skipIf(!enabled)("B3.1 Appwrite transaction integration", () => {
                 product_id: productId,
                 type: "ajuste",
                 quantity: 3,
+                balance_after: 7,
                 reason: "purchase_entry_reversal",
+                user_id: "core3-integration",
                 entry_id: entryId,
             },
             tx.$id,
@@ -171,12 +200,7 @@ describe.skipIf(!enabled)("B3.1 Appwrite transaction integration", () => {
     })
 
     it("rolls back all staged writes when the transaction is explicitly rolled back", async () => {
-        await createDocument("product", rollbackProductId, {
-            name: "Core3 B3.1 rollback product",
-            existence: 10,
-            reserved: 2,
-            last_unit_cost: 30,
-        })
+        await seedProduct(rollbackProductId, "Core3 B3.1 rollback product", 30)
         await createDocument("purchase_entry", rollbackEntryId, {
             entry_date: new Date().toISOString(),
             total_cost: 90,

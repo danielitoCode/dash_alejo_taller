@@ -4,7 +4,14 @@ import { cleanup } from "@testing-library/svelte";
 import { server } from "./msw.server";
 
 beforeAll(() => {
-    server.listen({ onUnhandledRequest: "error" });
+    const appwriteOrigin = process.env.APPWRITE_ENDPOINT?.replace(/\/$/, "") ?? "";
+    server.listen({
+        onUnhandledRequest(request, print) {
+            // Live Appwrite calls must not be treated as missing MSW handlers.
+            if (appwriteOrigin && request.url.startsWith(appwriteOrigin)) return;
+            print.error();
+        },
+    });
 });
 
 afterEach(() => {

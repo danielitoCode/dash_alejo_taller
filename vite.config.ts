@@ -27,6 +27,8 @@ export default defineConfig({
               test: {
                   name: "integration",
                   include: ["src/**/*.integration.test.ts"],
+                  // Live Appwrite tests must not inherit MSW (onUnhandledRequest: error).
+                  exclude: ["src/test/integration/appwrite/**"],
               }
           },
           {
@@ -34,6 +36,15 @@ export default defineConfig({
               test: {
                   name: "ui",
                   include: ["src/**/*.ui.test.ts"]
+              }
+          },
+          {
+              // Node + no MSW: real fetch to Appwrite (B3.1 transactions).
+              test: {
+                  name: "appwrite",
+                  environment: "node",
+                  include: ["src/test/integration/appwrite/**/*.test.ts"],
+                  setupFiles: [],
               }
           }
       ]

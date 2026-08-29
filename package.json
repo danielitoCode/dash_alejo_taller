@@ -13,6 +13,7 @@
     "test:unit": "vitest run --project unit",
     "test:ui": "vitest run --project ui",
     "test:integration": "vitest run --project integration",
+    "test:appwrite": "vitest run --project appwrite",
     "ci": "npm run check && npm run test:unit && npm run build"
   },
   "devDependencies": {

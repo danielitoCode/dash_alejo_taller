@@ -7,6 +7,7 @@ on:
     paths:
       - 'src/core/**'
       - 'src/test/integration/**'
+      - 'vite.config.ts'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/core3-appwrite-integration.yml'
@@ -43,4 +44,5 @@ jobs:
           test -n "$APPWRITE_API_KEY" || { echo 'Missing APPWRITE_API_KEY'; exit 1; }
 
       - name: Run B3.1 Appwrite integration tests
-        run: npx vitest run src/test/integration/appwrite/b3.1.appwrite.integration.test.ts
+        # Isolated vitest project: node env, no MSW interceptors.
+        run: npx vitest run --project appwrite
