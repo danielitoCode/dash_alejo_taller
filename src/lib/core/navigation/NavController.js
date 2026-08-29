@@ -7,24 +7,50 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     }
     return to.concat(ar || Array.prototype.slice.call(from));
 };
-import { writable } from "svelte/store";
+import { writable, get } from "svelte/store";
 var NavController = /** @class */ (function () {
     function NavController(startDestination) {
+        this.startDestination = startDestination;
         this.stackStore = writable([
             { route: startDestination }
         ]);
     }
-    // ✅ siempre devuelve EL MISMO store
     NavController.prototype._getStackStore = function () {
         return this.stackStore;
     };
     NavController.prototype.navigate = function (route, args) {
         this.stackStore.update(function (s) { return __spreadArray(__spreadArray([], s, true), [{ route: route, args: args }], false); });
     };
+    NavController.prototype.navigateReplace = function (route, args) {
+        this.stackStore.update(function (s) {
+            if (s.length === 0) return [{ route: route, args: args }];
+            return __spreadArray(__spreadArray([], s.slice(0, -1), true), [{ route: route, args: args }], false);
+        });
+    };
+    NavController.prototype.goToSection = function (route) {
+        var start = this.startDestination;
+        this.stackStore.update(function () {
+            if (route === start) {
+                return [{ route: start }];
+            }
+            return [{ route: start }, { route: route }];
+        });
+    };
     NavController.prototype.popBackStack = function () {
         this.stackStore.update(function (s) {
             return s.length > 1 ? s.slice(0, -1) : s;
         });
+    };
+    NavController.prototype.canPop = function () {
+        return get(this.stackStore).length > 1;
+    };
+    NavController.prototype.popOrNavigate = function (fallbackRoute) {
+        var s = get(this.stackStore);
+        if (s.length > 1) {
+            this.popBackStack();
+            return;
+        }
+        this.goToSection(fallbackRoute);
     };
     return NavController;
 }());
