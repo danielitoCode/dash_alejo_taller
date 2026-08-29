@@ -29,6 +29,7 @@ async function appwriteRequest<T>(
             "Content-Type": "application/json",
             "X-Appwrite-Project": projectId!,
             "X-Appwrite-Key": apiKey!,
+            ...(transactionId ? { "X-Appwrite-Transaction-Id": transactionId } : {}),
             ...(init.headers ?? {}),
         },
     })
@@ -52,7 +53,11 @@ async function createDocument(
         `/databases/${databaseId}/collections/${collectionId}/documents`,
         {
             method: "POST",
-            body: JSON.stringify({ documentId, data }),
+            body: JSON.stringify({
+                documentId,
+                data,
+                ...(transactionId ? { transactionId } : {}),
+            }),
         },
         transactionId,
     )
@@ -68,7 +73,10 @@ async function updateDocument(
         `/databases/${databaseId}/collections/${collectionId}/documents/${documentId}`,
         {
             method: "PATCH",
-            body: JSON.stringify({ data }),
+            body: JSON.stringify({
+                data,
+                ...(transactionId ? { transactionId } : {}),
+            }),
         },
         transactionId,
     )
@@ -221,6 +229,10 @@ describe.skipIf(!enabled)("B3.1 Appwrite transaction integration", () => {
         const tx = await createTransaction()
         await updateDocument("product", rollbackProductId, { existence: 7 }, tx.$id)
         await updateDocument("purchase_entry", rollbackEntryId, { status: "CANCELLED" }, tx.$id)
+
+        const beforeRollback = await getDocument("product", rollbackProductId)
+        expect(beforeRollback.existence).toBe(10)
+
         await finishTransaction(tx.$id, "rollback")
 
         const product = await getDocument("product", rollbackProductId)
