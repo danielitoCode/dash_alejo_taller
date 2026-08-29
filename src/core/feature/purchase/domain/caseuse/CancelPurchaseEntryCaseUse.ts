@@ -11,13 +11,7 @@ export type CancelPurchaseEntryResult = {
     reversedLines: number
 }
 
-/**
- * B3.1 — anulación completa de una entrada.
- *
- * La entrada y sus líneas nunca se eliminan. Cada línea genera un movimiento
- * compensatorio `ajuste` con reason=purchase_entry_reversal y la misma entryId.
- * Stock y estado de la entrada se modifican dentro de una única transacción.
- */
+/** B3.1 — anulación completa y atómica de una entrada. */
 export class CancelPurchaseEntryCaseUse {
     constructor(
         private readonly purchaseEntryRepository: PurchaseEntryRepository,
@@ -30,25 +24,19 @@ export class CancelPurchaseEntryCaseUse {
     async execute(entryIdInput: string): Promise<CancelPurchaseEntryResult> {
         const entryId = String(entryIdInput || "").trim()
         if (!entryId) throw new Error("entryId is required")
+        if (!this.purchaseEntryRepository.updateEntry) {
+            throw new Error("El adaptador de compras no soporta anulación de entradas")
+        }
 
         return this.transactionRunner.run(async (transactionId) => {
-            const entry = await this.purchaseEntryRepository.getEntryById(
-                entryId,
-                transactionId
-            )
+            const entry = await this.purchaseEntryRepository.getEntryById(entryId, transactionId)
             if (!entry) throw new Error(`Purchase entry ${entryId} not found`)
-
             if ((entry.status || "ACTIVE") === "CANCELLED") {
                 throw new Error(`Purchase entry ${entryId} is already cancelled`)
             }
 
-            const lines = await this.purchaseEntryRepository.listLinesByEntry(
-                entryId,
-                transactionId
-            )
-            if (lines.length === 0) {
-                throw new Error(`Purchase entry ${entryId} has no lines`)
-            }
+            const lines = await this.purchaseEntryRepository.listLinesByEntry(entryId, transactionId)
+            if (lines.length === 0) throw new Error(`Purchase entry ${entryId} has no lines`)
 
             const operationCount = 1 + lines.length * 2
             if (operationCount > MAX_APPWRITE_TRANSACTION_OPERATIONS) {
@@ -58,23 +46,16 @@ export class CancelPurchaseEntryCaseUse {
             }
 
             const userId = (await this.resolveUserId()).trim() || "staff"
-
-            // First pass: validate every affected product inside the transaction.
-            // No product is mutated until every line can be safely reversed.
             const reversals: Array<{
                 productId: string
                 quantity: number
                 newExistence: number
             }> = []
 
+            // Validate every line before staging any stock mutation.
             for (const line of lines) {
-                const product = await this.productRepository.getById(
-                    line.productId,
-                    transactionId
-                )
-                if (!product) {
-                    throw new Error(`Product with id ${line.productId} not found`)
-                }
+                const product = await this.productRepository.getById(line.productId, transactionId)
+                if (!product) throw new Error(`Product with id ${line.productId} not found`)
 
                 const existence = Number(product.existence) || 0
                 const reserved = Number(product.reserved) || 0
@@ -85,7 +66,6 @@ export class CancelPurchaseEntryCaseUse {
                         `No se puede anular ${entryId}: existence (${existence}) < quantity (${line.quantity}) para ${line.productId}`
                     )
                 }
-
                 if (newExistence < reserved) {
                     throw new Error(
                         `No se puede anular ${entryId}: existence (${newExistence}) < reserved (${reserved}) para ${line.productId}`
@@ -99,26 +79,27 @@ export class CancelPurchaseEntryCaseUse {
                 })
             }
 
-            // Second pass: all mutations are staged atomically.
             for (const reversal of reversals) {
-                // Deliberately do not modify reserved or lastUnitCost.
+                // Never change reserved or lastUnitCost during purchase reversal.
                 await this.productRepository.update(
                     reversal.productId,
                     { existence: reversal.newExistence },
                     transactionId
                 )
 
-                const movement = createStockMovement({
-                    id: crypto.randomUUID(),
-                    productId: reversal.productId,
-                    type: "ajuste",
-                    quantity: reversal.quantity,
-                    balanceAfter: reversal.newExistence,
-                    reason: "purchase_entry_reversal",
-                    userId,
-                    entryId,
-                })
-                await this.movementRepository.create(movement, transactionId)
+                await this.movementRepository.create(
+                    createStockMovement({
+                        id: crypto.randomUUID(),
+                        productId: reversal.productId,
+                        type: "ajuste",
+                        quantity: reversal.quantity,
+                        balanceAfter: reversal.newExistence,
+                        reason: "purchase_entry_reversal",
+                        userId,
+                        entryId,
+                    }),
+                    transactionId
+                )
             }
 
             await this.purchaseEntryRepository.updateEntry(
