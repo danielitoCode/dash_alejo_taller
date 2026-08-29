@@ -8,6 +8,7 @@
     import { supportInboxStore } from "../viewmodel/support-inbox.store";
     import type { SupportMessage, SupportStatus } from "../../domain/entity/SupportMessage";
     import { ArrowLeft, Clock, Mail, MessageSquareText, Send } from "lucide-svelte";
+    import { support } from "../../../../infrastructure/presentation/navigation/nested.router";
 
     export let navController: NavController;
     export let navBackStackEntry: NavBackStackEntry<{ id?: string }>;
@@ -67,7 +68,7 @@
     });
 
     function back() {
-        navController.popBackStack();
+        navController.popOrNavigate(support.path);
     }
 
     async function setStatus(next: SupportStatus) {
