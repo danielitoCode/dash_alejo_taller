@@ -19,4 +19,8 @@ export const ENV = {
     pusherKey: import.meta.env.VITE_PUSHER_KEY,
     pusherCluster: import.meta.env.VITE_PUSHER_CLUSTER,
     pusherSupportChannel: import.meta.env.VITE_PUSHER_SUPPORT_CHANNEL,
+    /** Paridad AlejoTaller — tasas CUP/USD (Directorio Cubano). */
+    directorioCubanoApiUrl:
+        import.meta.env.VITE_DIRECTORIO_CUBANO_API_URL ||
+        "https://widgets.directoriocubano.info/api/tasas",
 }

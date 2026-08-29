@@ -5,4 +5,6 @@ export interface StockMovementRepository {
     create(movement: StockMovement): Promise<StockMovement>
     listByProduct(productId: string, limit?: number): Promise<StockMovement[]>
     listRecent(limit?: number, type?: StockMovementType): Promise<StockMovement[]>
+    /** Movements vinculados a una factura de entrada (Core 3 B2). */
+    listByEntry(entryId: string, limit?: number): Promise<StockMovement[]>
 }

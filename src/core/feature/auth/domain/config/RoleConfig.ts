@@ -1,12 +1,16 @@
 /**
  * Configuración centralizada de roles y permisos (panel back-office).
  * Core1 3.3: ROLE_LABELS es la única fuente de verdad labels ↔ BusinessRole.
+ * Core3 B4: entrada al panel = owner | admin | sales (alias operator).
  */
 
 import type { BusinessRole } from "../entity/BusinessRole";
 import { normalizeBusinessRole } from "../entity/BusinessRole";
 
 export const ADMIN_ROLES: BusinessRole[] = ["admin", "owner"];
+
+/** Roles que pueden entrar al dashboard (no incluye viewer/cliente). */
+export const STAFF_ROLES: BusinessRole[] = ["owner", "admin", "sales"];
 
 /** Jerarquía de mayor a menor privilegio. */
 export const ROLE_HIERARCHY: BusinessRole[] = ["owner", "admin", "sales", "viewer"];
@@ -24,7 +28,9 @@ export const ROLE_ROUTE_ACCESS: Record<BusinessRole, string[]> = {
         "promo",
         "settings",
         "reservation",
-        "inventory"
+        "inventory",
+        "suppliers",
+        "purchases",
     ],
     admin: [
         "dashboard",
@@ -38,7 +44,9 @@ export const ROLE_ROUTE_ACCESS: Record<BusinessRole, string[]> = {
         "promo",
         "settings",
         "reservation",
-        "inventory"
+        "inventory",
+        "suppliers",
+        "purchases",
     ],
     sales: [
         "dashboard",
@@ -46,42 +54,54 @@ export const ROLE_ROUTE_ACCESS: Record<BusinessRole, string[]> = {
         "support-detail",
         "sales",
         "sales-detail",
-        "reservation"
+        "reservation",
     ],
     viewer: [
         "dashboard",
         "support",
-        "support-detail"
-    ]
+        "support-detail",
+    ],
 };
 
 /**
  * Labels Appwrite por rol de negocio.
  * Al crear/actualizar usuarios gestionados se usan exactamente estos arrays.
+ * `operator` es alias de sales (mismo menú: ventas + reservas + mensajes).
  */
 export const ROLE_LABELS: Record<BusinessRole, string[]> = {
     owner: ["owner", "admin"],
     admin: ["admin"],
-    sales: ["sales"],
-    viewer: ["viewer"]
+    sales: ["sales", "operator"],
+    viewer: ["viewer"],
 };
 
 export const ROLE_DESCRIPTIONS: Record<BusinessRole, string> = {
     owner: "Propietario - Control total del sistema",
     admin: "Administrador - Acceso a todas las funciones",
-    sales: "Ventas - Gestión de ventas y reservas",
-    viewer: "Visualizador - Acceso de solo lectura"
+    sales: "Ventas / operador - Ventas, reservas y mensajes (sin catálogo ni compras)",
+    viewer: "Visualizador - Acceso de solo lectura (no entra al panel)",
 };
 
 export const ROLE_COLORS: Record<BusinessRole, string> = {
     owner: "#FF6B6B",
     admin: "#4ECDC4",
     sales: "#45B7D1",
-    viewer: "#95A5A6"
+    viewer: "#95A5A6",
 };
 
 export function isAdminRole(role: string | null | undefined): boolean {
-    return role !== null && role !== undefined && ADMIN_ROLES.includes(role as BusinessRole);
+    return role !== null && role !== undefined && ADMIN_ROLES.includes(normalizeBusinessRole(role));
+}
+
+/** Owner, admin o sales/operator pueden entrar al panel. Viewer/cliente no. */
+export function canAccessDashboard(role: string | null | undefined): boolean {
+    if (role === null || role === undefined || String(role).trim() === "") return false;
+    const r = normalizeBusinessRole(role);
+    return STAFF_ROLES.includes(r);
+}
+
+export function dashboardDeniedMessage(): string {
+    return "Tu cuenta existe, pero no tiene acceso al panel de gestión. Se requiere owner, admin o sales/operator.";
 }
 
 export function canAccessRoute(role: BusinessRole | null | undefined, path: string): boolean {
@@ -108,7 +128,7 @@ export function normalizeAppwriteLabels(labels: unknown): string[] {
 
 /**
  * Deriva BusinessRole desde labels Appwrite (prioridad = ROLE_HIERARCHY).
- * Ej: ["admin","owner"] → owner.
+ * Ej: ["admin","owner"] → owner. Label `operator` → sales.
  */
 export function businessRoleFromLabels(labels: unknown): BusinessRole | null {
     const normalized = normalizeAppwriteLabels(labels);
@@ -116,6 +136,7 @@ export function businessRoleFromLabels(labels: unknown): BusinessRole | null {
     for (const role of ROLE_HIERARCHY) {
         if (normalized.includes(role)) return role;
     }
+    if (normalized.includes("operator")) return "sales";
     return null;
 }
 
@@ -185,12 +206,15 @@ export function assertCanAssignRole(
 
 export default {
     ADMIN_ROLES,
+    STAFF_ROLES,
     ROLE_HIERARCHY,
     ROLE_ROUTE_ACCESS,
     ROLE_LABELS,
     ROLE_DESCRIPTIONS,
     ROLE_COLORS,
     isAdminRole,
+    canAccessDashboard,
+    dashboardDeniedMessage,
     canAccessRoute,
     getFirstAllowedRoute,
     getRoleLabels,
@@ -202,5 +226,5 @@ export default {
     compareRoles,
     canManageRole,
     assignableRoles,
-    assertCanAssignRole
+    assertCanAssignRole,
 };

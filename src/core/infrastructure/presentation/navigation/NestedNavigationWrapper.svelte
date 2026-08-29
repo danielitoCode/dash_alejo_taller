@@ -20,6 +20,8 @@
     import { saleStore } from "../../../feature/sale/presentation/viewmodel/sale.store";
     import { reservationStore } from "../../../feature/reservation/presentation/viewmodel/reservation.store";
     import UserManagement from "../../../feature/auth/presentation/routes/UserManagement.svelte";
+    import SupplierManagement from "../../../feature/purchase/presentation/routes/SupplierManagement.svelte";
+    import PurchaseHistory from "../../../feature/purchase/presentation/routes/PurchaseHistory.svelte";
     import Icon from "../components/Icon.svelte";
     import DashboardHome from "../routes/DashboardHome.svelte";
     import SettingsManagement from "../routes/SettingsManagement.svelte";
@@ -36,10 +38,12 @@
         inventory,
         product,
         promo,
+        purchases,
         reservation,
         sales,
         settings,
         support,
+        suppliers,
         users,
     } from "./nested.router";
     import SupportDetail from "../../../feature/support/presentation/routes/SupportDetail.svelte";
@@ -49,6 +53,7 @@
     import {
         BadgeDollarSign,
         CalendarCheck2,
+        FileStack,
         Home,
         LogOut,
         Menu,
@@ -58,6 +63,7 @@
         ClipboardList,
         Settings,
         Tags,
+        Truck,
         Users,
     } from "lucide-svelte";
     import { createNestedNavRuntime } from "./nested-nav-runtime";
@@ -79,6 +85,8 @@
         { label: "Productos", path: product.path, icon: Package },
         { label: "Inventario", path: inventory.path, icon: ClipboardList },
         { label: "Categorías", path: category.path, icon: Tags },
+        { label: "Proveedores", path: suppliers.path, icon: Truck },
+        { label: "Compras", path: purchases.path, icon: FileStack },
         { label: "Ventas", path: sales.path, icon: BadgeDollarSign },
         { label: "Promos", path: promo.path, icon: Megaphone },
         { label: "Reservas", path: reservation.path, icon: CalendarCheck2 },
@@ -258,6 +266,8 @@
                         composable(product, () => ProductManagement),
                         composable(inventory, () => InventoryTrace),
                         composable(category, () => CategoryManagement),
+                        composable(suppliers, () => SupplierManagement),
+                        composable(purchases, () => PurchaseHistory),
                         composable(sales, () => SaleManagement),
                         composable(salesDetail, () => SaleDetail),
                         composable(promo, () => PromoManagement),

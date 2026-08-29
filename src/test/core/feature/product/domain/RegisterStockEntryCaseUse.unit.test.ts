@@ -77,6 +77,10 @@ class FakeMovementRepo implements StockMovementRepository {
     async listRecent(): Promise<StockMovement[]> {
         return []
     }
+
+    async listByEntry(entryId: string): Promise<StockMovement[]> {
+        return this.created.filter((m) => m.entryId === entryId)
+    }
 }
 
 describe("RegisterStockEntryCaseUse B3.1", () => {

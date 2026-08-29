@@ -15,27 +15,36 @@ import type {
     PurchaseEntryLineDTO,
 } from "../dto/PurchaseEntryDTO"
 
-export type SupplierWriteDTO = Pick<SupplierDTO, "name" | "contact" | "notes"> & {
+/** Payload de escritura: `contact` siempre string (Appwrite required). */
+export type SupplierWriteDTO = {
     $id?: string
+    name: string
+    contact: string
+    notes?: string
 }
 
 export function supplierFromDTO(dto: SupplierDTO): Supplier {
     return createSupplier({
         id: dto.$id,
         name: dto.name,
-        contact: dto.contact,
-        notes: dto.notes,
+        contact: dto.contact ?? "",
+        notes: dto.notes ?? undefined,
     })
 }
 
 export function supplierToDTO(s: Supplier): SupplierWriteDTO {
-    // Appwrite collection `supplier` exige `contact` (required).
+    const contact =
+        s.contact != null && String(s.contact).trim() !== ""
+            ? String(s.contact).trim()
+            : ""
     const dto: SupplierWriteDTO = {
         $id: s.id,
         name: s.name,
-        contact: s.contact != null && String(s.contact).trim() !== "" ? String(s.contact).trim() : "",
+        contact,
     }
-    if (s.notes) dto.notes = s.notes
+    if (s.notes != null && String(s.notes).trim() !== "") {
+        dto.notes = String(s.notes).trim()
+    }
     return dto
 }
 
@@ -49,6 +58,9 @@ export type PurchaseEntryWriteDTO = Pick<
     | "user_id"
     | "notes"
     | "line_count"
+    | "exchange_rate"
+    | "exchange_rate_at"
+    | "exchange_rate_source"
 > & { $id?: string }
 
 export type PurchaseEntryLineWriteDTO = Pick<
@@ -62,17 +74,45 @@ export type PurchaseEntryLineWriteDTO = Pick<
 > & { $id?: string }
 
 export function purchaseEntryFromDTO(dto: PurchaseEntryDTO): PurchaseEntry {
-    return createPurchaseEntry({
+    const currency = (dto.currency || "USD").toUpperCase() === "CUP" ? "CUP" : "USD"
+    const rate =
+        dto.exchange_rate != null && Number.isFinite(Number(dto.exchange_rate))
+            ? Number(dto.exchange_rate)
+            : undefined
+
+    if (currency === "CUP" && rate != null && rate > 0) {
+        return createPurchaseEntry({
+            id: dto.$id,
+            supplierId: dto.supplier_id,
+            reference: dto.reference,
+            entryDateIso: dto.entry_date,
+            totalCost: Number(dto.total_cost) || 0,
+            currency,
+            userId: dto.user_id,
+            notes: dto.notes,
+            lineCount: Math.trunc(Number(dto.line_count) || 0),
+            exchangeRate: rate,
+            exchangeRateAt: dto.exchange_rate_at,
+            exchangeRateSource:
+                dto.exchange_rate_source === "manual" ? "manual" : "DIRECTORIO_CUBANO",
+        })
+    }
+
+    return {
         id: dto.$id,
         supplierId: dto.supplier_id,
         reference: dto.reference,
         entryDateIso: dto.entry_date,
         totalCost: Number(dto.total_cost) || 0,
-        currency: dto.currency || "CUP",
+        currency,
         userId: dto.user_id,
         notes: dto.notes,
         lineCount: Math.trunc(Number(dto.line_count) || 0),
-    })
+        exchangeRate: currency === "CUP" ? rate : undefined,
+        exchangeRateAt: dto.exchange_rate_at,
+        exchangeRateSource:
+            dto.exchange_rate_source === "manual" ? "manual" : undefined,
+    }
 }
 
 export function purchaseEntryToDTO(e: PurchaseEntry): PurchaseEntryWriteDTO {
@@ -80,13 +120,18 @@ export function purchaseEntryToDTO(e: PurchaseEntry): PurchaseEntryWriteDTO {
         $id: e.id,
         entry_date: e.entryDateIso,
         total_cost: e.totalCost,
-        currency: e.currency,
+        currency: e.currency || "USD",
         user_id: e.userId,
         line_count: e.lineCount,
     }
     if (e.supplierId) dto.supplier_id = e.supplierId
     if (e.reference) dto.reference = e.reference
     if (e.notes) dto.notes = e.notes
+    if (e.currency === "CUP" && e.exchangeRate != null && e.exchangeRate > 0) {
+        dto.exchange_rate = e.exchangeRate
+        if (e.exchangeRateAt) dto.exchange_rate_at = e.exchangeRateAt
+        if (e.exchangeRateSource) dto.exchange_rate_source = e.exchangeRateSource
+    }
     return dto
 }
 

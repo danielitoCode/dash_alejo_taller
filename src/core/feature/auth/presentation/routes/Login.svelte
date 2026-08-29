@@ -1,12 +1,14 @@
-﻿<script lang="ts">
+<script lang="ts">
     import type { NavController } from "../../../../../lib/navigation/NavController";
     import { authContainer } from "../../di/auth.container";
+    import { canAccessDashboard, dashboardDeniedMessage } from "../../domain/config/RoleConfig";
     import FrameModal from "../components/FrameModal.svelte";
     import { ENV } from "../../../../infrastructure/env";
     import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
     import { parseGoogleIdToken, type GoogleIdTokenProfile } from "../util/google-id-token";
     import { registerStore } from "../viewmodel/register.store";
     import { Chrome, LogIn, Link2, UserPlus } from "lucide-svelte";
+    import { exchangeStore } from "../../../exchange/presentation/viewmodel/exchange.store";
 
     export let navController: NavController;
 
@@ -36,10 +38,11 @@
                 password
             );
             const current = await authContainer.useCases.accounts.getCurrentUser();
-            if (current.role !== "admin") {
-                navController.navigate("unauthorized", { message: "Tu cuenta existe, pero no tiene permisos de administrador." });
+            if (!canAccessDashboard(current.role)) {
+                navController.navigate("unauthorized", { message: dashboardDeniedMessage() });
                 return;
             }
+            void exchangeStore.refreshOnSession();
             navController.navigate("home", { id: userId });
         } catch (e) {
             error = e instanceof Error ? e.message : "No se pudo iniciar sesión";
@@ -88,10 +91,11 @@
             try {
                 const userId = await authContainer.useCases.sessions.openSession.openCustomSession(profile.email, profile.sub);
                 const current = await authContainer.useCases.accounts.getCurrentUser();
-                if (current.role !== "admin") {
-                    navController.navigate("unauthorized", { message: "Tu cuenta existe, pero no tiene permisos de administrador." });
-                    return;
-                }
+                if (!canAccessDashboard(current.role)) {
+                navController.navigate("unauthorized", { message: dashboardDeniedMessage() });
+                return;
+            }
+                void exchangeStore.refreshOnSession();
                 navController.navigate("home", { id: userId });
                 return;
             } catch {
@@ -127,13 +131,14 @@
             });
 
             const current = await authContainer.useCases.accounts.getCurrentUser();
-            if (current.role !== "admin") {
-                navController.navigate("unauthorized", { message: "Tu cuenta existe, pero no tiene permisos de administrador." });
+            if (!canAccessDashboard(current.role)) {
+                navController.navigate("unauthorized", { message: dashboardDeniedMessage() });
                 return;
             }
 
             linkOpen = false;
             linkPassword = "";
+            void exchangeStore.refreshOnSession();
             navController.navigate("home", { id: userId });
         } catch (e: any) {
             const code = typeof e?.code === "number" ? e.code : null;
@@ -175,10 +180,11 @@
             });
 
             const current = await authContainer.useCases.accounts.getCurrentUser();
-            if (current.role !== "admin") {
-                navController.navigate("unauthorized", { message: "Cuenta creada, pero sin permisos para el panel de gestión." });
+            if (!canAccessDashboard(current.role)) {
+                navController.navigate("unauthorized", { message: dashboardDeniedMessage() });
                 return;
             }
+            void exchangeStore.refreshOnSession();
             navController.navigate("home", { id: current.id });
         } catch (e: any) {
             const code = typeof e?.code === "number" ? e.code : null;
@@ -677,7 +683,3 @@
         cursor: not-allowed;
     }
 </style>
-
-
-
-

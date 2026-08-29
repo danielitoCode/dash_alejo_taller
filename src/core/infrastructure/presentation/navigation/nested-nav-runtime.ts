@@ -1,6 +1,6 @@
 import type { BusinessRole } from "../../../feature/auth/domain/entity/BusinessRole"
 import { normalizeBusinessRole } from "../../../feature/auth/domain/entity/BusinessRole"
-import { canAccessRoute } from "../../../feature/auth/domain/config/RoleConfig"
+import { canAccessDashboard, canAccessRoute } from "../../../feature/auth/domain/config/RoleConfig"
 import { authContainer } from "../../../feature/auth/di/auth.container"
 import { productStore } from "../../../feature/product/presentation/viewmodel/product.store"
 import { categoryStore } from "../../../feature/category/presentation/viewmodel/category.store"
@@ -185,7 +185,7 @@ export function createNestedNavRuntime(ctx: NestedNavRuntimeCtx) {
                         "⚠️ Tu cuenta no tiene rol configurado. Contacta al administrador. (viewer por defecto)"
                     )
                 }
-                if (!["owner", "admin", "sales", "viewer"].includes(role)) {
+                if (!canAccessDashboard(role)) {
                     ctx.outerNavigate.navigate("unauthorized", {
                         message: "Tu cuenta no está autorizada para usar el panel de gestión.",
                     })

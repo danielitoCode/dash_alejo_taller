@@ -9,6 +9,7 @@ import {
 } from "../../../../core/feature/purchase/data/mapper/Mappers"
 import type { PurchaseEntryDTO, PurchaseEntryLineDTO } from "../../../../core/feature/purchase/data/dto/PurchaseEntryDTO"
 import type { SupplierDTO } from "../../../../core/feature/purchase/data/dto/SupplierDTO"
+import { createPurchaseEntry } from "../../../../core/feature/purchase/domain/entity/PurchaseEntry"
 
 describe("purchase mapper round-trip", () => {
     it("supplier", () => {
@@ -71,5 +72,51 @@ describe("purchase mapper round-trip", () => {
         const lineWrite = purchaseEntryLineToDTO(line)
         expect(lineWrite.unit_cost).toBe(25)
         expect(lineWrite.concept).toBe("purchase")
+    })
+
+    it("maps CUP snapshot exchange_rate fields round-trip", () => {
+        const entryDto = {
+            $id: "e-cup",
+            $collectionId: "purchase_entry",
+            $databaseId: "db",
+            $createdAt: "2026-08-28T12:00:00.000Z",
+            $updatedAt: "2026-08-28T12:00:00.000Z",
+            $permissions: [],
+            entry_date: "2026-08-28T10:00:00.000Z",
+            total_cost: 700,
+            currency: "CUP",
+            user_id: "u1",
+            line_count: 1,
+            exchange_rate: 350,
+            exchange_rate_at: "2026-08-28T10:00:00.000Z",
+            exchange_rate_source: "DIRECTORIO_CUBANO",
+        } as unknown as PurchaseEntryDTO
+
+        const domain = purchaseEntryFromDTO(entryDto)
+        expect(domain.currency).toBe("CUP")
+        expect(domain.exchangeRate).toBe(350)
+        expect(domain.exchangeRateAt).toBe("2026-08-28T10:00:00.000Z")
+        expect(domain.exchangeRateSource).toBe("DIRECTORIO_CUBANO")
+
+        const write = purchaseEntryToDTO(domain)
+        expect(write.exchange_rate).toBe(350)
+        expect(write.exchange_rate_source).toBe("DIRECTORIO_CUBANO")
+        expect(write.exchange_rate_at).toBe("2026-08-28T10:00:00.000Z")
+    })
+
+    it("USD entry omits exchange rate on write", () => {
+        const domain = createPurchaseEntry({
+            id: "e-usd",
+            entryDateIso: "2026-08-28T10:00:00.000Z",
+            totalCost: 50,
+            currency: "USD",
+            userId: "u1",
+            lineCount: 1,
+        })
+        const write = purchaseEntryToDTO(domain)
+        expect(write.currency).toBe("USD")
+        expect(write.exchange_rate).toBeUndefined()
+        expect(write.exchange_rate_at).toBeUndefined()
+        expect(write.exchange_rate_source).toBeUndefined()
     })
 })
