@@ -20,8 +20,8 @@ export interface PurchaseEntryRepository {
     createEntry(entry: PurchaseEntry, transactionId?: TransactionId): Promise<PurchaseEntry>
     createLine(line: PurchaseEntryLine, transactionId?: TransactionId): Promise<PurchaseEntryLine>
     getEntryById(id: string, transactionId?: TransactionId): Promise<PurchaseEntry | null>
-    /** Implementado por el adaptador Appwrite; opcional para repositorios legacy/tests. */
-    updateEntry?(id: string, patch: Partial<PurchaseEntry>, transactionId?: TransactionId): Promise<PurchaseEntry>
+    /** Requerido por los casos de uso que mutan el estado de una entrada (p.ej. B3.1). */
+    updateEntry(id: string, patch: Partial<PurchaseEntry>, transactionId?: TransactionId): Promise<PurchaseEntry>
     listEntries(limitOrOpts?: number | ListPurchaseEntriesOpts): Promise<PurchaseEntry[]>
     listLinesByEntry(entryId: string, transactionId?: TransactionId): Promise<PurchaseEntryLine[]>
     /** Líneas de compra que afectan un SKU (auditoría por producto). */
