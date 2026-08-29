@@ -130,13 +130,12 @@ export function purchaseEntryToDTO(e: PurchaseEntry): PurchaseEntryWriteDTO {
         currency: e.currency || "USD",
         user_id: e.userId,
         line_count: e.lineCount,
+        // Appwrite: status es required (ACTIVE|CANCELLED). Siempre enviarlo en create/update.
+        status: e.status === "CANCELLED" ? "CANCELLED" : "ACTIVE",
     }
     if (e.supplierId) dto.supplier_id = e.supplierId
     if (e.reference) dto.reference = e.reference
     if (e.notes) dto.notes = e.notes
-    // Keep legacy/new-entry writes compatible until the Appwrite `status`
-    // attribute is provisioned; cancellation writes status explicitly.
-    if (e.status === "CANCELLED") dto.status = "CANCELLED"
     if (e.currency === "CUP" && e.exchangeRate != null && e.exchangeRate > 0) {
         dto.exchange_rate = e.exchangeRate
         if (e.exchangeRateAt) dto.exchange_rate_at = e.exchangeRateAt
