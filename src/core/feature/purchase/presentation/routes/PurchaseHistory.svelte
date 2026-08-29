@@ -14,6 +14,7 @@
     import { filterPurchaseEntries } from "../../domain/util/filterPurchaseEntries";
     import type { PurchaseEntry } from "../../domain/entity/PurchaseEntry";
     import {
+        Ban,
         Building2,
         CalendarDays,
         ChevronLeft,
@@ -75,6 +76,43 @@
     function closeDetail() {
         selectedId = null;
         purchaseHistoryStore.clearDetail();
+    }
+
+    /** Core 3 B3.1 — anulación de entrada: solo owner/admin, con confirmación. */
+    async function handleCancelEntry(): Promise<void> {
+        if (!detail || $purchaseHistoryStore.cancelling) return;
+        if (!canCancelEntry) {
+            toastStore.error("Solo owner o admin pueden anular entradas.", 4000);
+            return;
+        }
+        if (detail.entry.status === "CANCELLED") {
+            toastStore.error("Esta entrada ya está anulada.", 3000);
+            return;
+        }
+
+        const ref = detail.entry.reference?.trim() || detail.entry.id;
+        const ok = window.confirm(
+            `¿Anular la entrada "${ref}"?\n\n` +
+                "Esto revertirá el stock (existence) de cada línea mediante un movimiento " +
+                "compensatorio auditable. No se modifica reserved ni last_unit_cost. " +
+                "Si algún producto quedaría con existence < reserved, la anulación se bloqueará. " +
+                "Esta acción no se puede deshacer."
+        );
+        if (!ok) return;
+
+        try {
+            const result = await purchaseHistoryStore.cancelEntry(detail.entry.id);
+            toastStore.success(
+                `Entrada anulada. ${result.reversedLines} línea(s) revertida(s).`,
+                4000
+            );
+        } catch (e: unknown) {
+            const err = e as { message?: string; stack?: string };
+            logger.error(err?.message ?? e, err?.stack);
+            toastStore.error(
+                e instanceof Error ? e.message : "No se pudo anular la entrada."
+            );
+        }
     }
 
     function productName(productId: string): string {
@@ -270,6 +308,10 @@
 
     $: statsUsd = items.filter((e) => entryCurrency(e) === "USD").length;
     $: statsCup = items.filter((e) => entryCurrency(e) === "CUP").length;
+
+    /** Core 3 B3.1/B4 — anular es solo owner/admin (defensa en profundidad; la ruta ya lo exige). */
+    $: managerRole = $userManagementStore.managerRole ?? "viewer";
+    $: canCancelEntry = managerRole === "owner" || managerRole === "admin";
 </script>
 
 <section class="mgmt-page ph-page" aria-label="Historial de compras">
@@ -313,6 +355,22 @@
                     Volver al listado
                 </button>
                 <div class="detail-toolbar-right">
+                    {#if detail.entry.status === "CANCELLED"}
+                        <span class="status-badge cancelled">
+                            <Icon icon={Ban} size={14} ariaLabel="" />
+                            Anulada
+                        </span>
+                    {:else if canCancelEntry}
+                        <button
+                            class="mgmt-btn danger"
+                            type="button"
+                            on:click={handleCancelEntry}
+                            disabled={$purchaseHistoryStore.cancelling}
+                        >
+                            <Icon icon={Ban} size={16} ariaLabel="" />
+                            {$purchaseHistoryStore.cancelling ? "Anulando…" : "Anular entrada"}
+                        </button>
+                    {/if}
                     <span class="currency-badge lg" class:cup={detailIsCup}>{detailCurrency}</span>
                     {#if $purchaseHistoryStore.detailLoading}
                         <LoadingSpinner size={18} label="Cargando detalle" subtle />
@@ -355,6 +413,12 @@
                             <Icon icon={Layers} size={14} ariaLabel="" />
                             {detail.lines.length} línea(s)
                         </span>
+                        {#if detail.entry.status === "CANCELLED"}
+                            <span class="meta-chip chip-cancelled">
+                                <Icon icon={Ban} size={14} ariaLabel="" />
+                                Anulada
+                            </span>
+                        {/if}
                     </div>
                 </div>
             </div>
@@ -588,6 +652,12 @@
                                         {e.reference?.trim() || e.id.slice(0, 12) + "…"}
                                     </strong>
                                     <span class="currency-badge sm" class:cup={isCup}>{cur}</span>
+                                    {#if e.status === "CANCELLED"}
+                                        <span class="status-badge cancelled sm">
+                                            <Icon icon={Ban} size={12} ariaLabel="" />
+                                            Anulada
+                                        </span>
+                                    {/if}
                                 </div>
                                 <div class="entry-chips">
                                     <span class="meta-chip" title="Fecha">
@@ -860,6 +930,32 @@
         border-color: color-mix(in srgb, #f59e0b 28%, transparent);
         color: #fbbf24;
         font-weight: 700;
+    }
+    .chip-cancelled {
+        background: color-mix(in srgb, #ef4444 14%, transparent);
+        border-color: color-mix(in srgb, #ef4444 32%, transparent);
+        color: #f87171;
+        font-weight: 750;
+    }
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        padding: 3px 9px;
+        border-radius: 6px;
+        white-space: nowrap;
+    }
+    .status-badge.cancelled {
+        background: color-mix(in srgb, #ef4444 16%, transparent);
+        color: #f87171;
+        border: 1px solid color-mix(in srgb, #ef4444 36%, transparent);
+    }
+    .status-badge.sm {
+        font-size: 0.62rem;
+        padding: 1px 6px;
     }
     .entry-side {
         text-align: right;
