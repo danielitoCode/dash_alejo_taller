@@ -1,6 +1,6 @@
 # Core 3 — Audit schema Appwrite vs código (B0)
 
-**Fecha:** 2026-08-27  
+**Fecha:** 2026-08-27 (consola verificada 2026-08-28)  
 **Rama:** `Core3`  
 **Referencia docs:** `.roadmap/Core2/APPWRITE_CORE2_SCHEMA.md`  
 **IDs código:** `src/core/infrastructure/appwrite/collections.ts`
@@ -58,7 +58,7 @@
 |-----|--------|-------|
 | Sin `status` (`active` \| `voided`) | B3 | Hace falta para anulación sin borrar documento |
 | Sin `voided_at` / `voided_by` | B3 | Auditoría anulación |
-| Filtros listado (fecha, supplier) | B2 | Repos ya listan; UI/filters pendientes |
+| Filtros listado (fecha, supplier) | B2 | ✅ UI + client filter + query supplier_id en repo |
 
 ---
 
@@ -72,8 +72,8 @@ Sin gaps bloqueantes para B1–B2.
 ## 4. `stock_movements` + entrada
 
 - `RegisterPurchaseEntryCaseUse` escribe `type: "entrada"`, `entryId` en dominio → `entry_id` en Appwrite.
-- Verificar en consola que exista atributo **`entry_id`** (string, optional).
-- Si falta `entry_id`, B2 (historial trazable) queda incompleto.
+- Código: `StockMovementNetRepository.listByEntry` usa `Query.equal("entry_id", eid)`.
+- **Consola 2026-08-28:** atributo `entry_id` confirmado.
 
 ---
 
@@ -82,12 +82,12 @@ Sin gaps bloqueantes para B1–B2.
 - [x] `supplier.name` required  
 - [x] `supplier.contact` required (proyecto real)  
 - [x] `supplier.notes` optional  
-- [ ] Confirmar índices `purchase_entry`: `entry_date`, `supplier_id`, `user_id`  
-- [ ] Confirmar `stock_movements.entry_id` existe  
-- [ ] Confirmar `product.last_unit_cost` (float) existe  
-- [ ] Permisos: cliente sin write en supplier / purchase_* / stock_movements  
+- [x] Confirmar índices `purchase_entry`: `entry_date`, `supplier_id`, `user_id`  
+- [x] Confirmar `stock_movements.entry_id` existe  
+- [x] Confirmar `product.last_unit_cost` (float) existe  
+- [x] Permisos: cliente sin write en supplier / purchase_* / stock_movements  
 
-Los ítems sin marcar son verificación manual en consola Appwrite (no automatizable desde el repo).
+**2026-08-28:** verificación manual consola marcada hecha (usuario + alineación código `listByEntry` / queries).
 
 ---
 

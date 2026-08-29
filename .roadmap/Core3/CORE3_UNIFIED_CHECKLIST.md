@@ -22,11 +22,11 @@
 - [x] **DASH** Auditar schema Appwrite vs código → [`SCHEMA_AUDIT_CORE3.md`](./SCHEMA_AUDIT_CORE3.md)
 - [x] **DASH** Gaps listados: `contact` required real; sin `active` supplier; sin `status` entry (B3); verificar `entry_id` en movements
 - [x] **DASH** Tipado: `SupplierDTO.contact: string` + write path siempre envía `contact`
-- [ ] **DASH** Verificación manual consola: índices purchase_entry + `stock_movements.entry_id` + permisos cliente
+- [x] **DASH** Verificación manual consola: índices `purchase_entry` + `stock_movements.entry_id` + permisos cliente
 - [ ] **AT** Espejar política en `.roadmap/Core3/` (cuando se trabaje B0 en monorepo)
 
-**Salida B0:** política aceptada + gaps de schema listados + tipos supplier alineados a Appwrite real.  
-**2026-08-28:** Confirmado “casi cerrado” (política, audit schema, tipado `contact`). Restan solo consola + espejo AT. Se inicia **B4** en paralelo.
+**Salida B0:** política aceptada + gaps de schema listados + tipos supplier alineados a Appwrite real + consola verificada.  
+**2026-08-28:** B0 dash **cerrado** (política, audit, tipado, consola índices/entry_id/permisos). Resta espejo AT.
 
 ---
 
@@ -51,12 +51,14 @@
 
 - [x] **DASH** Listado facturas de entrada: filtros fecha, proveedor, referencia/usuario/texto — ruta **Compras** (`purchases`) — **smoke OK 2026-08-27**
 - [x] **DASH** Detalle de entrada: cabecera + líneas + movements por `entry_id` (click en fila) — **smoke OK 2026-08-27**
-- [ ] **DASH** Vista por producto: entradas que afectaron ese SKU (costos históricos) — repo `listLinesByProduct` listo; UI dedicada pendiente
-- [x] **DASH** Cada `entrada` de movement desde factura lleva `entry_id` (RegisterPurchaseEntryCaseUse + detalle)
+- [x] **DASH** Vista por producto: filtro producto en historial vía `listLinesByProduct` + UI en `PurchaseHistory.svelte`
+- [x] **DASH** Cada `entrada` de movement desde factura lleva `entry_id` (RegisterPurchaseEntryCaseUse + detalle `listByEntry`)
 - [x] **DASH** Tests de listado/detalle (`filterPurchaseEntries`, GetPurchaseEntryDetail)
 - [ ] **AT** No aplica UI; opcional: test/lectura que `last_unit_cost` en product sigue siendo la fuente de COGS operador
 
-**Salida B2:** cualquier entrada Core 2/3 es consultable y trazable. ✅ listado+detalle (dash smoke)
+**Salida B2:** cualquier entrada Core 2/3 es consultable y trazable. ✅ listado + detalle + filtro producto (dash)
+
+**Código verificado 2026-08-28:** `PurchaseHistory.svelte`, `ListPurchaseEntriesCaseUse`, `GetPurchaseEntryDetailCaseUse`, `filterPurchaseEntries`, `listByEntry(entry_id)`, `listLinesByProduct`.
 
 ---
 
@@ -78,13 +80,13 @@
 
 **DEP:** B1–B2 obligatorios; B3 si entra en el mismo release
 
-- [ ] **DASH** Permisos Appwrite auditados en consola
+- [x] **DASH** Permisos Appwrite auditados en consola (cliente sin write supplier / purchase_* / stock_movements) — verificado B0 2026-08-28
 - [x] **DASH** Smoke manual UI: subvista Proveedores + alta en factura + subvista Compras listado → detalle — **OK 2026-08-27**
 - [ ] **DASH** Smoke end-to-end datos: proveedor → entrada multi-línea → movements visibles en detalle (validar en prod/staging)
 - [ ] **DASH** Verificar badges/nav no se rompen
 - [ ] **AT** Smoke: login cliente no escribe compras; operador confirma venta post-entrada
 
-**2026-08-28:** B4 iniciado. Ejecutar checklist completo en [`SMOKE_B4.md`](./SMOKE_B4.md).
+**2026-08-28:** B4 en curso. Ejecutar checklist restante en [`SMOKE_B4.md`](./SMOKE_B4.md).
 
 ---
 
@@ -130,4 +132,4 @@
 | 2026-08-27 | Apertura rama `Core3` + checklist inicial |
 | 2026-08-27 | **B0 dash:** política, audit schema, tipado `contact` |
 | 2026-08-27 | **B1+B2 smoke UI:** Proveedores, alta en factura, Compras listado→detalle |
-| 2026-08-28 | **B0 confirmado casi cerrado** (política/audit/tipado). Restan consola + espejo AT. **Inicio B4** |
+| 2026-08-28 | **B0 consola** índices/`entry_id`/permisos cliente marcados verificados. **B2** completo incl. filtro producto en código |
