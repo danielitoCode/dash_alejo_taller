@@ -1,12 +1,12 @@
 import type { SaleDTO } from "../dto/SaleDTO";
-import { type Databases, ID, Query } from "appwrite";
+import { type Databases, Query } from "appwrite";
 import type { Models } from "appwrite";
 import { ENV } from "../../../../infrastructure/env";
 import { logger } from "../../../../infrastructure/presentation/util/logger.service";
 import { assertBackofficeCannotCreateB2cSale } from "../../domain/policy/BackofficeSalePolicy";
 
 const COLLECTION_ID = "sale";
-/** Appwrite default page size is 25; without pagination total can be > documents.length. */
+/** Appwrite default page size is 25; must page until all.length === total. */
 const PAGE_SIZE = 100;
 
 export class SaleNetRepository {
@@ -19,18 +19,20 @@ export class SaleNetRepository {
     }
 
     /**
-     * Lista todas las ventas (paginado). Sin esto, con >25 documentos Appwrite
-     * solo devuelve la primera página y las intenciones nuevas no aparecen en el panel.
+     * Lista TODAS las ventas (paginado). Sin esto, con >25 documentos Appwrite
+     * solo devuelve la primera página y las intenciones nuevas no aparecen.
      */
     async getAll(): Promise<SaleDTO[]> {
         try {
             const all: SaleDTO[] = [];
             let cursor: string | undefined;
             let reportedTotal = 0;
+            let page = 0;
 
             // eslint-disable-next-line no-constant-condition
             while (true) {
-                const queries = [
+                page += 1;
+                const queries: string[] = [
                     Query.orderDesc("$createdAt"),
                     Query.limit(PAGE_SIZE),
                 ];
@@ -47,9 +49,23 @@ export class SaleNetRepository {
                 if (batch.length === 0) break;
 
                 all.push(...batch);
-                if (batch.length < PAGE_SIZE || all.length >= reportedTotal) break;
 
+                logger.log({
+                    scope: "sale.net.getAll.page",
+                    page,
+                    batchLength: batch.length,
+                    accumulated: all.length,
+                    total: reportedTotal,
+                });
+
+                if (batch.length < PAGE_SIZE || all.length >= reportedTotal) break;
                 cursor = batch[batch.length - 1].$id;
+            }
+
+            if (reportedTotal > 0 && all.length < reportedTotal) {
+                logger.warn(
+                    `[sale.net.getAll] incomplete fetch: got ${all.length} of ${reportedTotal}`
+                );
             }
 
             logger.log({
@@ -67,7 +83,6 @@ export class SaleNetRepository {
 
     /**
      * Core1 4.4: bloqueado. Alta B2C solo en clientes de tienda.
-     * Firma conservada por compatibilidad; no ejecuta createDocument.
      */
     async create(
         _data: Omit<SaleDTO, keyof Models.Document>
@@ -82,7 +97,7 @@ export class SaleNetRepository {
 
             // eslint-disable-next-line no-constant-condition
             while (true) {
-                const queries = [
+                const queries: string[] = [
                     Query.equal("user_id", userId),
                     Query.orderDesc("$createdAt"),
                     Query.limit(PAGE_SIZE),

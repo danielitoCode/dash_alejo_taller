@@ -10,13 +10,38 @@ import { assertBackofficeCannotCreateB2cSale } from "../../domain/policy/Backoff
 export class SaleOfflineFirstRepository implements SaleRepository {
     constructor(private readonly net: SaleNetRepository) {}
 
+    /**
+     * Espejo completo: si la red responde, reemplaza Dexie con el set remoto
+     * (no solo bulkPut parcial, que dejaba el mirror atascado en 25 filas).
+     */
     async getAllSales(): Promise<Sale[]> {
         try {
             const remote = await this.net.getAll();
-            await db.sales.bulkPut(remote);
+
+            // Replace mirror: evita que filas viejas/incompletas contaminen un fallback offline.
+            await db.transaction("rw", db.sales, async () => {
+                await db.sales.clear();
+                if (remote.length > 0) {
+                    await db.sales.bulkPut(remote);
+                }
+            });
+
+            logger.log({
+                scope: "sale.offlineFirst.getAllSales",
+                remoteCount: remote.length,
+                dexieReplaced: true,
+            });
+
             return remote.map(saleFromDTO);
-        } catch {
+        } catch (error) {
+            logger.warn(
+                `[sale.offlineFirst] net failed, using Dexie: ${error instanceof Error ? error.message : String(error)}`
+            );
             const local = await db.sales.toArray();
+            logger.log({
+                scope: "sale.offlineFirst.getAllSales.fallback",
+                localCount: local.length,
+            });
             return local.map(saleFromDTO);
         }
     }
