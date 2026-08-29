@@ -12,40 +12,26 @@ import type { StockMovementRepository } from "../../../../../core/feature/invent
 class FakePurchase implements PurchaseEntryRepository {
     entries: PurchaseEntry[] = []
     lines: PurchaseEntryLine[] = []
-    async createEntry(e: PurchaseEntry) {
-        this.entries.push(e)
-        return e
+    async createEntry(e: PurchaseEntry) { this.entries.push(e); return e }
+    async createLine(l: PurchaseEntryLine) { this.lines.push(l); return l }
+    async getEntryById(id: string) { return this.entries.find((e) => e.id === id) ?? null }
+    async updateEntry(id: string, patch: Partial<PurchaseEntry>) {
+        const i = this.entries.findIndex((e) => e.id === id)
+        if (i < 0) throw new Error("missing")
+        const next = { ...this.entries[i], ...patch }
+        this.entries[i] = next
+        return next
     }
-    async createLine(l: PurchaseEntryLine) {
-        this.lines.push(l)
-        return l
-    }
-    async getEntryById(id: string) {
-        return this.entries.find((e) => e.id === id) ?? null
-    }
-    async listEntries() {
-        return this.entries
-    }
-    async listLinesByEntry(entryId: string) {
-        return this.lines.filter((l) => l.entryId === entryId)
-    }
-    async listLinesByProduct(productId: string) {
-        return this.lines.filter((l) => l.productId === productId)
-    }
+    async listEntries() { return this.entries }
+    async listLinesByEntry(entryId: string) { return this.lines.filter((l) => l.entryId === entryId) }
+    async listLinesByProduct(productId: string) { return this.lines.filter((l) => l.productId === productId) }
 }
 
 class FakeSupplier implements SupplierRepository {
     items: Supplier[] = []
-    async create(s: Supplier) {
-        this.items.push(s)
-        return s
-    }
-    async getById(id: string) {
-        return this.items.find((s) => s.id === id) ?? null
-    }
-    async list() {
-        return this.items
-    }
+    async create(s: Supplier) { this.items.push(s); return s }
+    async getById(id: string) { return this.items.find((s) => s.id === id) ?? null }
+    async list() { return this.items }
     async update(id: string, patch: Partial<Supplier>) {
         const i = this.items.findIndex((s) => s.id === id)
         if (i < 0) throw new Error("missing")
@@ -56,19 +42,10 @@ class FakeSupplier implements SupplierRepository {
 
 class FakeMovements implements StockMovementRepository {
     items: StockMovement[] = []
-    async create(m: StockMovement) {
-        this.items.push(m)
-        return m
-    }
-    async listByProduct() {
-        return []
-    }
-    async listRecent() {
-        return []
-    }
-    async listByEntry(entryId: string) {
-        return this.items.filter((m) => m.entryId === entryId)
-    }
+    async create(m: StockMovement) { this.items.push(m); return m }
+    async listByProduct() { return [] }
+    async listRecent() { return [] }
+    async listByEntry(entryId: string) { return this.items.filter((m) => m.entryId === entryId) }
 }
 
 describe("GetPurchaseEntryDetailCaseUse (Core3 B2)", () => {
@@ -76,54 +53,20 @@ describe("GetPurchaseEntryDetailCaseUse (Core3 B2)", () => {
         const purchase = new FakePurchase()
         const suppliers = new FakeSupplier()
         const movements = new FakeMovements()
-
-        purchase.entries.push({
-            id: "e1",
-            supplierId: "s1",
-            entryDateIso: "2026-08-20T12:00:00.000Z",
-            totalCost: 50,
-            currency: "CUP",
-            userId: "staff",
-            lineCount: 1,
-            reference: "F-9",
-        })
-        purchase.lines.push({
-            id: "l1",
-            entryId: "e1",
-            productId: "p1",
-            quantity: 2,
-            unitCost: 25,
-            concept: "purchase",
-            lineCost: 50,
-        })
+        purchase.entries.push({ id: "e1", supplierId: "s1", entryDateIso: "2026-08-20T12:00:00.000Z", totalCost: 50, currency: "CUP", userId: "staff", lineCount: 1, reference: "F-9" })
+        purchase.lines.push({ id: "l1", entryId: "e1", productId: "p1", quantity: 2, unitCost: 25, concept: "purchase", lineCost: 50 })
         suppliers.items.push({ id: "s1", name: "Acme", contact: "" })
-        movements.items.push({
-            id: "m1",
-            productId: "p1",
-            type: "entrada",
-            quantity: 2,
-            balanceAfter: 10,
-            reason: "purchase_entry",
-            userId: "staff",
-            entryId: "e1",
-        })
-
+        movements.items.push({ id: "m1", productId: "p1", type: "entrada", quantity: 2, balanceAfter: 10, reason: "purchase_entry", userId: "staff", entryId: "e1" })
         const uc = new GetPurchaseEntryDetailCaseUse(purchase, suppliers, movements)
         const detail = await uc.execute("e1")
-
         expect(detail.entry.id).toBe("e1")
         expect(detail.lines).toHaveLength(1)
         expect(detail.supplier?.name).toBe("Acme")
         expect(detail.movements).toHaveLength(1)
         expect(detail.movements[0].entryId).toBe("e1")
     })
-
     it("throws when entry missing", async () => {
-        const uc = new GetPurchaseEntryDetailCaseUse(
-            new FakePurchase(),
-            new FakeSupplier(),
-            new FakeMovements()
-        )
+        const uc = new GetPurchaseEntryDetailCaseUse(new FakePurchase(), new FakeSupplier(), new FakeMovements())
         await expect(uc.execute("nope")).rejects.toThrow(/no encontrada/)
     })
 })
