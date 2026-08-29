@@ -6,6 +6,8 @@ import type { SupplierRepository } from "../../domain/repository/purchase.reposi
 import type { SupplierDTO } from "../dto/SupplierDTO"
 import { supplierFromDTO, supplierToDTO } from "../mapper/Mappers"
 
+type TransactionId = string | undefined
+
 export class SupplierNetRepository implements SupplierRepository {
     constructor(private readonly databases: Databases) {}
 
@@ -19,10 +21,9 @@ export class SupplierNetRepository implements SupplierRepository {
         return APPWRITE_COLLECTIONS.supplier
     }
 
-    async create(supplier: Supplier): Promise<Supplier> {
+    async create(supplier: Supplier, transactionId?: TransactionId): Promise<Supplier> {
         const write = supplierToDTO(supplier)
         const id = write.$id && write.$id.length > 0 ? write.$id : ID.unique()
-        // Payload sin $id: solo atributos de collection (contact siempre string).
         const data: {
             name: string
             contact: string
@@ -34,22 +35,24 @@ export class SupplierNetRepository implements SupplierRepository {
         if (write.notes !== undefined) {
             data.notes = write.notes
         }
-        const doc = await this.databases.createDocument<SupplierDTO>(
-            this.databaseId,
-            this.collectionId,
-            id,
-            data
-        )
+        const doc = await this.databases.createDocument<SupplierDTO>({
+            databaseId: this.databaseId,
+            collectionId: this.collectionId,
+            documentId: id,
+            data,
+            transactionId,
+        })
         return supplierFromDTO(doc)
     }
 
-    async getById(id: string): Promise<Supplier | null> {
+    async getById(id: string, transactionId?: TransactionId): Promise<Supplier | null> {
         try {
-            const doc = await this.databases.getDocument<SupplierDTO>(
-                this.databaseId,
-                this.collectionId,
-                id
-            )
+            const doc = await this.databases.getDocument<SupplierDTO>({
+                databaseId: this.databaseId,
+                collectionId: this.collectionId,
+                documentId: id,
+                transactionId,
+            })
             return supplierFromDTO(doc)
         } catch {
             return null
@@ -66,7 +69,7 @@ export class SupplierNetRepository implements SupplierRepository {
         return res.documents.map(supplierFromDTO)
     }
 
-    async update(id: string, patch: Partial<Supplier>): Promise<Supplier> {
+    async update(id: string, patch: Partial<Supplier>, transactionId?: TransactionId): Promise<Supplier> {
         const data: {
             name?: string
             contact?: string
@@ -76,7 +79,6 @@ export class SupplierNetRepository implements SupplierRepository {
             data.name = String(patch.name).trim()
         }
         if (patch.contact !== undefined) {
-            // Required en Appwrite: nunca enviar null; vacío → "".
             data.contact =
                 patch.contact != null && String(patch.contact).trim() !== ""
                     ? String(patch.contact).trim()
@@ -88,12 +90,13 @@ export class SupplierNetRepository implements SupplierRepository {
                     ? String(patch.notes).trim()
                     : ""
         }
-        const doc = await this.databases.updateDocument<SupplierDTO>(
-            this.databaseId,
-            this.collectionId,
-            id,
-            data
-        )
+        const doc = await this.databases.updateDocument<SupplierDTO>({
+            databaseId: this.databaseId,
+            collectionId: this.collectionId,
+            documentId: id,
+            data,
+            transactionId,
+        })
         return supplierFromDTO(doc)
     }
 }
