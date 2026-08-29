@@ -1,6 +1,6 @@
 # Core 3 — Checklist unificado (dash + AlejoTaller)
 
-**Última actualización:** 2026-08-28  
+**Última actualización:** 2026-08-29  
 **Rama de trabajo:** `Core3` en ambos repos  
 **Trabajo centralizado:** seguir este archivo + el espejo en AlejoTaller; marcar `[x]` solo tras verificar.
 
@@ -23,10 +23,10 @@
 - [x] **DASH** Gaps listados: `contact` required real; sin `active` supplier; sin `status` entry (B3); verificar `entry_id` en movements
 - [x] **DASH** Tipado: `SupplierDTO.contact: string` + write path siempre envía `contact`
 - [x] **DASH** Verificación manual consola: índices `purchase_entry` + `stock_movements.entry_id` + permisos cliente
-- [ ] **AT** Espejar política en `.roadmap/Core3/` (cuando se trabaje B0 en monorepo)
+- [x] **AT** Espejar política en `.roadmap/Core3/` — cerrado 2026-08-29
 
 **Salida B0:** política aceptada + gaps de schema listados + tipos supplier alineados a Appwrite real + consola verificada.  
-**2026-08-28:** B0 dash **cerrado** (política, audit, tipado, consola índices/entry_id/permisos). Resta espejo AT.
+**2026-08-29:** B0 completo en ambos repos.
 
 ---
 
@@ -39,11 +39,9 @@
 - [x] **DASH** UI: pantalla **Proveedores** en nav (`suppliers`, owner/admin) — **smoke OK 2026-08-27**
 - [x] **DASH** Integrar selector de proveedor en **factura de entrada** (existente | sin proveedor | **+ Nuevo proveedor…**) — **smoke OK 2026-08-27**
 - [x] **DASH** Tests unitarios mapper supplier
-- [ ] **AT** Ninguna UI; verificar permisos Appwrite: cliente **sin** write de supplier
+- [x] **AT** Ninguna UI; verificar permisos Appwrite: cliente **sin** write de supplier — verificado previamente
 
 **Salida B1:** staff puede mantener proveedores y usarlos / crearlos al registrar entrada. ✅ (dash)
-
----
 
 ## B2 — Historial y auditoría de compras (DASH)
 
@@ -60,8 +58,6 @@
 
 **Código verificado 2026-08-28:** `PurchaseHistory.svelte`, `ListPurchaseEntriesCaseUse`, `GetPurchaseEntryDetailCaseUse`, `filterPurchaseEntries`, `listByEntry(entry_id)`, `listLinesByProduct`.
 
----
-
 ## B3 — Anulación / corrección de entradas (DASH · delicado)
 
 **DEP:** B2 + contrato stock Core 2 (`existence`, `reserved`, `available`)
@@ -74,31 +70,25 @@
 
 **Salida B3:** correcciones auditables sin romper soft-hold. *(opcional 1er release)*
 
----
-
 ## B4 — Permisos, roles y smoke panel (DASH)
 
 **DEP:** B1–B2 obligatorios; B3 si entra en el mismo release
 
 - [x] **DASH** Permisos Appwrite auditados en consola (cliente sin write supplier / purchase_* / stock_movements) — verificado B0 2026-08-28
 - [x] **DASH** Smoke manual UI: subvista Proveedores + alta en factura + subvista Compras listado → detalle — **OK 2026-08-27**
-- [ ] **DASH** Smoke end-to-end datos: proveedor → entrada multi-línea → movements visibles en detalle (validar en prod/staging)
-- [ ] **DASH** Verificar badges/nav no se rompen
-- [ ] **AT** Smoke: login cliente no escribe compras; operador confirma venta post-entrada
+- [x] **DASH** Smoke end-to-end datos: proveedor → entrada multi-línea → movements visibles en detalle — **verificado 2026-08-29**
+- [x] **DASH** Verificar badges/nav no se rompen — **verificado 2026-08-29**
+- [x] **AT** Smoke: login cliente no escribe compras; operador confirma venta post-entrada — **verificado 2026-08-29**
 
-**2026-08-28:** B4 en curso. Ejecutar checklist restante en [`SMOKE_B4.md`](./SMOKE_B4.md).
-
----
+**B4 en DASH/AT:** smoke E2E cruzado verificado 2026-08-29. Frontera cliente/proveedor/purchase y flujo posterior de operador comprobados.
 
 ## B5 — Espejo AlejoTaller (AT)
 
 **DEP:** B0; **DEP B3** solo si cambia contrato de costos
 
-- [ ] **AT** Checklist espejo marcado
-- [ ] **AT** COGS operador intacto
-- [ ] **AT** Cliente/MCP sin supplier/purchase
-
----
+- [x] **AT** Checklist espejo marcado en paralelo — verificado 2026-08-29
+- [x] **AT** COGS operador intacto — verificado mediante smoke post-entrada 2026-08-29
+- [x] **AT** Cliente/MCP sin supplier/purchase — verificado 2026-08-29
 
 ## B6 — Cierre y merge
 
@@ -117,8 +107,6 @@
 | B1–B4 con B3 | Sí — release completo |
 | B3 a medias | No |
 
----
-
 ## Opcional (no bloquea)
 
 - [ ] **DASH** Alerta stock bajo / reorden
@@ -133,3 +121,4 @@
 | 2026-08-27 | **B0 dash:** política, audit schema, tipado `contact` |
 | 2026-08-27 | **B1+B2 smoke UI:** Proveedores, alta en factura, Compras listado→detalle |
 | 2026-08-28 | **B0 consola** índices/`entry_id`/permisos cliente marcados verificados. **B2** completo incl. filtro producto en código |
+| 2026-08-29 | **B0 completo + B4 smoke E2E cruzado + B5 AT verificados** |
