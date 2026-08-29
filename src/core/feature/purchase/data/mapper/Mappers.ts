@@ -15,7 +15,6 @@ import type {
     PurchaseEntryLineDTO,
 } from "../dto/PurchaseEntryDTO"
 
-/** Payload de escritura: `contact` siempre string (Appwrite required). */
 export type SupplierWriteDTO = {
     $id?: string
     name: string
@@ -42,9 +41,7 @@ export function supplierToDTO(s: Supplier): SupplierWriteDTO {
         name: s.name,
         contact,
     }
-    if (s.notes != null && String(s.notes).trim() !== "") {
-        dto.notes = String(s.notes).trim()
-    }
+    if (s.notes != null && String(s.notes).trim() !== "") dto.notes = String(s.notes).trim()
     return dto
 }
 
@@ -58,6 +55,7 @@ export type PurchaseEntryWriteDTO = Pick<
     | "user_id"
     | "notes"
     | "line_count"
+    | "status"
     | "exchange_rate"
     | "exchange_rate_at"
     | "exchange_rate_source"
@@ -80,25 +78,7 @@ export function purchaseEntryFromDTO(dto: PurchaseEntryDTO): PurchaseEntry {
             ? Number(dto.exchange_rate)
             : undefined
 
-    if (currency === "CUP" && rate != null && rate > 0) {
-        return createPurchaseEntry({
-            id: dto.$id,
-            supplierId: dto.supplier_id,
-            reference: dto.reference,
-            entryDateIso: dto.entry_date,
-            totalCost: Number(dto.total_cost) || 0,
-            currency,
-            userId: dto.user_id,
-            notes: dto.notes,
-            lineCount: Math.trunc(Number(dto.line_count) || 0),
-            exchangeRate: rate,
-            exchangeRateAt: dto.exchange_rate_at,
-            exchangeRateSource:
-                dto.exchange_rate_source === "manual" ? "manual" : "DIRECTORIO_CUBANO",
-        })
-    }
-
-    return {
+    return createPurchaseEntry({
         id: dto.$id,
         supplierId: dto.supplier_id,
         reference: dto.reference,
@@ -108,11 +88,12 @@ export function purchaseEntryFromDTO(dto: PurchaseEntryDTO): PurchaseEntry {
         userId: dto.user_id,
         notes: dto.notes,
         lineCount: Math.trunc(Number(dto.line_count) || 0),
+        status: dto.status === "CANCELLED" ? "CANCELLED" : "ACTIVE",
         exchangeRate: currency === "CUP" ? rate : undefined,
         exchangeRateAt: dto.exchange_rate_at,
         exchangeRateSource:
-            dto.exchange_rate_source === "manual" ? "manual" : undefined,
-    }
+            dto.exchange_rate_source === "manual" ? "manual" : currency === "CUP" ? "DIRECTORIO_CUBANO" : undefined,
+    })
 }
 
 export function purchaseEntryToDTO(e: PurchaseEntry): PurchaseEntryWriteDTO {
@@ -127,6 +108,9 @@ export function purchaseEntryToDTO(e: PurchaseEntry): PurchaseEntryWriteDTO {
     if (e.supplierId) dto.supplier_id = e.supplierId
     if (e.reference) dto.reference = e.reference
     if (e.notes) dto.notes = e.notes
+    // Keep legacy/new-entry writes compatible until the Appwrite `status`
+    // attribute is provisioned; cancellation writes status explicitly.
+    if (e.status === "CANCELLED") dto.status = "CANCELLED"
     if (e.currency === "CUP" && e.exchangeRate != null && e.exchangeRate > 0) {
         dto.exchange_rate = e.exchangeRate
         if (e.exchangeRateAt) dto.exchange_rate_at = e.exchangeRateAt
