@@ -19,6 +19,7 @@ import type {
     PurchaseEntryRepository,
     SupplierRepository,
 } from "../repository/purchase.repository"
+import type { TransactionRunner } from "../repository/transaction.repository"
 
 export type ResolveStaffUserId = () => Promise<string>
 
@@ -62,11 +63,16 @@ export type RegisterPurchaseEntryResult = PurchaseEntry & {
     priceProtections?: PriceProtectionApplied[]
 }
 
+const MAX_APPWRITE_TRANSACTION_OPERATIONS = 100
+
 /**
  * Factura de entrada multi-línea.
  * - USD: last_unit_cost = unitCost
  * - CUP: montos de línea en CUP; last_unit_cost = unitCostCUP / exchangeRate (USD)
  * - Protección precio: si unitCostUsd > price → price = unitCostUsd × 1.30
+ *
+ * Core 3: todas las escrituras de una entrada se ejecutan dentro de una
+ * transacción Appwrite cuando el runner de producción está inyectado.
  * @see .policies/exchange/EXCHANGE_POLICY.md
  */
 export class RegisterPurchaseEntryCaseUse {
@@ -75,7 +81,8 @@ export class RegisterPurchaseEntryCaseUse {
         private readonly supplierRepository: SupplierRepository,
         private readonly productRepository: ProductRepository,
         private readonly movementRepository: StockMovementRepository,
-        private readonly resolveUserId: ResolveStaffUserId = async () => "staff"
+        private readonly resolveUserId: ResolveStaffUserId = async () => "staff",
+        private readonly transactionRunner?: TransactionRunner
     ) {}
 
     async execute(input: RegisterPurchaseEntryInput): Promise<RegisterPurchaseEntryResult> {
@@ -132,9 +139,6 @@ export class RegisterPurchaseEntryCaseUse {
                 throw new Error(`concepto inválido: ${String(raw.concept)}`)
             }
 
-            const product = await this.productRepository.getById(productId)
-            if (!product) throw new Error(`Product with id ${productId} not found`)
-
             const unitCostUsd =
                 currency === "CUP" && exchangeRate
                     ? cupToUsd(unitCost, exchangeRate)
@@ -157,16 +161,19 @@ export class RegisterPurchaseEntryCaseUse {
 
         let supplierId = String(input.supplierId || "").trim() || undefined
         const supplierName = String(input.supplierName || "").trim()
-        if (!supplierId && supplierName) {
-            const contactRaw = String(input.supplierContact || "").trim()
-            const created = await this.supplierRepository.create(
-                createSupplier({
-                    id: crypto.randomUUID(),
-                    name: supplierName,
-                    contact: contactRaw,
-                })
+        const createsSupplier = !supplierId && Boolean(supplierName)
+        if (createsSupplier) {
+            supplierId = crypto.randomUUID()
+        }
+
+        const transactionOperations =
+            1 +
+            normalized.length * 3 +
+            (createsSupplier ? 1 : 0)
+        if (transactionOperations > MAX_APPWRITE_TRANSACTION_OPERATIONS) {
+            throw new Error(
+                `La factura tiene demasiadas líneas para una transacción Appwrite (${transactionOperations} operaciones; máximo ${MAX_APPWRITE_TRANSACTION_OPERATIONS}).`
             )
-            supplierId = created.id
         }
 
         const entryId = crypto.randomUUID()
@@ -185,72 +192,100 @@ export class RegisterPurchaseEntryCaseUse {
             exchangeRateSource,
         })
 
-        const savedEntry = await this.purchaseEntryRepository.createEntry(entry)
-
-        const savedLines: PurchaseEntryLine[] = []
-        const priceProtections: PriceProtectionApplied[] = []
-
-        for (const line of normalized) {
-            const lineEntity = createPurchaseEntryLine({
-                id: crypto.randomUUID(),
-                entryId: savedEntry.id,
-                productId: line.productId,
-                quantity: line.quantity,
-                unitCost: line.unitCost,
-                concept: line.concept,
-                lineCost: line.lineCost,
-            })
-            const savedLine = await this.purchaseEntryRepository.createLine(lineEntity)
-            savedLines.push(savedLine)
-
-            const product = await this.productRepository.getById(line.productId)
-            if (!product) throw new Error(`Product with id ${line.productId} not found`)
-
-            const reserved = Number(product.reserved) || 0
-            const existence = Number(product.existence) || 0
-            const nextExistence = existence + line.quantity
-            if (nextExistence < reserved) {
-                throw new Error(
-                    `existence (${nextExistence}) cannot be less than reserved (${reserved}) for ${line.productId}`
+        const runAtomic = async (
+            transactionId?: string
+        ): Promise<RegisterPurchaseEntryResult> => {
+            if (createsSupplier) {
+                const contactRaw = String(input.supplierContact || "").trim()
+                await this.supplierRepository.create(
+                    createSupplier({
+                        id: supplierId!,
+                        name: supplierName,
+                        contact: contactRaw,
+                    }),
+                    transactionId
                 )
             }
 
-            const patch: {
-                existence: number
-                lastUnitCost?: number
-                price?: number
-                priceProtectedAt?: string
-                priceProtectionEntryId?: string
-            } = {
-                existence: nextExistence,
-            }
+            const savedEntry = await this.purchaseEntryRepository.createEntry(
+                entry,
+                transactionId
+            )
 
-            if (shouldUpdateLastUnitCost(line)) {
-                // Siempre USD (convertido si la factura fue CUP)
-                patch.lastUnitCost = line.unitCostUsd
+            const savedLines: PurchaseEntryLine[] = []
+            const priceProtections: PriceProtectionApplied[] = []
 
-                // Protección de precio de venta (EXCHANGE_POLICY §5)
-                const decision = decidePriceProtection(
-                    line.unitCostUsd,
-                    Number(product.price) || 0
+            for (const line of normalized) {
+                const lineEntity = createPurchaseEntryLine({
+                    id: crypto.randomUUID(),
+                    entryId: savedEntry.id,
+                    productId: line.productId,
+                    quantity: line.quantity,
+                    unitCost: line.unitCost,
+                    concept: line.concept,
+                    lineCost: line.lineCost,
+                })
+                const savedLine = await this.purchaseEntryRepository.createLine(
+                    lineEntity,
+                    transactionId
                 )
-                if (decision.applied) {
-                    const protectedAt = new Date().toISOString()
-                    patch.price = decision.newPrice
-                    patch.priceProtectedAt = protectedAt
-                    patch.priceProtectionEntryId = savedEntry.id
-                    priceProtections.push({
-                        productId: line.productId,
-                        previousPrice: decision.previousPrice,
-                        newPrice: decision.newPrice,
-                        unitCostUsd: decision.unitCostUsd,
-                    })
+                savedLines.push(savedLine)
+
+                // Critical: when transactionId exists, Appwrite reads the current
+                // transactional state and detects external changes at commit.
+                const product = await this.productRepository.getById(
+                    line.productId,
+                    transactionId
+                )
+                if (!product) throw new Error(`Product with id ${line.productId} not found`)
+
+                const reserved = Number(product.reserved) || 0
+                const existence = Number(product.existence) || 0
+                const nextExistence = existence + line.quantity
+                if (nextExistence < reserved) {
+                    throw new Error(
+                        `existence (${nextExistence}) cannot be less than reserved (${reserved}) for ${line.productId}`
+                    )
                 }
-            }
 
-            await this.productRepository.update(line.productId, patch)
+                const patch: {
+                    existence: number
+                    lastUnitCost?: number
+                    price?: number
+                    priceProtectedAt?: string
+                    priceProtectionEntryId?: string
+                } = {
+                    existence: nextExistence,
+                }
 
-            try {
+                if (shouldUpdateLastUnitCost(line)) {
+                    // Siempre USD (convertido si la factura fue CUP)
+                    patch.lastUnitCost = line.unitCostUsd
+
+                    const decision = decidePriceProtection(
+                        line.unitCostUsd,
+                        Number(product.price) || 0
+                    )
+                    if (decision.applied) {
+                        const protectedAt = new Date().toISOString()
+                        patch.price = decision.newPrice
+                        patch.priceProtectedAt = protectedAt
+                        patch.priceProtectionEntryId = savedEntry.id
+                        priceProtections.push({
+                            productId: line.productId,
+                            previousPrice: decision.previousPrice,
+                            newPrice: decision.newPrice,
+                            unitCostUsd: decision.unitCostUsd,
+                        })
+                    }
+                }
+
+                await this.productRepository.update(
+                    line.productId,
+                    patch,
+                    transactionId
+                )
+
                 const movement = createStockMovement({
                     id: crypto.randomUUID(),
                     productId: line.productId,
@@ -261,19 +296,31 @@ export class RegisterPurchaseEntryCaseUse {
                     userId,
                     entryId: savedEntry.id,
                 })
-                await this.movementRepository.create(movement)
-            } catch (err) {
-                console.error(
-                    `[RegisterPurchaseEntry] stock ok productId=${line.productId}; movement failed`,
-                    err
-                )
+                // Movement creation is now part of the transaction. Any failure
+                // aborts the whole entry instead of leaving stock without audit.
+                await this.movementRepository.create(movement, transactionId)
+            }
+
+            return {
+                ...savedEntry,
+                lines: savedLines,
+                priceProtections: priceProtections.length > 0 ? priceProtections : undefined,
             }
         }
 
-        return {
-            ...savedEntry,
-            lines: savedLines,
-            priceProtections: priceProtections.length > 0 ? priceProtections : undefined,
+        const result = this.transactionRunner
+            ? await this.transactionRunner.run(runAtomic)
+            : await runAtomic()
+
+        // Refresh the offline-first mirror only after a successful commit.
+        for (const line of normalized) {
+            try {
+                await this.productRepository.getById(line.productId)
+            } catch {
+                // Cache refresh is best-effort; Appwrite remains the source of truth.
+            }
         }
+
+        return result
     }
 }
