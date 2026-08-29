@@ -56,8 +56,8 @@
 
 | Gap | Bloque | Notas |
 |-----|--------|-------|
-| Sin `status` (`active` \| `voided`) | B3 | Hace falta para anulación sin borrar documento |
-| Sin `voided_at` / `voided_by` | B3 | Auditoría anulación |
+| `status` (`ACTIVE` \| `CANCELLED`) | B3.1 | **Provisionado consola 2026-08-29.** Código escribe el campo. |
+| Sin `voided_at` / `voided_by` | B3 opcional | Auditoría extra; no bloquea B3.1 (`user_id` + movement reversal) |
 | Filtros listado (fecha, supplier) | B2 | ✅ UI + client filter + query supplier_id en repo |
 
 ---

@@ -8,7 +8,7 @@
 - [x] **BOTH** Core 2 confirmado sin regresiones
 - [x] **DASH** Política de compras Core 3 documentada
 - [x] **DASH** Schema auditado
-- [x] **DASH** Gaps de schema documentados, incluido `purchase_entry.status` pendiente
+- [x] **DASH** Gaps de schema documentados (`purchase_entry.status` provisionado 2026-08-29)
 - [x] **DASH** Tipado `SupplierDTO.contact` alineado
 - [x] **DASH** Índices, `entry_id` y permisos cliente verificados
 - [x] **AT** Política espejada
@@ -46,12 +46,12 @@
 - [x] **DASH** Validación completa antes de mutar stock
 - [x] **DASH** Idempotencia mediante `ACTIVE → CANCELLED` y conflicto transaccional
 - [x] **DASH** `reserved` y `last_unit_cost` no se modifican durante reversión
-- [ ] **DASH** Provisionar atributo Appwrite `purchase_entry.status` (`ACTIVE|CANCELLED`)
+- [x] **DASH** Atributo Appwrite `purchase_entry.status` (`ACTIVE|CANCELLED`) provisionado (consola 2026-08-29)
 - [ ] **DASH** UI de anulación solo owner/admin + confirmación
-- [ ] **DASH** Tests unitarios B3.1: `existence < reserved`, rollback e idempotencia
-- [ ] **AT** Smoke operador `VERIFIED` post-anulación
+- [x] **DASH** Tests unitarios B3.1: `existence < reserved`, rollback de dominio e idempotencia
+- [ ] **AT** Smoke operador `VERIFIED` post-anulación (**DEP** UI B3 dash)
 
-**Estado B3:** núcleo transaccional implementado; habilitación final bloqueada por schema `status`, UI y tests/smoke.
+**Estado B3:** núcleo + schema `status` listos. Falta **UI anular** y smoke operador post-anulación.
 
 ### B3.2 — Corrección parcial
 
@@ -60,20 +60,25 @@
 - [ ] **DASH** UI owner/admin
 - [ ] **DASH** Tests
 
+*(Opcional; no bloquea cierre de B3.1 / Core 3 mínimo con anulación completa.)*
+
 ## B4 — Permisos, roles y smoke panel
 
 - [x] **DASH** Permisos Appwrite auditados
 - [x] **DASH** Smoke UI Proveedores → Entrada → Compras
 - [x] **DASH** Smoke E2E proveedor → entrada → movements
 - [x] **DASH** Badges/nav verificados
-- [x] **AT** Cliente no escribe compras + operador confirma venta post-entrada
+- [x] **DASH** Gate panel: owner/admin + sales/operator; compras/proveedores solo owner/admin
+- [ ] **AT** Smoke cruzado — ver lista de verificación en el espejo AT (código OK; falta confirmación manual)
 
 ## B5 — Espejo AlejoTaller
 
-- [x] **AT** Checklist espejo
-- [x] **AT** COGS operador intacto
-- [x] **AT** Cliente/MCP sin supplier/purchase
+- [x] **AT** Checklist espejo (carpeta `.roadmap/Core3/`)
+- [x] **AT** COGS operador intacto en código (`last_unit_cost × qty` al VERIFIED)
+- [ ] **AT** (opcional) Test/nota nueva Core3 de lectura `last_unit_cost` en COGS — **se mantiene pendiente**
+- [x] **AT** Cliente/MCP sin supplier/purchase (código)
 - [x] **AT** Política B3 espejada; no se añade lógica de anulación al cliente/operador
+- [ ] **AT** Confirmar smokes B4/B5 en dispositivo/web (lista en espejo AT)
 
 ## B6 — Cierre y merge
 
@@ -85,9 +90,9 @@
 
 | Condición | ¿Merge? |
 |---|---|
-| B1+B2+B4 | Sí — release parcial |
-| B3 completo | Sí — release completo |
-| B3 núcleo sin schema/UI/tests | No |
+| B1+B2+B4 | Sí — release parcial (sin anulación en UI) |
+| B3.1 (schema + UI + CI) | Sí — release con anulación completa |
+| B3.2 | No bloquea |
 
 ## Registro
 
@@ -95,6 +100,5 @@
 |---|---|
 | 2026-08-27 | Apertura Core3 + B0/B1/B2 inicial |
 | 2026-08-28 | Schema/índices/permisos verificados; B2 completo |
-| 2026-08-29 | B0 + B4 smoke E2E + B5 verificados |
-| 2026-08-29 | B3.0: contrato real de stock auditado |
-| 2026-08-29 | B3: Appwrite Client SDK transaction runner implementado; registro de entradas y anulación B3.1 preparados sobre la misma infraestructura. Pendiente schema `purchase_entry.status`, UI, tests y smoke. |
+| 2026-08-29 | B0 + B4 smoke E2E panel; B3.0 stock audit; B3.1 transaccional |
+| 2026-08-29 | Consola: `purchase_entry.status` ACTIVE\|CANCELLED provisionado |

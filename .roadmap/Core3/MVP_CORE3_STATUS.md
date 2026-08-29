@@ -1,20 +1,21 @@
 # MVP Core 3 — Estado vivo (dash)
 
-**Última actualización:** 2026-08-28  
+**Última actualización:** 2026-08-29  
 **Rama:** `Core3`  
 **Core 3 cerrado:** **NO**
 
 | Bloque | Estado |
 |--------|--------|
-| B0 Baseline / política / audit schema / tipado / consola | **Cerrado (dash)** — resta espejo AT |
+| B0 Baseline / política / audit schema / consola | **Cerrado** |
 | B1 Proveedores UI + selector en factura | **Hecho + smoke UI OK** |
-| B2 Historial compras (listado → detalle + filtro producto) | **Hecho + smoke UI OK + código verificado** |
-| B3 Anulación/corrección | pendiente (opcional 1er release) |
-| B4 Permisos + smoke E2E | **En curso** — permisos consola ya en B0; faltan E2E datos + badges/nav |
-| B5 Espejo AT | pendiente |
+| B2 Historial compras (listado → detalle + filtro producto) | **Hecho + smoke UI OK** |
+| B3.1 Anulación completa | **Núcleo + schema `status` OK.** Falta UI anular + smoke operador |
+| B3.2 Corrección parcial | pendiente (no bloquea B3.1) |
+| B4 Permisos + smoke panel | **Hecho (dash).** AT smoke cruzado: verificar lista en espejo AT |
+| B5 Espejo AT | código frontera OK; STATUS AT alineado; smokes AT por confirmar |
 | B6 Merge master | no |
 
-### Smoke UI ya verificado (2026-08-27)
+### Smoke UI (2026-08-27)
 
 | Flujo | Resultado |
 |-------|-----------|
@@ -22,20 +23,16 @@
 | Alta proveedor desde **factura de entrada** | OK |
 | Subvista **Compras** listado → detalle | OK |
 
-### Código B2 verificado (2026-08-28)
+### B3.1
 
-- `PurchaseHistory.svelte` — listado, filtros (fecha/proveedor/usuario/texto/moneda/producto), detalle con movements por `entry_id`
-- `ListPurchaseEntriesCaseUse` / `GetPurchaseEntryDetailCaseUse`
-- `filterPurchaseEntries`
-- `StockMovementNetRepository.listByEntry` + `PurchaseEntryNetRepository.listLinesByProduct`
+- `CancelPurchaseEntryCaseUse` + transacciones Appwrite
+- Tests unitarios (reserved, idempotencia, movimiento compensatorio)
+- Consola: `purchase_entry.status` = `ACTIVE` \| `CANCELLED` (**2026-08-29**)
+- Pendiente: botón anular en detalle (owner/admin)
 
-### B4 — qué falta comprobar
+### Siguiente para cerrar Core 3
 
-Ver checklist ejecutable en [`SMOKE_B4.md`](./SMOKE_B4.md):
-
-1. ~~Consola Appwrite (permisos cliente + `entry_id`)~~ → hecho en B0
-2. E2E datos: factura multi-línea → stock → movements en detalle
-3. Roles nav (sales/viewer sin Compras/Proveedores)
-4. Frontera AT (opcional en paralelo)
-
-Ver checklist unificado.
+1. UI anulación en Compras  
+2. CI verde  
+3. Smokes AT (lista en espejo)  
+4. PR `Core3` → `master`  

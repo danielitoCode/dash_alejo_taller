@@ -26,8 +26,10 @@ El README histórico de Core 3 listaba proveedores, `purchase_entry`, costos y m
 ## Orden lógico
 
 ```text
-B0 ✓ → B1 ✓ smoke → B2 ✓ smoke → B3? → B4 (permisos consola) → B5 AT → B6 Merge
+B0 ✓ → B1 ✓ → B2 ✓ → B4 panel ✓ → B3.1 schema ✓ → UI anular → smoke AT → B6
 ```
+
+B3.2 (corrección parcial) no bloquea. Test opcional COGS AT no bloquea.
 
 ## Criterio de merge a `master`
 
