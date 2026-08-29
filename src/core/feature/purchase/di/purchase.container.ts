@@ -10,6 +10,7 @@ import type {
     SupplierRepository,
 } from "../domain/repository/purchase.repository"
 import { RegisterPurchaseEntryCaseUse } from "../domain/caseuse/RegisterPurchaseEntryCaseUse"
+import { CancelPurchaseEntryCaseUse } from "../domain/caseuse/CancelPurchaseEntryCaseUse"
 import { ListSuppliersCaseUse } from "../domain/caseuse/ListSuppliersCaseUse"
 import { CreateSupplierCaseUse } from "../domain/caseuse/CreateSupplierCaseUse"
 import { UpdateSupplierCaseUse } from "../domain/caseuse/UpdateSupplierCaseUse"
@@ -42,6 +43,14 @@ const registerPurchaseEntryCaseUse = new RegisterPurchaseEntryCaseUse(
     purchaseTransactionRunner
 )
 
+const cancelPurchaseEntryCaseUse = new CancelPurchaseEntryCaseUse(
+    purchaseEntryNet,
+    productContainer.repositories.offlineFirst,
+    inventoryContainer.repositories.stockMovement,
+    purchaseTransactionRunner,
+    resolveStaffUserId
+)
+
 export const purchaseContainer = {
     repositories: {
         supplier: supplierNet as SupplierRepository,
@@ -49,6 +58,7 @@ export const purchaseContainer = {
     },
     useCases: {
         registerPurchaseEntry: registerPurchaseEntryCaseUse,
+        cancelPurchaseEntry: cancelPurchaseEntryCaseUse,
         listSuppliers: new ListSuppliersCaseUse(supplierNet),
         createSupplier: new CreateSupplierCaseUse(supplierNet),
         updateSupplier: new UpdateSupplierCaseUse(supplierNet),
