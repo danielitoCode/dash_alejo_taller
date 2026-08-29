@@ -97,12 +97,19 @@
         return getFirstAllowedRoute(role);
     }
 
+    /** Listado padre de una ruta de detalle (para resaltar el menú). */
+    function parentListPath(path: string): string {
+        if (path === salesDetail.path) return sales.path;
+        if (path === supportDetail.path) return support.path;
+        return path;
+    }
+
     const internalStackStore = internalNavController._getStackStore();
     $: internalStack = $internalStackStore;
     $: currentPath = internalStack.at(-1)?.route ?? dashboard.path;
+    $: listPath = parentListPath(currentPath);
     $: visibleItems = items.filter((item) => canAccessRoute(currentRole, item.path));
 
-    // Badges: ventas + reservas + mensajes
     $: pendingSalesCount = ($saleStore.items ?? []).filter(
         (s) => s.verified === BuyState.UNVERIFIED
     ).length;
@@ -120,14 +127,14 @@
         return 0;
     }
 
-    $: if (currentRole && currentPath && !canAccessRoute(currentRole, currentPath)) {
+    $: if (currentRole && currentPath && !canAccessRoute(currentRole, parentListPath(currentPath))) {
         const allowedPath = firstAllowedPath(currentRole);
         if (allowedPath !== currentPath) {
             logger.info(
                 `[NestedNav] 3.1 ruta bloqueada path=${currentPath} role=${currentRole} → ${allowedPath}`
             );
             toastStore.error("Tu rol no tiene acceso a esta sección.");
-            internalNavController.navigate(allowedPath);
+            internalNavController.goToSection(allowedPath);
         }
     }
 
@@ -140,11 +147,11 @@
             sidebarOpen = false;
             return;
         }
-        if (currentPath !== path) internalNavController.navigate(path);
+        // Sección de listado como raíz bajo dashboard (no apilar / no dejar detalle huérfano)
+        internalNavController.goToSection(path);
         sidebarOpen = false;
     }
 
-    // RT + sync de stores: nested-nav-runtime (no duplicar onMount de master)
     const runtime = createNestedNavRuntime({
         getRole: () => currentRole,
         setRole: (r) => {
@@ -152,7 +159,7 @@
         },
         getPath: () => currentPath,
         firstAllowedPath,
-        internalNavigate: (p) => internalNavController.navigate(p),
+        internalNavigate: (p) => internalNavController.goToSection(p),
         outerNavigate: navController,
     });
 
@@ -205,10 +212,9 @@
             {#each visibleItems as item}
                 {@const badge = navBadge(item.path)}
                 <button
-                        class:selected={currentPath === item.path ||
-                        (item.path === support.path && currentPath === supportDetail.path)}
+                        class:selected={listPath === item.path}
                         on:click={() => go(item.path)}
-                        aria-current={currentPath === item.path ? "page" : undefined}
+                        aria-current={listPath === item.path ? "page" : undefined}
                         title={badge > 0 ? `${item.label} (${badge} pendientes)` : item.label}
                 >
                     <span class="nav-ico-wrap">
