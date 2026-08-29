@@ -11,7 +11,17 @@ export type CancelPurchaseEntryResult = {
     reversedLines: number
 }
 
-/** B3.1 — anulación completa y atómica de una entrada. */
+/**
+ * B3.1 — anulación completa y atómica de una entrada.
+ *
+ * La operación se ejecuta íntegramente mediante Appwrite Client SDK:
+ * - lee dentro de la transacción;
+ * - valida todas las líneas antes de mutar stock;
+ * - revierte existence sin tocar reserved/lastUnitCost;
+ * - crea movimientos compensatorios auditables;
+ * - marca la entrada CANCELLED;
+ * - commit/rollback lo decide AppwriteTransactionRunner.
+ */
 export class CancelPurchaseEntryCaseUse {
     constructor(
         private readonly purchaseEntryRepository: PurchaseEntryRepository,
@@ -31,6 +41,7 @@ export class CancelPurchaseEntryCaseUse {
         return this.transactionRunner.run(async (transactionId) => {
             const entry = await this.purchaseEntryRepository.getEntryById(entryId, transactionId)
             if (!entry) throw new Error(`Purchase entry ${entryId} not found`)
+            // Legacy entries without status are ACTIVE by contract.
             if ((entry.status || "ACTIVE") === "CANCELLED") {
                 throw new Error(`Purchase entry ${entryId} is already cancelled`)
             }
@@ -38,7 +49,19 @@ export class CancelPurchaseEntryCaseUse {
             const lines = await this.purchaseEntryRepository.listLinesByEntry(entryId, transactionId)
             if (lines.length === 0) throw new Error(`Purchase entry ${entryId} has no lines`)
 
-            const operationCount = 1 + lines.length * 2
+            // A SKU may occur in more than one line. Aggregate before touching
+            // stock so existence is decremented exactly once per product.
+            const byProduct = new Map<string, number>()
+            for (const line of lines) {
+                const productId = String(line.productId || "").trim()
+                const quantity = Number(line.quantity)
+                if (!productId || !Number.isInteger(quantity) || quantity <= 0) {
+                    throw new Error(`Invalid line in purchase entry ${entryId}`)
+                }
+                byProduct.set(productId, (byProduct.get(productId) ?? 0) + quantity)
+            }
+
+            const operationCount = 1 + byProduct.size * 2
             if (operationCount > MAX_APPWRITE_TRANSACTION_OPERATIONS) {
                 throw new Error(
                     `La anulación requiere ${operationCount} operaciones Appwrite; máximo ${MAX_APPWRITE_TRANSACTION_OPERATIONS}.`
@@ -52,31 +75,27 @@ export class CancelPurchaseEntryCaseUse {
                 newExistence: number
             }> = []
 
-            // Validate every line before staging any stock mutation.
-            for (const line of lines) {
-                const product = await this.productRepository.getById(line.productId, transactionId)
-                if (!product) throw new Error(`Product with id ${line.productId} not found`)
+            // Validate every affected SKU before staging any stock mutation.
+            for (const [productId, quantity] of byProduct) {
+                const product = await this.productRepository.getById(productId, transactionId)
+                if (!product) throw new Error(`Product with id ${productId} not found`)
 
                 const existence = Number(product.existence) || 0
                 const reserved = Number(product.reserved) || 0
-                const newExistence = existence - line.quantity
+                const newExistence = existence - quantity
 
                 if (newExistence < 0) {
                     throw new Error(
-                        `No se puede anular ${entryId}: existence (${existence}) < quantity (${line.quantity}) para ${line.productId}`
+                        `No se puede anular ${entryId}: existence (${existence}) < quantity (${quantity}) para ${productId}`
                     )
                 }
                 if (newExistence < reserved) {
                     throw new Error(
-                        `No se puede anular ${entryId}: existence (${newExistence}) < reserved (${reserved}) para ${line.productId}`
+                        `No se puede anular ${entryId}: existence (${newExistence}) < reserved (${reserved}) para ${productId}`
                     )
                 }
 
-                reversals.push({
-                    productId: line.productId,
-                    quantity: line.quantity,
-                    newExistence,
-                })
+                reversals.push({ productId, quantity, newExistence })
             }
 
             for (const reversal of reversals) {
@@ -87,6 +106,8 @@ export class CancelPurchaseEntryCaseUse {
                     transactionId
                 )
 
+                // Reuse the existing `ajuste` movement type. The reason provides
+                // the explicit reversal semantic without changing the enum/schema.
                 await this.movementRepository.create(
                     createStockMovement({
                         id: crypto.randomUUID(),
@@ -110,7 +131,7 @@ export class CancelPurchaseEntryCaseUse {
 
             return {
                 entryId,
-                reversedLines: reversals.length,
+                reversedLines: lines.length,
             }
         })
     }
