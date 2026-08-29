@@ -48,23 +48,28 @@
     });
 
     function gotoSupportList() {
-        navController.navigate(support.path);
+        navController.goToSection(support.path);
         openPanel = null;
     }
 
     function gotoSalesList() {
-        navController.navigate(sales.path);
+        navController.goToSection(sales.path);
+        openPanel = null;
+    }
+
+    /** Abre detalle con el listado padre debajo para que Volver funcione. */
+    function openDetailWithList(listPath: string, detailPath: string, id: string) {
+        navController.goToSection(listPath);
+        navController.navigate(detailPath, { id });
         openPanel = null;
     }
 
     function gotoSupportItem(item: SupportMessage) {
-        navController.navigate(supportDetail.path, { id: item.id });
-        openPanel = null;
+        openDetailWithList(support.path, supportDetail.path, item.id);
     }
 
     function gotoSaleItem(item: Sale) {
-        navController.navigate(salesDetail.path, { id: item.id });
-        openPanel = null;
+        openDetailWithList(sales.path, salesDetail.path, item.id);
     }
 
     function toggle(panel: "support" | "sales") {
