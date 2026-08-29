@@ -111,17 +111,25 @@ async function firstCategoryId(): Promise<string> {
     } catch {
         // category collection may be empty or named differently
     }
-    return "core3-b31-uncategorized"
+    return "b31_uncat"
+}
+
+/** Appwrite documentId: max 36 chars, [a-zA-Z0-9._-], no leading special char. */
+function fixtureId(prefix: string): string {
+    const id = `${prefix}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+    if (id.length > 36 || !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,35}$/.test(id)) {
+        throw new Error(`Invalid Appwrite documentId "${id}" (len=${id.length})`)
+    }
+    return id
 }
 
 describe.skipIf(!enabled)("B3.1 Appwrite transaction integration", () => {
-    const runId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-    const productId = `core3-b31-product-${runId}`
-    const entryId = `core3-b31-entry-${runId}`
-    const lineId = `core3-b31-line-${runId}`
-    const movementId = `core3-b31-movement-${runId}`
-    const rollbackProductId = `core3-b31-rollback-product-${runId}`
-    const rollbackEntryId = `core3-b31-rollback-entry-${runId}`
+    const productId = fixtureId("b31p_")
+    const entryId = fixtureId("b31e_")
+    const lineId = fixtureId("b31l_")
+    const movementId = fixtureId("b31m_")
+    const rollbackProductId = fixtureId("b31rp_")
+    const rollbackEntryId = fixtureId("b31re_")
 
     afterAll(async () => {
         await Promise.allSettled([
