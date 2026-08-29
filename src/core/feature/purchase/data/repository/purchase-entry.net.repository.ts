@@ -97,7 +97,21 @@ export class PurchaseEntryNetRepository implements PurchaseEntryRepository {
             APPWRITE_COLLECTIONS.purchaseEntry,
             queries
         )
-        return res.documents.map(purchaseEntryFromDTO)
+
+        // Un documento legacy inválido no debe tumbar todo el historial
+        const out: PurchaseEntry[] = []
+        for (const doc of res.documents) {
+            try {
+                out.push(purchaseEntryFromDTO(doc))
+            } catch (err) {
+                console.warn(
+                    "[purchase] skip invalid purchase_entry",
+                    doc.$id,
+                    err instanceof Error ? err.message : err
+                )
+            }
+        }
+        return out
     }
 
     async listLinesByEntry(entryId: string, transactionId?: TransactionId): Promise<PurchaseEntryLine[]> {
