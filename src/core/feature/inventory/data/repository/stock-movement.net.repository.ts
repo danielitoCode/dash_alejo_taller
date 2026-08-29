@@ -10,6 +10,8 @@ import {
     stockMovementToDTO,
 } from "../mapper/Mappers"
 
+type TransactionId = string | undefined
+
 /**
  * Net repo Appwrite — stock_movements (append-only).
  */
@@ -26,15 +28,16 @@ export class StockMovementNetRepository implements StockMovementRepository {
         return APPWRITE_COLLECTIONS.stockMovements
     }
 
-    async create(movement: StockMovement): Promise<StockMovement> {
+    async create(movement: StockMovement, transactionId?: TransactionId): Promise<StockMovement> {
         const write = stockMovementToDTO(movement)
         const { $id, ...data } = write
-        const doc = await this.databases.createDocument<StockMovementDTO>(
-            this.databaseId,
-            this.collectionId,
-            $id && $id.length > 0 ? $id : ID.unique(),
-            data as Omit<StockMovementDTO, keyof import("appwrite").Models.Document>
-        )
+        const doc = await this.databases.createDocument<StockMovementDTO>({
+            databaseId: this.databaseId,
+            collectionId: this.collectionId,
+            documentId: $id && $id.length > 0 ? $id : ID.unique(),
+            data: data as Omit<StockMovementDTO, keyof import("appwrite").Models.Document>,
+            transactionId,
+        })
         return stockMovementFromDTO(doc)
     }
 
