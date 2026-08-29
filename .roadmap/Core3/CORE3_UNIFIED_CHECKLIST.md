@@ -47,11 +47,11 @@
 - [x] **DASH** Idempotencia mediante `ACTIVE → CANCELLED` y conflicto transaccional
 - [x] **DASH** `reserved` y `last_unit_cost` no se modifican durante reversión
 - [x] **DASH** Atributo Appwrite `purchase_entry.status` (`ACTIVE|CANCELLED`) provisionado (consola 2026-08-29)
-- [ ] **DASH** UI de anulación solo owner/admin + confirmación
+- [x] **DASH** UI de anulación solo owner/admin + confirmación
 - [x] **DASH** Tests unitarios B3.1: `existence < reserved`, rollback de dominio e idempotencia
-- [ ] **AT** Smoke operador `VERIFIED` post-anulación (**DEP** UI B3 dash)
+- [ ] **AT** Smoke operador `VERIFIED` post-anulación (**DEP** UI B3 dash — UI ya lista; falta correr el smoke)
 
-**Estado B3:** núcleo + schema `status` listos. Falta **UI anular** y smoke operador post-anulación.
+**Estado B3:** núcleo + schema `status` + UI de anulación listos (código). Falta smoke operador post-anulación y confirmar CI verde en GitHub.
 
 ### B3.2 — Corrección parcial
 
@@ -82,7 +82,7 @@
 
 ## B6 — Cierre y merge
 
-- [ ] **DASH** CI verde en `Core3`
+- [ ] **DASH** CI verde en `Core3` (verificado localmente: `svelte-check` 0 errores, `tsc -p tsconfig.node.json` 0 errores, `vitest` unit+integration+ui 173/175 — 2 fallos preexistentes en `SupportInbox.ui.test.ts` no relacionados; falta confirmar el run real en GitHub Actions)
 - [ ] **AT** CI módulos tocados verde
 - [ ] **BOTH** PR `Core3` → `master`
 
@@ -102,3 +102,4 @@
 | 2026-08-28 | Schema/índices/permisos verificados; B2 completo |
 | 2026-08-29 | B0 + B4 smoke E2E panel; B3.0 stock audit; B3.1 transaccional |
 | 2026-08-29 | Consola: `purchase_entry.status` ACTIVE\|CANCELLED provisionado |
+| 2026-08-29 | UI anulación (owner/admin + confirmación) implementada; fix CI `process.env` (tsconfig `types`) |
