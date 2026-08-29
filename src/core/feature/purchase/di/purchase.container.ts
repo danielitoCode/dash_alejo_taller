@@ -2,6 +2,7 @@ import { infrastructureContainer } from "../../../infrastructure/di/infrastructu
 import { authContainer } from "../../auth/di/auth.container"
 import { inventoryContainer } from "../../inventory/di/inventory.container"
 import { productContainer } from "../../product/di/product.container"
+import { AppwriteTransactionRunner } from "../../../infrastructure/data/appwrite/AppwriteTransactionRunner"
 import { SupplierNetRepository } from "../data/repository/supplier.net.repository"
 import { PurchaseEntryNetRepository } from "../data/repository/purchase-entry.net.repository"
 import type {
@@ -18,6 +19,7 @@ import { GetPurchaseEntryDetailCaseUse } from "../domain/caseuse/GetPurchaseEntr
 const databases = infrastructureContainer.appwrite.databases
 const supplierNet = new SupplierNetRepository(databases)
 const purchaseEntryNet = new PurchaseEntryNetRepository(databases)
+const purchaseTransactionRunner = new AppwriteTransactionRunner(databases)
 
 async function resolveStaffUserId(): Promise<string> {
     try {
@@ -36,7 +38,8 @@ const registerPurchaseEntryCaseUse = new RegisterPurchaseEntryCaseUse(
     supplierNet,
     productContainer.repositories.offlineFirst,
     inventoryContainer.repositories.stockMovement,
-    resolveStaffUserId
+    resolveStaffUserId,
+    purchaseTransactionRunner
 )
 
 export const purchaseContainer = {
