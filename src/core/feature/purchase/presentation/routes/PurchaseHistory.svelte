@@ -78,8 +78,11 @@
         purchaseHistoryStore.clearDetail();
     }
 
-    /** Core 3 B3.1 — anulación de entrada: solo owner/admin, con confirmación.
-     *  No optimista: badge Anulada solo tras cancelEntry exitoso en el store. */
+    /**
+     * Core 3 B3.1 — anulación de entrada: solo owner/admin, con confirmación.
+     * Toast loading global (sobrevive navegación) → success/error al terminar.
+     * Badge Anulada solo tras cancelEntry exitoso en el store.
+     */
     async function handleCancelEntry(): Promise<void> {
         if (!detail || $purchaseHistoryStore.cancelling) return;
         if (!canCancelEntry) {
@@ -103,19 +106,21 @@
         if (!ok) return;
 
         try {
-            const result = await purchaseHistoryStore.cancelEntry(entryId);
-            toastStore.success(
-                `Entrada anulada. ${result.reversedLines} línea(s) revertida(s).`,
-                4000
+            await toastStore.run(
+                `Anulando entrada "${ref}"…`,
+                () => purchaseHistoryStore.cancelEntry(entryId),
+                {
+                    title: "Anular entrada",
+                    success: (result) =>
+                        `Entrada anulada. ${result.reversedLines} línea(s) revertida(s).`,
+                    error: (e) =>
+                        e instanceof Error ? e.message : "No se pudo anular la entrada.",
+                }
             );
         } catch (e: unknown) {
             const err = e as { message?: string; stack?: string };
             logger.error(err?.message ?? e, err?.stack);
-            toastStore.error(
-                e instanceof Error ? e.message : "No se pudo anular la entrada.",
-                6000
-            );
-            // Defensa en profundidad: re-sincronizar detalle para no mostrar badge Anulada falso.
+            // Defensa: re-sincronizar detalle si seguimos en esta entrada.
             if (selectedId === entryId) {
                 try {
                     await purchaseHistoryStore.loadDetail(entryId);
