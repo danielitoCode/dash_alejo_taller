@@ -63,13 +63,16 @@ function createPurchaseHistoryStore() {
     /**
      * Core 3 B3.1 — anula una entrada (compensación de stock, sin tocar
      * reserved/lastUnitCost) y refresca detalle + listado en memoria.
-     * La UI es responsable de confirmar y de gatear por rol owner/admin.
+     *
+     * No es optimista: status CANCELLED solo se escribe en items/detail
+     * después de execute + getDetail exitosos. Si falla, no muta status.
      */
     async function cancelEntry(entryId: string): Promise<CancelPurchaseEntryResult> {
         update((s) => ({ ...s, cancelling: true, error: null }))
         try {
             const result = await purchaseContainer.useCases.cancelPurchaseEntry.execute(entryId)
 
+            // Solo tras commit remoto: refrescar detalle y marcar listado.
             const refreshedDetail = await purchaseContainer.useCases.getPurchaseEntryDetail.execute(
                 entryId
             )
@@ -79,12 +82,15 @@ function createPurchaseHistoryStore() {
                 cancelling: false,
                 detail: refreshedDetail,
                 items: s.items.map((item) =>
-                    item.id === entryId ? { ...item, status: "CANCELLED" } : item
+                    item.id === entryId
+                        ? { ...item, status: refreshedDetail.entry.status || "CANCELLED" }
+                        : item
                 ),
             }))
 
             return result
         } catch (error) {
+            // Fallo: no tocar status de items ni detail (evita badge "Anulada" falso).
             update((s) => ({ ...s, cancelling: false, error: normalizeError(error) }))
             throw error
         }

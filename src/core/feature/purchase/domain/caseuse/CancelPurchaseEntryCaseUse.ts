@@ -80,15 +80,16 @@ export class CancelPurchaseEntryCaseUse {
                 const existence = Number(product.existence) || 0
                 const reserved = Number(product.reserved) || 0
                 const newExistence = existence - quantity
+                const label = product.name?.trim() || productId
 
                 if (newExistence < 0) {
                     throw new Error(
-                        `No se puede anular ${entryId}: existence (${existence}) < quantity (${quantity}) para ${productId}`
+                        `No se puede anular ${entryId}: existence actual (${existence}) es menor que la cantidad a revertir (${quantity}) para "${label}" (${productId}).`
                     )
                 }
                 if (newExistence < reserved) {
                     throw new Error(
-                        `No se puede anular ${entryId}: existence (${newExistence}) < reserved (${reserved}) para ${productId}`
+                        `No se puede anular ${entryId}: al revertir, "${label}" quedaría con existence ${newExistence} pero tiene reserved ${reserved} por ventas pendientes. Rechaza o confirma esas ventas primero (${productId}).`
                     )
                 }
 
