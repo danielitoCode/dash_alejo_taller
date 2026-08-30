@@ -78,7 +78,8 @@
         purchaseHistoryStore.clearDetail();
     }
 
-    /** Core 3 B3.1 — anulación de entrada: solo owner/admin, con confirmación. */
+    /** Core 3 B3.1 — anulación de entrada: solo owner/admin, con confirmación.
+     *  No optimista: badge Anulada solo tras cancelEntry exitoso en el store. */
     async function handleCancelEntry(): Promise<void> {
         if (!detail || $purchaseHistoryStore.cancelling) return;
         if (!canCancelEntry) {
@@ -90,7 +91,8 @@
             return;
         }
 
-        const ref = detail.entry.reference?.trim() || detail.entry.id;
+        const entryId = detail.entry.id;
+        const ref = detail.entry.reference?.trim() || entryId;
         const ok = window.confirm(
             `¿Anular la entrada "${ref}"?\n\n` +
                 "Esto revertirá el stock (existence) de cada línea mediante un movimiento " +
@@ -101,7 +103,7 @@
         if (!ok) return;
 
         try {
-            const result = await purchaseHistoryStore.cancelEntry(detail.entry.id);
+            const result = await purchaseHistoryStore.cancelEntry(entryId);
             toastStore.success(
                 `Entrada anulada. ${result.reversedLines} línea(s) revertida(s).`,
                 4000
@@ -110,8 +112,17 @@
             const err = e as { message?: string; stack?: string };
             logger.error(err?.message ?? e, err?.stack);
             toastStore.error(
-                e instanceof Error ? e.message : "No se pudo anular la entrada."
+                e instanceof Error ? e.message : "No se pudo anular la entrada.",
+                6000
             );
+            // Defensa en profundidad: re-sincronizar detalle para no mostrar badge Anulada falso.
+            if (selectedId === entryId) {
+                try {
+                    await purchaseHistoryStore.loadDetail(entryId);
+                } catch {
+                    /* ignore */
+                }
+            }
         }
     }
 
@@ -1004,8 +1015,8 @@
         padding: 2px 8px;
         border-radius: 6px;
         background: color-mix(in srgb, var(--md-sys-color-primary) 14%, transparent);
-        color: var(--md-sys-color-primary);
         border: 1px solid color-mix(in srgb, var(--md-sys-color-primary) 30%, transparent);
+        color: var(--md-sys-color-primary);
     }
     .currency-badge.cup {
         background: color-mix(in srgb, #f59e0b 18%, transparent);
