@@ -125,7 +125,25 @@
         box-shadow: 0 4px 14px color-mix(in srgb, black 18%, transparent);
     }
 
+    .activity-chip {
+        pointer-events: none;
+        justify-self: end;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--md-sys-color-on-surface);
+        background: color-mix(in srgb, var(--md-sys-color-surface) 70%, transparent);
+        border: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 80%, transparent);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+    }
+
     .toast {
+        position: relative;
         pointer-events: auto;
         position: relative;
         display: grid;
