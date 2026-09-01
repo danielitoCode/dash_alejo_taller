@@ -2,17 +2,17 @@
 
 **Última actualización:** 2026-09-01  
 **Rama:** `Core4`  
-**Core 4 (release mínimo):** **NO** — en definición / implementación  
+**Core 4 (release mínimo):** **NO** — en implementación  
 **Base:** `master` @ apertura de rama
 
 | Bloque | Estado |
 |--------|--------|
-| B0 Baseline / política / audit schema | **Docs creados** — pendiente aceptación + decisión Opción A/B + provisión consola |
-| B1 Contrato dominio snapshot + líneas | pendiente |
-| B2 Confirm panel con snapshot | pendiente |
-| B3 Confirm operador (AT) | pendiente (espejo) |
+| B0 Baseline / política / audit schema | **Cerrado** — Opción A (`lines_json`) |
+| B1 Contrato dominio snapshot + líneas | **Hecho** — entidad, builder, mapper, tests; tipos AT |
+| B2 Confirm panel con snapshot | pendiente (+ provisionar `lines_json` en Appwrite) |
+| B3 Confirm operador (AT) | pendiente (rellenar `lines` en case use) |
 | B4 Idempotencia + estabilidad histórica | pendiente |
-| B5 Tests + paridad | pendiente |
+| B5 Tests + paridad | parcial (build + mapper OK) |
 | B6 Permisos + smoke + PR | pendiente |
 
 ### Heredado de Core 2 (no rehacer)
@@ -23,24 +23,20 @@
 - `UNVERIFIED` / `DELETED` sin finance
 - `FinanceSummaryPanel` de lectura
 
-### Gap prioritario Core 4
+### Hecho en B1
 
-1. Snapshot **por línea** (`unit_cost_snapshot`) persistido  
-2. Margen por línea  
-3. Política + tests de no-reescribir histórico si cambia `last_unit_cost`  
-4. Paridad explícita panel ↔ operador
+- `SaleFinanceLine` + `lines` en `SaleFinanceEvent`
+- `buildFinanceEventFromSale` rellena `unitCostSnapshot` por producto
+- DTO/mapper `lines_json` (legacy sin campo → `lines: []`)
+- AT: `SaleFinanceLineWrite`, `SaleFinanceWrite.lines`, repo serializa/parsea `lines_json`
 
-### Smoke (cuando haya implementación)
+### Siguiente (B2)
 
-| Flujo | Resultado |
-|-------|-----------|
-| Confirm panel → event + líneas | — |
-| Reintento confirm → mismo event | — |
-| Cambio `last_unit_cost` post-VERIFIED → event intacto | — |
-| Reject / UNVERIFIED → sin event | — |
-| Confirm operador → mismo contrato | — |
+1. Provisionar en Appwrite consola atributo **`lines_json`** (string) en `sale_finance_event`  
+2. Verificar que confirm panel ya pasa por `buildFinanceEventFromSale` (debería escribir líneas automáticamente)  
+3. Smoke create/read
 
 ### Notas
 
 - Trabajar **solo** en `Core4` hasta estable; merge a `master` con CI verde.
-- Ideal: Core 3 ya en `master` antes del merge de Core 4 (costos de compra como base de `last_unit_cost`).
+- Ideal: Core 3 ya en `master` antes del merge de Core 4.
