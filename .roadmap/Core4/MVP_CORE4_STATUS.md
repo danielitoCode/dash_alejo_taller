@@ -2,41 +2,33 @@
 
 **Última actualización:** 2026-09-01  
 **Rama:** `Core4`  
-**Core 4 (release mínimo):** **NO** — en implementación  
+**Core 4 (release mínimo):** **NO** — en implementación (B0–B3 código/smoke panel OK)  
 **Base:** `master` @ apertura de rama
 
 | Bloque | Estado |
 |--------|--------|
 | B0 Baseline / política / audit schema | **Cerrado** — Opción A (`lines_json`) |
-| B1 Contrato dominio snapshot + líneas | **Hecho** — entidad, builder, mapper, tests; tipos AT |
-| B2 Confirm panel con snapshot | pendiente (+ provisionar `lines_json` en Appwrite) |
-| B3 Confirm operador (AT) | pendiente (rellenar `lines` en case use) |
-| B4 Idempotencia + estabilidad histórica | pendiente |
-| B5 Tests + paridad | parcial (build + mapper OK) |
-| B6 Permisos + smoke + PR | pendiente |
+| B1 Contrato dominio snapshot + líneas | **Hecho** |
+| B2 Confirm panel con snapshot | **Cerrado** — smoke 2026-09-01 |
+| B3 Confirm operador (AT) | **Código hecho** — smoke dispositivo pendiente |
+| B4 Idempotencia + estabilidad histórica | **Siguiente** |
+| B5 Tests + paridad | parcial (build/mapper/operador unit OK) |
+| B6 Permisos + smoke residual + PR | pendiente |
 
-### Heredado de Core 2 (no rehacer)
+### Smoke panel (B2) — verificado
 
-- `sale_finance_event` al VERIFIED (panel + operador)
-- COGS agregado = Σ `last_unit_cost × qty`
-- Idempotencia por `sale_id`
-- `UNVERIFIED` / `DELETED` sin finance
-- `FinanceSummaryPanel` de lectura
+- `lines_json` provisionado en `sale_finance_event`
+- Confirm → documento con líneas:
+  - producto con `last_unit_cost=2`, qty 3 → `lineCogs=6`, `unitCostSnapshot=2`
+  - producto legacy sin costo → `unitCostSnapshot=0`
+  - `cogs=6`, `margin=16.5` coherentes con revenue de líneas
 
-### Hecho en B1
+### Siguiente (B4)
 
-- `SaleFinanceLine` + `lines` en `SaleFinanceEvent`
-- `buildFinanceEventFromSale` rellena `unitCostSnapshot` por producto
-- DTO/mapper `lines_json` (legacy sin campo → `lines: []`)
-- AT: `SaleFinanceLineWrite`, `SaleFinanceWrite.lines`, repo serializa/parsea `lines_json`
-
-### Siguiente (B2)
-
-1. Provisionar en Appwrite consola atributo **`lines_json`** (string) en `sale_finance_event`  
-2. Verificar que confirm panel ya pasa por `buildFinanceEventFromSale` (debería escribir líneas automáticamente)  
-3. Smoke create/read
+1. Tests/casos: segundo `RegisterSaleFinance` no recalcula ni duplica  
+2. Tras VERIFIED, cambiar `last_unit_cost` del producto **no** muta el event  
+3. Reconcile (si existe) solo crea faltantes
 
 ### Notas
 
 - Trabajar **solo** en `Core4` hasta estable; merge a `master` con CI verde.
-- Ideal: Core 3 ya en `master` antes del merge de Core 4.
