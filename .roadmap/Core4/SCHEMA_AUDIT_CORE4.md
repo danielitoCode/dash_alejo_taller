@@ -1,55 +1,44 @@
 # Core 4 — Audit de schema `sale_finance_event`
 
 **Fecha:** 2026-09-01  
-**Base código:** `master` / rama `Core4`  
-**Colección Appwrite:** `sale_finance_event` (nombre lógico del dominio)
+**Base código:** rama `Core4`  
+**Colección Appwrite:** `sale_finance_event`  
+**Decisión B0:** **Opción A** — `lines_json` en el mismo documento (MVP)
 
 ---
 
 ## 1. Contrato actual (Core 2)
 
-### Dominio (`SaleFinanceEvent`)
+### Dominio (`SaleFinanceEvent`) — post B1
 
 | Campo | Tipo | Notas |
 |-------|------|--------|
 | `id` | string | p.ej. `fin_{saleId}` |
 | `saleId` | string | 1:1 con venta |
 | `revenue` | number ≥ 0 | |
-| `cogs` | number ≥ 0 | Σ last_unit_cost × qty al confirm |
+| `cogs` | number ≥ 0 | Σ unitCostSnapshot × qty |
 | `margin` | number | revenue − cogs |
 | `userId` | string | staff / operador |
 | `atIso` | string ISO | |
 | `currency` | string? | de la venta |
+| `lines` | `SaleFinanceLine[]` | Core 4; vacío en legacy |
 
-### DTO Appwrite (`SaleFinanceEventDTO`)
+### DTO Appwrite
 
-| Atributo | Tipo código |
-|----------|-------------|
-| `sale_id` | string |
-| `revenue` | number |
-| `cogs` | number |
-| `margin` | number |
-| `user_id` | string |
-| `at` | string |
-| `currency` | string? |
-
-### Lo que **no** existe hoy
-
-| Necesidad Core 4 | Estado |
-|------------------|--------|
-| `unit_cost_snapshot` por línea | **Ausente** — solo total `cogs` |
-| Detalle de líneas (product_id, qty, price, unit_cost_snapshot, line_cogs, line_margin) | **Ausente** |
-| Flag / versión de contrato (`schema_version`) | **Ausente** (opcional) |
-
-**Nota:** el total `cogs` ya es un snapshot *agregado* (no se reescribe al cambiar el producto). El gap es **trazabilidad por línea** y reproducibilidad sin re-leer el catálogo.
+| Atributo | Tipo código | Estado consola |
+|----------|-------------|----------------|
+| `sale_id` | string | existente |
+| `revenue` | number | existente |
+| `cogs` | number | existente |
+| `margin` | number | existente |
+| `user_id` | string | existente |
+| `at` | string | existente |
+| `currency` | string? | existente (verificar entornos) |
+| **`lines_json`** | string? | **A PROVISIONAR** |
 
 ---
 
-## 2. Propuesta de extensión (Core 4)
-
-### Opción A — JSON de líneas en el mismo documento (preferida MVP)
-
-Añadir atributo string (JSON) o array si Appwrite lo permite de forma estable:
+## 2. Decisión: Opción A (cerrada)
 
 ```text
 lines_json: string  // serialización de SaleFinanceLine[]
@@ -59,43 +48,39 @@ lines_json: string  // serialización de SaleFinanceLine[]
 interface SaleFinanceLine {
   productId: string
   quantity: number
-  unitPrice: number          // precio venta de la línea
-  unitCostSnapshot: number   // last_unit_cost al confirm
-  lineRevenue: number        // unitPrice × quantity
-  lineCogs: number           // unitCostSnapshot × quantity
-  lineMargin: number         // lineRevenue − lineCogs
+  unitPrice: number
+  unitCostSnapshot: number
+  lineRevenue: number
+  lineCogs: number
+  lineMargin: number
 }
 ```
 
-- `revenue` / `cogs` / `margin` del documento siguen siendo la fuente de agregados.
-- `lines_json` es el detalle auditable.
-- Sin colección extra → menos permisos y menos writes.
-
-### Opción B — Colección `sale_finance_line`
-
-Solo si el volumen o las queries por producto lo exigen (posible Core 5). **No** es requisito del release mínimo Core 4.
+- Agregados `revenue` / `cogs` / `margin` siguen siendo la fuente de resúmenes.
+- Docs legacy sin `lines_json` → `lines: []` (compatible).
+- Opción B (colección `sale_finance_line`) **no** en release mínimo.
 
 ---
 
 ## 3. Acciones de consola / provisión
 
 - [ ] Verificar en Appwrite consola atributos reales vs DTO.
-- [ ] Si se adopta Opción A: provisionar `lines_json` (string, size suficiente) o atributo equivalente.
-- [ ] Índices: único lógico por `sale_id` (query `getBySaleId`); no hace falta índice de líneas en MVP.
-- [ ] Permisos: create/update alineados a roles que confirman ventas; cliente B2C sin write.
-- [ ] Documentar gap si algún entorno de staging no tiene `currency`.
+- [ ] **Provisionar `lines_json`** (string, size suficiente p.ej. 16384+; required = false).
+- [ ] Índices: query por `sale_id` (ya usada); no índice de líneas en MVP.
+- [ ] Permisos: create alineado a roles que confirman; cliente B2C sin write.
+- [ ] Documentar gap si algún entorno no tiene `currency`.
 
 ---
 
 ## 4. Paridad operador (AlejoTaller)
 
-Hoy el operador escribe los mismos campos agregados vía `SaleFinanceWrite` + `createIdempotent`.  
-Core 4 debe extender el write del operador con el **mismo** detalle de líneas/snapshot para no diverger del panel.
+- `SaleFinanceWrite.lines` + repo escribe `lines_json` cuando `lines` no está vacío.
+- Case use operador debe **poblar** `lines` en B3 (tipos listos en B1).
 
 ---
 
 ## 5. Criterio de cierre del audit (B0)
 
-- [ ] Tabla “actual vs propuesto” validada en código.
-- [ ] Decisión Opción A vs B registrada en checklist.
-- [ ] Lista de atributos a provisionar en consola (si aplica) lista antes de B1 implementación.
+- [x] Tabla “actual vs propuesto” validada en código.
+- [x] Decisión Opción A registrada.
+- [x] Lista de atributos a provisionar: **`lines_json`**.
