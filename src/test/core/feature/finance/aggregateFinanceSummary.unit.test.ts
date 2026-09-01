@@ -18,10 +18,12 @@ function ev(
         userId: partial.userId ?? "u1",
         atIso: partial.atIso ?? "2026-08-20T12:00:00.000Z",
         currency: partial.currency ?? "CUP",
+        /** Core 4: lines obligatorio; vacío en fixtures de agregado (solo totales). */
+        lines: partial.lines ?? [],
     }
 }
 
-describe("aggregateFinanceSummary (Core2 B4.2)", () => {
+describe("aggregateFinanceSummary (Core2 B4.2 / Core4)", () => {
     it("vacío", () => {
         expect(aggregateFinanceSummary([])).toEqual(emptyFinanceSummary())
     })
