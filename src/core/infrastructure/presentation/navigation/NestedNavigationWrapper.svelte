@@ -29,7 +29,6 @@
     import InventoryTrace from "../../../feature/inventory/presentation/routes/InventoryTrace.svelte";
     import { toastStore } from "../viewmodel/toast.store";
     import { logger } from "../util/logger.service";
-    import RealtimeDock from "../components/RealtimeDock.svelte";
     import SupportInbox from "../../../feature/support/presentation/routes/SupportInbox.svelte";
     import { supportInboxStore } from "../../../feature/support/presentation/viewmodel/support-inbox.store";
     import {
@@ -257,8 +256,6 @@
             </button>
             <span class="ghost" aria-hidden="true">{userId}</span>
         </div>
-
-        <RealtimeDock navController={internalNavController} />
 
         {#key currentPath}
             <div class="route-stage" in:fade={{ duration: 120 }}>
