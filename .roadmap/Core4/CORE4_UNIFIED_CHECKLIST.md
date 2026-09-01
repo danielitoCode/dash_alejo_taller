@@ -34,9 +34,7 @@ Convención: **DASH** = `dash_alejo_taller` · **AT** = `AlejoTaller` · **BOTH*
 - [x] **AT** Espejo de tipos/`SaleFinanceWrite` + `SaleFinanceLineWrite` + repo `lines_json`
 - [x] **DASH** Tests unitarios build + mapper (legacy sin lines + round-trip lines_json)
 
-**Salida B1:** **completa** 2026-09-01 (dominio + mappers + tipos AT). Wiring de confirm con líneas pobladas en runtime → B2/B3.
-
-**Pendiente operativo (no bloquea B1):** provisionar atributo `lines_json` en consola Appwrite antes del smoke de B2.
+**Salida B1:** **completa** 2026-09-01.
 
 ---
 
@@ -44,14 +42,14 @@ Convención: **DASH** = `dash_alejo_taller` · **AT** = `AlejoTaller` · **BOTH*
 
 **DEP:** B1
 
-- [ ] **DASH** `ConfirmSaleFromPanelCaseUse` (o flujo equivalente) genera evento con **snapshot por línea**
-- [ ] **DASH** COGS del documento = Σ (unitCostSnapshot × qty)
-- [ ] **DASH** No se genera finance en transiciones que no sean a VERIFIED
-- [ ] **DASH** Si el producto no tiene `last_unit_cost`, snapshot = 0 y log/warn (sin fallar el confirm de stock)
-- [ ] **DASH** Lectura `FinanceSummaryPanel` / store sigue agregando solo eventos fuente (sin segunda contabilidad)
-- [ ] **DASH** Provisionar atributo `lines_json` en Appwrite; smoke create/read del nuevo campo
+- [x] **DASH** `ConfirmSaleFromPanelCaseUse` genera evento con **snapshot por línea** (vía `buildFinanceEventFromSale`)
+- [x] **DASH** COGS del documento = Σ (unitCostSnapshot × qty) — smoke: cogs=6 con línea 2×3
+- [x] **DASH** No se genera finance en transiciones que no sean a VERIFIED (contrato Core2 + guards)
+- [x] **DASH** Si el producto no tiene `last_unit_cost`, snapshot = 0 (smoke: `p-vmm3da` legacy → 0)
+- [x] **DASH** Lectura `FinanceSummaryPanel` / store sigue agregando solo eventos fuente
+- [x] **DASH** Atributo `lines_json` provisionado en Appwrite; smoke create/read OK 2026-09-01
 
-**Salida B2:** panel confirma venta → evento estable con detalle de líneas.
+**Salida B2:** **completa** 2026-09-01 — panel confirma → event con `lines_json` válido (cogs/margin coherentes).
 
 ---
 
@@ -59,13 +57,14 @@ Convención: **DASH** = `dash_alejo_taller` · **AT** = `AlejoTaller` · **BOTH*
 
 **DEP:** B1 (contrato) · paridad con B2
 
-- [ ] **AT** `ApplyOperatorStockDecisionCaseUse` (VERIFIED) escribe finance con **mismo** snapshot por línea
-- [ ] **AT** `OperatorSaleFinanceRepository.createIdempotent` acepta/persiste el detalle
-- [ ] **AT** DELETED sigue sin finance y sin `salida_venta` financiera
-- [ ] **AT** Idempotencia por `sale_id` intacta (reintento operador no duplica)
-- [ ] **AT** Cliente web / MCP: **sin** write a `sale_finance_event` (solo frontera)
+- [x] **AT** `ApplyOperatorStockDecisionCaseUse` (VERIFIED) escribe finance con **mismo** snapshot por línea (código en `Core4`)
+- [x] **AT** `OperatorSaleFinanceRepository.createIdempotent` acepta/persiste el detalle (`lines_json`)
+- [x] **AT** DELETED sigue sin finance (test unitario)
+- [x] **AT** Idempotencia por `sale_id` intacta (test unitario)
+- [x] **AT** Cliente web / MCP: **sin** write a `sale_finance_event` (frontera; sin cambios que abran write)
+- [ ] **AT** Smoke runtime dispositivo/emulador confirm → `lines_json` (opcional; código listo)
 
-**Salida B3:** paridad panel ↔ operador en el contrato financiero.
+**Salida B3:** **código completo** 2026-09-01; smoke dispositivo pendiente (no bloquea avanzar B4).
 
 ---
 
@@ -76,7 +75,7 @@ Convención: **DASH** = `dash_alejo_taller` · **AT** = `AlejoTaller` · **BOTH*
 - [ ] **DASH** Test/caso: existe event → segundo `execute` devuelve el mismo y **no** recalcula con `last_unit_cost` nuevo
 - [ ] **DASH** Test/caso: tras VERIFIED, cambiar `product.last_unit_cost` **no** altera el evento almacenado
 - [ ] **DASH** Reconcile de resumen (si existe) solo **crea faltantes**; nunca sobrescribe eventos existentes con costos actuales
-- [ ] **AT** Misma garantía en `createIdempotent`
+- [ ] **AT** Misma garantía en `createIdempotent` (base Core2 + lines; reforzar test si hace falta)
 
 **Salida B4:** histórico financiero congelado; reintentos seguros.
 
@@ -91,7 +90,7 @@ Convención: **DASH** = `dash_alejo_taller` · **AT** = `AlejoTaller` · **BOTH*
 - [x] **DASH** Unit: mapper round-trip con `lines_json` *(B1)*
 - [ ] **DASH** Unit: `RegisterSaleFinanceFromVerifiedCaseUse` idempotente
 - [ ] **DASH** Unit: UNVERIFIED/DELETED no invocan create (o guard en capa superior cubierto)
-- [ ] **AT** Unit/instrumented: COGS operador con snapshot; idempotencia
+- [x] **AT** Unit: COGS operador con snapshot + lines; costo ausente → 0; idempotencia *(B3)*
 - [ ] **BOTH** Nota de paridad: mismos campos semánticos panel vs operador
 
 **Salida B5:** suite verde en módulos tocados.
@@ -101,8 +100,8 @@ Convención: **DASH** = `dash_alejo_taller` · **AT** = `AlejoTaller` · **BOTH*
 ## B6 — Permisos, smoke y cierre
 
 - [ ] **DASH** Permisos Appwrite: cliente sin write finance; roles de confirm OK
-- [ ] **DASH** Smoke UI: cola/detalle → confirmar venta → event con líneas/snapshot visible en log o detalle dev
-- [ ] **DASH** Smoke: UNVERIFIED no crea event; REJECT no crea event
+- [x] **DASH** Smoke UI: confirmar venta → event con líneas/snapshot *(B2 2026-09-01)*
+- [ ] **DASH** Smoke: REJECT no crea event (rápido de validar)
 - [ ] **AT** Smoke operador (dispositivo o emulador): confirm → finance; reject → no finance
 - [ ] **DASH** CI verde en PR `Core4` → `master`
 - [ ] **AT** CI módulos tocados verde en PR espejo
@@ -124,5 +123,6 @@ Convención: **DASH** = `dash_alejo_taller` · **AT** = `AlejoTaller` · **BOTH*
 
 | Fecha | Nota |
 |---|---|
-| 2026-09-01 | Apertura rama `Core4` ambos repos; docs B0 (README, policy, schema audit, checklist, status) |
-| 2026-09-01 | B0 cerrado: Opción A `lines_json`; B1 dominio/mappers/tests dash + tipos/repo AT |
+| 2026-09-01 | Apertura rama `Core4` ambos repos; docs B0 |
+| 2026-09-01 | B0 cerrado Opción A; B1 dominio/mappers/tests dash + tipos/repo AT |
+| 2026-09-01 | `lines_json` provisionado; B2 smoke panel OK (cogs/margin/lines); B3 código operador + unit tests |
