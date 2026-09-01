@@ -1,24 +1,22 @@
-import type { ProductDTO } from "../dto/ProductDTO";
-import { type Databases, ID, Query } from "appwrite";
-import type { ProductWriteDTO } from "../mapper/Mappers";
-import { ENV } from "../../../../infrastructure/env";
-import {
-    clampNonNegative,
-    nextStockAfterConfirm,
-    nextStockAfterReject,
-} from "../../../sale/domain/policy/StockDecisionMath";
-import { logger } from "../../../../infrastructure/presentation/util/logger.service";
-import { db } from "../../../../infrastructure/di/dexie.db";
+import { type Databases, ID, Query } from "appwrite"
+import { ENV } from "../../../../infrastructure/env"
+import type { ProductDTO } from "../dto/ProductDTO"
+import type { ProductWriteDTO } from "../mapper/Mappers"
+import { clampNonNegative, nextStockAfterConfirm, nextStockAfterReject } from "../../../sale/domain/policy/StockDecisionMath"
+import { logger } from "../../../../infrastructure/presentation/util/logger.service"
+import { db } from "../../../../infrastructure/di/dexie.db"
 
-const COLLECTION_ID = "product";
+const COLLECTION_ID = "product"
+
+type TransactionId = string | undefined
 
 class ProductNetRepository {
     constructor(private readonly databases: Databases) {}
 
     private get databaseId(): string {
-        const id = ENV.databaseId;
-        if (!id) throw new Error("Falta configurar VITE_APPWRITE_DATABASE_ID");
-        return id;
+        const id = ENV.databaseId
+        if (!id) throw new Error("Falta configurar VITE_APPWRITE_DATABASE_ID")
+        return id
     }
 
     async getAll(limit: number = 25, offset: number = 0): Promise<{ documents: ProductDTO[]; total: number }> {
@@ -30,26 +28,28 @@ class ProductNetRepository {
                 Query.limit(limit),
                 Query.offset(offset),
             ]
-        );
+        )
 
-        return { documents: response.documents, total: response.total };
+        return { documents: response.documents, total: response.total }
     }
 
-    async getById(id: string): Promise<ProductDTO> {
-        return await this.databases.getDocument<ProductDTO>(
-            this.databaseId,
-            COLLECTION_ID,
-            id
-        );
+    async getById(id: string, transactionId?: TransactionId): Promise<ProductDTO> {
+        return await this.databases.getDocument<ProductDTO>({
+            databaseId: this.databaseId,
+            collectionId: COLLECTION_ID,
+            documentId: id,
+            transactionId,
+        })
     }
 
-    async update(id: string, data: Partial<ProductWriteDTO>): Promise<ProductDTO> {
-        return await this.databases.updateDocument<ProductDTO>(
-            this.databaseId,
-            COLLECTION_ID,
-            id,
-            data
-        );
+    async update(id: string, data: Partial<ProductWriteDTO>, transactionId?: TransactionId): Promise<ProductDTO> {
+        return await this.databases.updateDocument<ProductDTO>({
+            databaseId: this.databaseId,
+            collectionId: COLLECTION_ID,
+            documentId: id,
+            data,
+            transactionId,
+        })
     }
 
     /**

@@ -4,10 +4,7 @@ import type {
     PurchaseEntry,
     PurchaseEntryLine,
 } from "../../domain/entity/PurchaseEntry"
-import {
-    createPurchaseEntry,
-    createPurchaseEntryLine,
-} from "../../domain/entity/PurchaseEntry"
+import { createPurchaseEntryLine } from "../../domain/entity/PurchaseEntry"
 import { isPurchaseLineConcept } from "../../domain/entity/enums"
 import type { SupplierDTO } from "../dto/SupplierDTO"
 import type {
@@ -15,7 +12,6 @@ import type {
     PurchaseEntryLineDTO,
 } from "../dto/PurchaseEntryDTO"
 
-/** Payload de escritura: `contact` siempre string (Appwrite required). */
 export type SupplierWriteDTO = {
     $id?: string
     name: string
@@ -42,9 +38,7 @@ export function supplierToDTO(s: Supplier): SupplierWriteDTO {
         name: s.name,
         contact,
     }
-    if (s.notes != null && String(s.notes).trim() !== "") {
-        dto.notes = String(s.notes).trim()
-    }
+    if (s.notes != null && String(s.notes).trim() !== "") dto.notes = String(s.notes).trim()
     return dto
 }
 
@@ -58,6 +52,7 @@ export type PurchaseEntryWriteDTO = Pick<
     | "user_id"
     | "notes"
     | "line_count"
+    | "status"
     | "exchange_rate"
     | "exchange_rate_at"
     | "exchange_rate_source"
@@ -73,46 +68,58 @@ export type PurchaseEntryLineWriteDTO = Pick<
     | "line_cost"
 > & { $id?: string }
 
+/**
+ * Lectura desde Appwrite: no lanza por exchange_rate faltante.
+ * Facturas CUP legacy sin snapshot siguen listándose (tasa undefined).
+ * Validación estricta solo en createPurchaseEntry (escritura / RegisterPurchaseEntry).
+ */
 export function purchaseEntryFromDTO(dto: PurchaseEntryDTO): PurchaseEntry {
     const currency = (dto.currency || "USD").toUpperCase() === "CUP" ? "CUP" : "USD"
-    const rate =
-        dto.exchange_rate != null && Number.isFinite(Number(dto.exchange_rate))
-            ? Number(dto.exchange_rate)
-            : undefined
 
-    if (currency === "CUP" && rate != null && rate > 0) {
-        return createPurchaseEntry({
-            id: dto.$id,
-            supplierId: dto.supplier_id,
-            reference: dto.reference,
-            entryDateIso: dto.entry_date,
-            totalCost: Number(dto.total_cost) || 0,
-            currency,
-            userId: dto.user_id,
-            notes: dto.notes,
-            lineCount: Math.trunc(Number(dto.line_count) || 0),
-            exchangeRate: rate,
-            exchangeRateAt: dto.exchange_rate_at,
-            exchangeRateSource:
-                dto.exchange_rate_source === "manual" ? "manual" : "DIRECTORIO_CUBANO",
-        })
+    const rawRate =
+        (dto as { exchange_rate?: unknown; exchangeRate?: unknown }).exchange_rate ??
+        (dto as { exchangeRate?: unknown }).exchangeRate
+    let rate: number | undefined
+    if (rawRate != null && rawRate !== "") {
+        const n = Number(rawRate)
+        if (Number.isFinite(n) && n > 0) rate = n
     }
 
-    return {
-        id: dto.$id,
-        supplierId: dto.supplier_id,
-        reference: dto.reference,
-        entryDateIso: dto.entry_date,
+    const rawAt =
+        (dto as { exchange_rate_at?: unknown; exchangeRateAt?: unknown }).exchange_rate_at ??
+        (dto as { exchangeRateAt?: unknown }).exchangeRateAt
+    const rawSource =
+        (dto as { exchange_rate_source?: unknown; exchangeRateSource?: unknown })
+            .exchange_rate_source ??
+        (dto as { exchangeRateSource?: unknown }).exchangeRateSource
+
+    const id = String(dto.$id || "").trim() || "unknown"
+    const userId = String(dto.user_id || "").trim() || "unknown"
+    const entryDateIso =
+        String(dto.entry_date || "").trim() || new Date(0).toISOString()
+
+    const entry: PurchaseEntry = {
+        id,
+        supplierId: dto.supplier_id ? String(dto.supplier_id) : undefined,
+        reference: dto.reference ? String(dto.reference) : undefined,
+        entryDateIso,
         totalCost: Number(dto.total_cost) || 0,
         currency,
-        userId: dto.user_id,
-        notes: dto.notes,
+        userId,
+        notes: dto.notes ? String(dto.notes) : undefined,
         lineCount: Math.trunc(Number(dto.line_count) || 0),
-        exchangeRate: currency === "CUP" ? rate : undefined,
-        exchangeRateAt: dto.exchange_rate_at,
-        exchangeRateSource:
-            dto.exchange_rate_source === "manual" ? "manual" : undefined,
+        status: dto.status === "CANCELLED" ? "CANCELLED" : "ACTIVE",
     }
+
+    if (currency === "CUP" && rate != null) {
+        entry.exchangeRate = rate
+        const at = String(rawAt || "").trim()
+        if (at) entry.exchangeRateAt = at
+        entry.exchangeRateSource =
+            rawSource === "manual" ? "manual" : "DIRECTORIO_CUBANO"
+    }
+
+    return entry
 }
 
 export function purchaseEntryToDTO(e: PurchaseEntry): PurchaseEntryWriteDTO {
@@ -123,6 +130,8 @@ export function purchaseEntryToDTO(e: PurchaseEntry): PurchaseEntryWriteDTO {
         currency: e.currency || "USD",
         user_id: e.userId,
         line_count: e.lineCount,
+        // Appwrite: status es required (ACTIVE|CANCELLED). Siempre enviarlo en create/update.
+        status: e.status === "CANCELLED" ? "CANCELLED" : "ACTIVE",
     }
     if (e.supplierId) dto.supplier_id = e.supplierId
     if (e.reference) dto.reference = e.reference

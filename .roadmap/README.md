@@ -4,7 +4,7 @@
 |------------|---------|--------|
 | [`Core1/`](./Core1/) | Soft-hold, catálogo, ventas, roles, QA | **Cerrado** (2026-08-12) |
 | [`Core2/`](./Core2/) | Factura entrada, movements (`entrada`/`salida_venta`), finance, cola, reservas taller | **Cerrado** (2026-08-24) · PR #12 → `master` |
-| [`Core3/`](./Core3/) | Compras y abastecimiento (proveedores, historial, anulación) | **En curso** · rama `Core3` |
+| [`Core3/`](./Core3/) | Compras y abastecimiento (proveedores, historial, anulación B3.1) | **Listo para merge** · rama `Core3` → PR a `master` |
 
 ## Core 1
 
@@ -21,6 +21,7 @@
 - README: [`Core3/README.md`](./Core3/README.md)
 - Checklist: [`Core3/CORE3_UNIFIED_CHECKLIST.md`](./Core3/CORE3_UNIFIED_CHECKLIST.md)
 - Estado: [`Core3/MVP_CORE3_STATUS.md`](./Core3/MVP_CORE3_STATUS.md)
-- **Trabajo en rama `Core3`** — no mergear a `master` hasta B6
+- **Release mínimo:** B1 + B2 + B3.1 + B4 — código y política listos; merge vía PR `Core3` → `master`
+- **Fuera de scope (post-merge):** B3.2 corrección parcial
 
 **Políticas:** [`.policies/`](../.policies/) · soft-hold canónico en AlejoTaller `.policies/warehouse` y `.policies/sale`

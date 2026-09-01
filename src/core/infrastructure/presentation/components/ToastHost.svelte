@@ -1,71 +1,88 @@
 <script lang="ts">
-    import { fly, fade } from "svelte/transition";
-    import { flip } from "svelte/animate";
-    import { toastStore, type ToastType } from "../viewmodel/toast.store";
-    import Icon from "./Icon.svelte";
+    import { fly, fade } from "svelte/transition"
+    import { quintOut } from "svelte/easing"
+    import Icon from "./Icon.svelte"
+    import { toastStore, type ToastMessage, type ToastType } from "../viewmodel/toast.store"
     import {
-        CheckCircle2,
-        XCircle,
-        Info,
         AlertTriangle,
+        CheckCircle2,
+        Info,
         Loader2,
-        X
-    } from "lucide-svelte";
+        X,
+        XCircle,
+    } from "lucide-svelte"
 
-    const iconMap: Record<ToastType, typeof CheckCircle2> = {
-        success: CheckCircle2,
-        error: XCircle,
-        info: Info,
-        warning: AlertTriangle,
-        loading: Loader2
-    };
+    function iconFor(type: ToastType) {
+        switch (type) {
+            case "success":
+                return CheckCircle2
+            case "error":
+                return XCircle
+            case "warning":
+                return AlertTriangle
+            case "loading":
+                return Loader2
+            default:
+                return Info
+        }
+    }
 
-    const labelMap: Record<ToastType, string> = {
-        success: "Éxito",
-        error: "Error",
-        info: "Info",
-        warning: "Aviso",
-        loading: "En curso"
-    };
+    function ariaRole(type: ToastType): "alert" | "status" {
+        return type === "error" || type === "warning" ? "alert" : "status"
+    }
 
-    $: loadings = $toastStore.queue.filter((t) => t.type === "loading");
+    $: loadingCount = $toastStore.queue.filter((t) => t.type === "loading").length
+    $: visible = $toastStore.queue
 </script>
 
-<section class="toast-host" aria-live="polite" aria-atomic="false">
-    {#if loadings.length > 1}
+<section class="toast-host" aria-live="polite" aria-relevant="additions text">
+    {#if loadingCount > 1}
         <div class="activity-chip" transition:fade={{ duration: 160 }}>
-            <Icon icon={Loader2} size={14} className="spin" ariaLabel="Operaciones en curso" />
-            <span>{loadings.length} operaciones en curso</span>
+            <span class="spin-wrap" aria-hidden="true">
+                <Icon icon={Loader2} size={14} />
+            </span>
+            <span>{loadingCount} operaciones en curso</span>
         </div>
     {/if}
 
-    {#each $toastStore.queue as toast (toast.id)}
+    {#each visible as toast (toast.id)}
         <article
-            class="toast {toast.type}"
-            role="status"
-            in:fly={{ y: 16, duration: 220 }}
-            out:fade={{ duration: 160 }}
-            animate:flip={{ duration: 200 }}
+            class="toast toast-{toast.type}"
+            role={ariaRole(toast.type)}
+            aria-busy={toast.type === "loading" ? "true" : undefined}
+            in:fly={{ y: 18, duration: 280, easing: quintOut }}
+            out:fly={{ y: 8, duration: 180 }}
         >
-            <span class="toast-ico" class:spin={toast.type === "loading"}>
-                <Icon icon={iconMap[toast.type]} size={20} ariaLabel={labelMap[toast.type]} />
-            </span>
-            <div class="toast-body">
-                <strong class="toast-label">{labelMap[toast.type]}</strong>
-                <span class="toast-text">{toast.text}</span>
+            <div class="toast-icon" aria-hidden="true">
+                <span class:spin={toast.type === "loading"}>
+                    <Icon icon={iconFor(toast.type)} size={18} />
+                </span>
             </div>
-            {#if toast.type !== "loading"}
+
+            <div class="toast-body">
+                {#if toast.title}
+                    <strong class="toast-title">{toast.title}</strong>
+                {/if}
+                <p class="toast-text">{toast.text}</p>
+            </div>
+
+            {#if toast.dismissible}
                 <button
-                    class="toast-close"
                     type="button"
+                    class="toast-close"
                     aria-label="Cerrar notificación"
-                    on:click={() => toastStore.remove(toast.id)}
+                    on:click={() => toastStore.dismiss(toast.id)}
                 >
-                    <Icon icon={X} size={16} ariaLabel="Cerrar" />
+                    <Icon icon={X} size={14} />
                 </button>
             {/if}
-            {#if toast.type === "loading"}
-                <div class="toast-progress" aria-hidden="true"></div>
+
+            {#if toast.type !== "loading" && toast.timeoutMs > 0}
+                <div
+                    class="toast-progress"
+                    style={`--toast-ttl: ${toast.timeoutMs}ms`}
+                    aria-hidden="true"
+                ></div>
             {/if}
         </article>
     {/each}
@@ -77,10 +94,35 @@
         right: 16px;
         bottom: 16px;
         z-index: 10000;
-        display: grid;
+        display: flex;
+        flex-direction: column-reverse;
+        align-items: stretch;
         gap: 10px;
         width: min(400px, calc(100vw - 24px));
         pointer-events: none;
+        max-height: min(70vh, 520px);
+        overflow: visible;
+    }
+
+    .activity-chip {
+        pointer-events: none;
+        align-self: flex-end;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        color: var(--md-sys-color-on-surface-variant);
+        background: color-mix(
+            in srgb,
+            var(--md-sys-color-surface-container-highest, var(--md-sys-color-surface)) 92%,
+            transparent
+        );
+        border: 1px solid var(--md-sys-color-outline-variant);
+        box-shadow: 0 4px 14px color-mix(in srgb, black 18%, transparent);
     }
 
     .activity-chip {
@@ -103,51 +145,57 @@
     .toast {
         position: relative;
         pointer-events: auto;
+        position: relative;
         display: grid;
         grid-template-columns: auto 1fr auto;
         align-items: start;
         gap: 12px;
+        padding: 12px 14px 14px;
         border-radius: 14px;
-        padding: 12px 14px;
         border: 1px solid var(--md-sys-color-outline-variant);
         background: color-mix(
             in srgb,
-            var(--md-sys-color-surface-container-highest, var(--md-sys-color-surface)) 92%,
+            var(--md-sys-color-surface-container-highest, var(--md-sys-color-surface)) 94%,
             black
         );
         color: var(--md-sys-color-on-surface);
-        font-weight: 600;
-        font-size: 0.92rem;
-        line-height: 1.35;
         box-shadow:
-            0 12px 32px rgba(0, 0, 0, 0.42),
-            0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+            0 12px 32px color-mix(in srgb, black 28%, transparent),
+            0 0 0 1px color-mix(in srgb, white 4%, transparent) inset;
         overflow: hidden;
+        backdrop-filter: blur(10px);
     }
 
-    .toast-ico {
+    .toast-icon {
         display: grid;
         place-items: center;
-        margin-top: 1px;
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
         flex-shrink: 0;
+        margin-top: 1px;
     }
 
     .toast-body {
         min-width: 0;
         display: grid;
         gap: 2px;
+        padding-top: 2px;
     }
 
-    .toast-label {
-        font-size: 0.72rem;
+    .toast-title {
+        font-size: 0.78rem;
         font-weight: 800;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.02em;
         text-transform: uppercase;
         opacity: 0.85;
     }
 
     .toast-text {
-        font-weight: 650;
+        margin: 0;
+        font-size: 0.9rem;
+        font-weight: 600;
+        line-height: 1.4;
         word-break: break-word;
     }
 
@@ -158,11 +206,11 @@
         border-radius: 8px;
         cursor: pointer;
         color: inherit;
+        opacity: 0.7;
         background: color-mix(in srgb, var(--md-sys-color-surface-variant) 45%, transparent);
         display: grid;
         place-items: center;
         flex-shrink: 0;
-        opacity: 0.75;
         transition: opacity 0.15s, background 0.15s;
     }
 
@@ -171,78 +219,124 @@
         background: color-mix(in srgb, var(--md-sys-color-surface-variant) 70%, transparent);
     }
 
-    .toast.success {
-        border-color: color-mix(in srgb, #22c55e 55%, var(--md-sys-color-outline-variant));
-        background: color-mix(in srgb, #22c55e 16%, var(--md-sys-color-surface) 84%);
-        color: #bbf7d0;
-    }
-
-    .toast.error {
-        border-color: color-mix(in srgb, #ef4444 60%, var(--md-sys-color-outline-variant));
-        background: color-mix(in srgb, #ef4444 16%, var(--md-sys-color-surface) 84%);
-        color: #fecaca;
-    }
-
-    .toast.info {
-        border-color: color-mix(in srgb, #38bdf8 50%, var(--md-sys-color-outline-variant));
-        background: color-mix(in srgb, #38bdf8 14%, var(--md-sys-color-surface) 86%);
-        color: #e0f2fe;
-    }
-
-    .toast.warning {
-        border-color: color-mix(in srgb, #f59e0b 55%, var(--md-sys-color-outline-variant));
-        background: color-mix(in srgb, #f59e0b 16%, var(--md-sys-color-surface) 84%);
-        color: #fde68a;
-    }
-
-    .toast.loading {
-        border-color: color-mix(in srgb, #a78bfa 50%, var(--md-sys-color-outline-variant));
-        background: color-mix(in srgb, #8b5cf6 14%, var(--md-sys-color-surface) 86%);
-        color: #e9d5ff;
-    }
-
     .toast-progress {
         position: absolute;
         left: 0;
+        right: 0;
         bottom: 0;
         height: 3px;
-        width: 40%;
-        border-radius: 0 2px 0 0;
-        background: color-mix(in srgb, currentColor 70%, transparent);
-        animation: progress-indeterminate 1.4s ease-in-out infinite;
+        background: color-mix(in srgb, currentColor 22%, transparent);
+        transform-origin: left center;
+        animation: toast-ttl var(--toast-ttl) linear forwards;
     }
 
-    :global(.spin) {
-        animation: spin 0.9s linear infinite;
+    @keyframes toast-ttl {
+        from {
+            transform: scaleX(1);
+        }
+        to {
+            transform: scaleX(0);
+        }
     }
 
-    @keyframes spin {
+    .spin,
+    .spin-wrap {
+        display: inline-flex;
+        animation: toast-spin 0.85s linear infinite;
+    }
+
+    @keyframes toast-spin {
         to {
             transform: rotate(360deg);
         }
     }
 
-    @keyframes progress-indeterminate {
-        0% {
-            left: 0;
-            width: 30%;
-        }
-        50% {
-            left: 35%;
-            width: 40%;
-        }
-        100% {
-            left: 100%;
-            width: 20%;
+    /* —— Variants —— */
+    .toast-success {
+        border-color: color-mix(in srgb, #22c55e 50%, var(--md-sys-color-outline-variant));
+        background: color-mix(in srgb, #22c55e 14%, var(--md-sys-color-surface) 86%);
+    }
+    .toast-success .toast-icon {
+        color: #4ade80;
+        background: color-mix(in srgb, #22c55e 18%, transparent);
+    }
+    .toast-success .toast-title {
+        color: #86efac;
+    }
+
+    .toast-error {
+        border-color: color-mix(in srgb, #ef4444 55%, var(--md-sys-color-outline-variant));
+        background: color-mix(in srgb, #ef4444 14%, var(--md-sys-color-surface) 86%);
+    }
+    .toast-error .toast-icon {
+        color: #f87171;
+        background: color-mix(in srgb, #ef4444 18%, transparent);
+    }
+    .toast-error .toast-title {
+        color: #fca5a5;
+    }
+
+    .toast-warning {
+        border-color: color-mix(in srgb, #f59e0b 50%, var(--md-sys-color-outline-variant));
+        background: color-mix(in srgb, #f59e0b 12%, var(--md-sys-color-surface) 88%);
+    }
+    .toast-warning .toast-icon {
+        color: #fbbf24;
+        background: color-mix(in srgb, #f59e0b 18%, transparent);
+    }
+    .toast-warning .toast-title {
+        color: #fcd34d;
+    }
+
+    .toast-info {
+        border-color: color-mix(in srgb, #38bdf8 45%, var(--md-sys-color-outline-variant));
+        background: color-mix(in srgb, #38bdf8 12%, var(--md-sys-color-surface) 88%);
+    }
+    .toast-info .toast-icon {
+        color: #7dd3fc;
+        background: color-mix(in srgb, #38bdf8 16%, transparent);
+    }
+    .toast-info .toast-title {
+        color: #bae6fd;
+    }
+
+    .toast-loading {
+        border-color: color-mix(
+            in srgb,
+            var(--md-sys-color-primary) 40%,
+            var(--md-sys-color-outline-variant)
+        );
+        background: color-mix(
+            in srgb,
+            var(--md-sys-color-primary) 10%,
+            var(--md-sys-color-surface) 90%
+        );
+    }
+    .toast-loading .toast-icon {
+        color: var(--md-sys-color-primary);
+        background: color-mix(in srgb, var(--md-sys-color-primary) 16%, transparent);
+    }
+    .toast-loading .toast-title {
+        color: var(--md-sys-color-primary);
+    }
+
+    @media (max-width: 480px) {
+        .toast-host {
+            right: 10px;
+            left: 10px;
+            bottom: 12px;
+            width: auto;
         }
     }
 
-    @media (max-width: 600px) {
-        .toast-host {
-            left: 12px;
-            right: 12px;
-            bottom: 12px;
-            width: auto;
+    @media (prefers-reduced-motion: reduce) {
+        .spin,
+        .spin-wrap {
+            animation: none;
+        }
+        .toast-progress {
+            animation: none;
+            transform: scaleX(0.35);
         }
     }
 </style>

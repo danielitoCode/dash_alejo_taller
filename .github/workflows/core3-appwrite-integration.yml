@@ -1,0 +1,48 @@
+name: Core3 Appwrite Integration
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [Core3]
+    paths:
+      - 'src/core/**'
+      - 'src/test/integration/**'
+      - 'vite.config.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/core3-appwrite-integration.yml'
+
+jobs:
+  appwrite-integration:
+    name: B3.1 Appwrite integration + rollback
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      APPWRITE_ENDPOINT: ${{ secrets.APPWRITE_ENDPOINT }}
+      APPWRITE_PROJECT_ID: ${{ secrets.APPWRITE_PROJECT_ID }}
+      APPWRITE_DATABASE_ID: ${{ secrets.APPWRITE_DATABASE_ID }}
+      APPWRITE_API_KEY: ${{ secrets.APPWRITE_API_KEY }}
+    steps:
+      - name: Checkout Core3
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify required Appwrite secrets are configured
+        shell: bash
+        run: |
+          test -n "$APPWRITE_ENDPOINT" || { echo 'Missing APPWRITE_ENDPOINT'; exit 1; }
+          test -n "$APPWRITE_PROJECT_ID" || { echo 'Missing APPWRITE_PROJECT_ID'; exit 1; }
+          test -n "$APPWRITE_DATABASE_ID" || { echo 'Missing APPWRITE_DATABASE_ID'; exit 1; }
+          test -n "$APPWRITE_API_KEY" || { echo 'Missing APPWRITE_API_KEY'; exit 1; }
+
+      - name: Run B3.1 Appwrite integration tests
+        # Isolated vitest project: node env, no MSW interceptors.
+        run: npx vitest run --project appwrite

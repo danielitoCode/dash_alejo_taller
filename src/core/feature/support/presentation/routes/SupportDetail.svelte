@@ -7,7 +7,8 @@
     import { logger } from "../../../../infrastructure/presentation/util/logger.service";
     import { supportInboxStore } from "../viewmodel/support-inbox.store";
     import type { SupportMessage, SupportStatus } from "../../domain/entity/SupportMessage";
-    import { ArrowLeft, Clock, Mail, MessageSquareText, Send } from "lucide-svelte";
+    import { support } from "../../../../infrastructure/presentation/navigation/nested.router";
+    import { ArrowLeft, Clock, MessageSquareText, Send } from "lucide-svelte";
 
     export let navController: NavController;
     export let navBackStackEntry: NavBackStackEntry<{ id?: string }>;
@@ -33,7 +34,6 @@
         scrollToBottom();
     }
 
-    /** createdAtIso del inbox row = lastMessageAt del hilo; al cambiar, recargar burbujas. */
     let lastSeenMessageAt = "";
     $: if (threadId && message?.createdAtIso && message.createdAtIso !== lastSeenMessageAt) {
         lastSeenMessageAt = message.createdAtIso;
@@ -54,7 +54,6 @@
             })
             .finally(() => (loading = false));
 
-        // NestedNav mantiene RT; ref-count para no matar la suscripción global
         const stop = supportInboxStore.startRealtime();
         return () => {
             stop();
@@ -67,7 +66,7 @@
     });
 
     function back() {
-        navController.popBackStack();
+        navController.popOrNavigate(support.path);
     }
 
     async function setStatus(next: SupportStatus) {
@@ -104,11 +103,11 @@
 </script>
 
 <section class="mgmt-container">
-    <header class="mgmt-page-head">
+    <header class="mgmt-page-head detail-back-bar">
         <div class="mgmt-page-title">
-            <button class="mgmt-btn ghost" type="button" on:click={back}>
+            <button class="mgmt-btn ghost back-btn" type="button" on:click={back}>
                 <Icon icon={ArrowLeft} size={18} ariaLabel="Volver" />
-                Volver
+                Volver al listado de mensajes
             </button>
             <div>
                 <h1 class="mgmt-h1">Hilo de soporte</h1>
@@ -198,184 +197,65 @@
 </section>
 
 <style>
+    .detail-back-bar { position: sticky; top: 0; z-index: 5; }
+    .back-btn {
+        display: inline-flex; align-items: center; gap: 8px; font-weight: 700;
+        border-radius: 10px; padding: 8px 12px;
+        border: 1px solid var(--md-sys-color-outline-variant);
+        background: color-mix(in srgb, var(--md-sys-color-surface) 92%, transparent);
+        color: var(--md-sys-color-primary); cursor: pointer; margin-bottom: 8px;
+    }
+    .back-btn:hover { background: color-mix(in srgb, var(--md-sys-color-primary) 12%, transparent); }
     .chat-shell {
-        display: flex;
-        flex-direction: column;
-        border: 1px solid var(--md-sys-color-outline-variant);
-        border-radius: 16px;
-        overflow: hidden;
-        background: var(--md-sys-color-surface);
-        min-height: 420px;
+        display: flex; flex-direction: column; border: 1px solid var(--md-sys-color-outline-variant);
+        border-radius: 16px; overflow: hidden; background: var(--md-sys-color-surface); min-height: 420px;
     }
-
     .chat-meta {
-        padding: 12px 16px;
-        border-bottom: 1px solid var(--md-sys-color-outline-variant);
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px 18px;
-        align-items: flex-start;
-        justify-content: space-between;
+        padding: 12px 16px; border-bottom: 1px solid var(--md-sys-color-outline-variant);
+        display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: flex-start; justify-content: space-between;
     }
-
-    .meta-main {
-        display: grid;
-        gap: 4px;
-        min-width: 0;
-    }
-
-    .meta-title {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 1rem;
-    }
-
-    .meta-sub {
-        margin: 0;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 0.88rem;
-    }
-
-    .meta-ico {
-        opacity: 0.85;
-        flex-shrink: 0;
-    }
-
-    .status-actions {
-        display: inline-flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        align-items: center;
-    }
-
+    .meta-main { display: grid; gap: 4px; min-width: 0; }
+    .meta-title { display: inline-flex; align-items: center; gap: 8px; font-size: 1rem; }
+    .meta-sub { margin: 0; display: inline-flex; align-items: center; gap: 6px; font-size: 0.88rem; }
+    .meta-ico { opacity: 0.85; flex-shrink: 0; }
+    .status-actions { display: inline-flex; flex-wrap: wrap; gap: 8px; align-items: center; }
     .status-pill {
-        font-size: 0.75rem;
-        font-weight: 700;
-        padding: 4px 10px;
-        border-radius: 999px;
-        text-transform: lowercase;
-        border: 1px solid var(--md-sys-color-outline-variant);
+        font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 999px;
+        text-transform: lowercase; border: 1px solid var(--md-sys-color-outline-variant);
     }
-
-    .status-nuevo {
-        background: color-mix(in srgb, #f59e0b 18%, transparent);
-        border-color: color-mix(in srgb, #f59e0b 40%, var(--md-sys-color-outline-variant));
-    }
-
-    .status-en_proceso {
-        background: color-mix(in srgb, var(--md-sys-color-primary) 16%, transparent);
-        border-color: color-mix(in srgb, var(--md-sys-color-primary) 35%, var(--md-sys-color-outline-variant));
-    }
-
-    .status-resuelto {
-        background: color-mix(in srgb, #22c55e 16%, transparent);
-        border-color: color-mix(in srgb, #22c55e 35%, var(--md-sys-color-outline-variant));
-    }
-
-    .status-cerrado {
-        background: color-mix(in srgb, #94a3b8 12%, transparent);
-        border-color: color-mix(in srgb, #94a3b8 35%, var(--md-sys-color-outline-variant));
-    }
-
+    .status-nuevo { background: color-mix(in srgb, #f59e0b 18%, transparent); border-color: color-mix(in srgb, #f59e0b 40%, var(--md-sys-color-outline-variant)); }
+    .status-en_proceso { background: color-mix(in srgb, var(--md-sys-color-primary) 16%, transparent); border-color: color-mix(in srgb, var(--md-sys-color-primary) 35%, var(--md-sys-color-outline-variant)); }
+    .status-resuelto { background: color-mix(in srgb, #22c55e 16%, transparent); border-color: color-mix(in srgb, #22c55e 35%, var(--md-sys-color-outline-variant)); }
+    .status-cerrado { background: color-mix(in srgb, #94a3b8 12%, transparent); border-color: color-mix(in srgb, #94a3b8 35%, var(--md-sys-color-outline-variant)); }
     .chat-wrap {
-        flex: 1;
-        overflow-y: auto;
-        padding: 16px;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
+        flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px;
         background: color-mix(in srgb, var(--md-sys-color-surface-container-low, var(--md-sys-color-surface)) 88%, transparent);
-        min-height: 220px;
-        max-height: 42vh;
+        min-height: 220px; max-height: 42vh;
     }
-
-    .center {
-        text-align: center;
-        margin: 24px auto;
-    }
-
-    .bubble-row {
-        display: flex;
-        width: 100%;
-    }
-
-    .bubble-row.user {
-        justify-content: flex-start;
-    }
-
-    .bubble-row.staff {
-        justify-content: flex-end;
-    }
-
+    .center { text-align: center; margin: 24px auto; }
+    .bubble-row { display: flex; width: 100%; }
+    .bubble-row.user { justify-content: flex-start; }
+    .bubble-row.staff { justify-content: flex-end; }
     .bubble {
-        max-width: min(520px, 88%);
-        border-radius: 16px;
-        padding: 10px 12px;
+        max-width: min(520px, 88%); border-radius: 16px; padding: 10px 12px;
         border: 1px solid var(--md-sys-color-outline-variant);
         background: color-mix(in srgb, var(--md-sys-color-surface) 96%, transparent);
     }
-
     .bubble-row.staff .bubble {
         background: color-mix(in srgb, var(--md-sys-color-primary) 16%, var(--md-sys-color-surface));
         border-color: color-mix(in srgb, var(--md-sys-color-primary) 28%, var(--md-sys-color-outline-variant));
     }
-
-    .bubble-head {
-        display: flex;
-        justify-content: space-between;
-        gap: 10px;
-        font-size: 0.72rem;
-        opacity: 0.8;
-        margin-bottom: 4px;
-    }
-
-    .who {
-        font-weight: 700;
-    }
-
-    .bubble-body {
-        margin: 0;
-        white-space: pre-wrap;
-        word-break: break-word;
-        line-height: 1.45;
-        font-size: 0.95rem;
-    }
-
-    .composer {
-        border-top: 1px solid var(--md-sys-color-outline-variant);
-        padding: 12px 16px 16px;
-        display: grid;
-        gap: 10px;
-    }
-
+    .bubble-head { display: flex; justify-content: space-between; gap: 10px; font-size: 0.72rem; opacity: 0.8; margin-bottom: 4px; }
+    .who { font-weight: 700; }
+    .bubble-body { margin: 0; white-space: pre-wrap; word-break: break-word; line-height: 1.45; font-size: 0.95rem; }
+    .composer { border-top: 1px solid var(--md-sys-color-outline-variant); padding: 12px 16px 16px; display: grid; gap: 10px; }
     .composer-input {
-        width: 100%;
-        resize: vertical;
-        min-height: 72px;
-        border-radius: 14px;
+        width: 100%; resize: vertical; min-height: 72px; border-radius: 14px;
         border: 1px solid var(--md-sys-color-outline-variant);
         background: color-mix(in srgb, var(--md-sys-color-surface) 94%, transparent);
-        color: inherit;
-        padding: 12px 14px;
-        font: inherit;
+        color: inherit; padding: 12px 14px; font: inherit;
     }
-
-    .composer-input:focus {
-        outline: 2px solid color-mix(in srgb, var(--md-sys-color-primary) 55%, transparent);
-        outline-offset: 1px;
-    }
-
-    .composer-actions {
-        display: flex;
-        justify-content: flex-end;
-    }
-
-    .closed-hint {
-        margin: 0;
-        text-align: center;
-        padding: 8px;
-    }
+    .composer-input:focus { outline: 2px solid color-mix(in srgb, var(--md-sys-color-primary) 55%, transparent); outline-offset: 1px; }
+    .composer-actions { display: flex; justify-content: flex-end; }
+    .closed-hint { margin: 0; text-align: center; padding: 8px; }
 </style>

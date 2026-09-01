@@ -3,10 +3,9 @@ import {
     type PurchaseLineConcept,
 } from "./enums"
 
-/**
- * Línea de factura de entrada (Core 2).
- * unitCost / lineCost están en la moneda de la factura (USD o CUP).
- */
+export type PurchaseEntryStatus = "ACTIVE" | "CANCELLED"
+
+/** Línea de factura de entrada (Core 2). */
 export interface PurchaseEntryLine {
     id: string
     entryId: string
@@ -17,11 +16,7 @@ export interface PurchaseEntryLine {
     lineCost: number
 }
 
-/**
- * Cabecera de factura de entrada.
- * Moneda principal del negocio: USD. CUP solo cuando la compra real fue en CUP.
- * Si CUP: snapshot de tasa (CUP por 1 USD) inmutable.
- */
+/** Cabecera de factura de entrada. */
 export interface PurchaseEntry {
     id: string
     supplierId?: string
@@ -33,6 +28,8 @@ export interface PurchaseEntry {
     notes?: string
     lineCount: number
     lines?: PurchaseEntryLine[]
+    /** Core 3 B3: ciclo de vida lógico; legacy entries default to ACTIVE. */
+    status?: PurchaseEntryStatus
     /** CUP por 1 USD — solo si currency = CUP */
     exchangeRate?: number
     exchangeRateAt?: string
@@ -107,8 +104,7 @@ export function createPurchaseEntry(input: PurchaseEntry): PurchaseEntry {
         }
         exchangeRate = rate
         exchangeRateAt = String(exchangeRateAt || "").trim() || new Date().toISOString()
-        exchangeRateSource =
-            exchangeRateSource === "manual" ? "manual" : "DIRECTORIO_CUBANO"
+        exchangeRateSource = exchangeRateSource === "manual" ? "manual" : "DIRECTORIO_CUBANO"
     } else {
         exchangeRate = undefined
         exchangeRateAt = undefined
@@ -126,6 +122,7 @@ export function createPurchaseEntry(input: PurchaseEntry): PurchaseEntry {
         notes: input.notes ? String(input.notes) : undefined,
         lineCount,
         lines: input.lines,
+        status: input.status === "CANCELLED" ? "CANCELLED" : "ACTIVE",
         exchangeRate,
         exchangeRateAt,
         exchangeRateSource,

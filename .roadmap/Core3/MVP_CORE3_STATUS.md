@@ -1,41 +1,48 @@
 # MVP Core 3 — Estado vivo (dash)
 
-**Última actualización:** 2026-08-28  
+**Última actualización:** 2026-09-01  
 **Rama:** `Core3`  
-**Core 3 cerrado:** **NO**
+**Core 3 (release mínimo):** **SÍ** — listo para PR → `master`  
+**B3.2 (corrección parcial):** pendiente post-merge (no bloquea)
 
 | Bloque | Estado |
 |--------|--------|
-| B0 Baseline / política / audit schema / tipado / consola | **Cerrado (dash)** — resta espejo AT |
+| B0 Baseline / política / audit schema / consola | **Cerrado** |
 | B1 Proveedores UI + selector en factura | **Hecho + smoke UI OK** |
-| B2 Historial compras (listado → detalle + filtro producto) | **Hecho + smoke UI OK + código verificado** |
-| B3 Anulación/corrección | pendiente (opcional 1er release) |
-| B4 Permisos + smoke E2E | **En curso** — permisos consola ya en B0; faltan E2E datos + badges/nav |
-| B5 Espejo AT | pendiente |
-| B6 Merge master | no |
+| B2 Historial compras (listado → detalle + filtro producto) | **Hecho + smoke UI OK** |
+| B3.1 Anulación completa | **Cerrado** — núcleo + schema `status` + UI + validación reserved + mensajes enriquecidos + UI no optimista |
+| B3.2 Corrección parcial | pendiente (no bloquea) |
+| B4 Permisos + smoke panel | **Hecho (dash)** |
+| B5 Espejo AT | código frontera OK; docs AT alineados |
+| B6 Merge master | **en curso** — PR `Core3` → `master` |
 
-### Smoke UI ya verificado (2026-08-27)
+### Smoke UI
 
 | Flujo | Resultado |
 |-------|-----------|
 | Subvista **Proveedores** | OK |
 | Alta proveedor desde **factura de entrada** | OK |
 | Subvista **Compras** listado → detalle | OK |
+| **Anular entrada** (owner/admin) | OK — éxito marca CANCELLED; fallo reserved muestra error y **no** badge Anulada |
+| Bloqueo `existence < reserved` | OK — mensaje con producto, existence, reserved y ventas pendientes |
 
-### Código B2 verificado (2026-08-28)
+### B3.1 (resumen técnico)
 
-- `PurchaseHistory.svelte` — listado, filtros (fecha/proveedor/usuario/texto/moneda/producto), detalle con movements por `entry_id`
-- `ListPurchaseEntriesCaseUse` / `GetPurchaseEntryDetailCaseUse`
-- `filterPurchaseEntries`
-- `StockMovementNetRepository.listByEntry` + `PurchaseEntryNetRepository.listLinesByProduct`
+- `CancelPurchaseEntryCaseUse` + `AppwriteTransactionRunner`
+- Reversión: `existence -= qty`, movement `ajuste` + `reason=purchase_entry_reversal` + `entry_id`
+- **No** modifica `reserved` ni `last_unit_cost`
+- Regla: `newExistence >= reserved` o rechazo con mensaje explícito
+- UI: solo owner/admin; confirmación; `toastStore.run` (loading sobrevive navegación)
+- Store: status `CANCELLED` solo tras execute + loadDetail exitosos
 
-### B4 — qué falta comprobar
+### UX incluido en Core3 (paridad operativa)
 
-Ver checklist ejecutable en [`SMOKE_B4.md`](./SMOKE_B4.md):
+- Toast unificado con iconos (success / error / info / warning / loading)
+- Loading persistente para anular / registrar factura (stages)
+- RealtimeDock flotante eliminado del layout (funciones en panel de navegación)
 
-1. ~~Consola Appwrite (permisos cliente + `entry_id`)~~ → hecho en B0
-2. E2E datos: factura multi-línea → stock → movements en detalle
-3. Roles nav (sales/viewer sin Compras/Proveedores)
-4. Frontera AT (opcional en paralelo)
+### Post-merge (no bloquea)
 
-Ver checklist unificado.
+1. B3.2 corrección parcial de líneas  
+2. Smoke cruzado AT opcional en dispositivo  
+3. Test opcional COGS `last_unit_cost` en AT  

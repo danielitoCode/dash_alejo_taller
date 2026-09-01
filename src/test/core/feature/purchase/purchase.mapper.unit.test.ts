@@ -44,6 +44,9 @@ describe("purchase mapper round-trip", () => {
             user_id: "u1",
             line_count: 1,
             supplier_id: "sup1",
+            exchange_rate: 350,
+            exchange_rate_at: "2026-08-18T10:00:00.000Z",
+            exchange_rate_source: "DIRECTORIO_CUBANO",
         } as unknown as PurchaseEntryDTO
         const entry = purchaseEntryFromDTO(entryDto)
         expect(entry.totalCost).toBe(100)
@@ -51,6 +54,7 @@ describe("purchase mapper round-trip", () => {
         const entryWrite = purchaseEntryToDTO(entry)
         expect(entryWrite.total_cost).toBe(100)
         expect(entryWrite.currency).toBe("CUP")
+        expect(entryWrite.exchange_rate).toBe(350)
 
         const lineDto = {
             $id: "l1",

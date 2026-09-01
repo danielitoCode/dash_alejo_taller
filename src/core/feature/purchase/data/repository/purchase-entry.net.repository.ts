@@ -17,6 +17,8 @@ import {
     purchaseEntryToDTO,
 } from "../mapper/Mappers"
 
+type TransactionId = string | undefined
+
 export class PurchaseEntryNetRepository implements PurchaseEntryRepository {
     constructor(private readonly databases: Databases) {}
 
@@ -26,41 +28,60 @@ export class PurchaseEntryNetRepository implements PurchaseEntryRepository {
         return id
     }
 
-    async createEntry(entry: PurchaseEntry): Promise<PurchaseEntry> {
+    async createEntry(entry: PurchaseEntry, transactionId?: TransactionId): Promise<PurchaseEntry> {
         const write = purchaseEntryToDTO(entry)
         const { $id, ...data } = write
-        const doc = await this.databases.createDocument<PurchaseEntryDTO>(
-            this.databaseId,
-            APPWRITE_COLLECTIONS.purchaseEntry,
-            $id && $id.length > 0 ? $id : ID.unique(),
-            data as Omit<PurchaseEntryDTO, keyof import("appwrite").Models.Document>
-        )
+        const doc = await this.databases.createDocument<PurchaseEntryDTO>({
+            databaseId: this.databaseId,
+            collectionId: APPWRITE_COLLECTIONS.purchaseEntry,
+            documentId: $id && $id.length > 0 ? $id : ID.unique(),
+            data: data as Omit<PurchaseEntryDTO, keyof import("appwrite").Models.Document>,
+            transactionId,
+        })
         return purchaseEntryFromDTO(doc)
     }
 
-    async createLine(line: PurchaseEntryLine): Promise<PurchaseEntryLine> {
+    async createLine(line: PurchaseEntryLine, transactionId?: TransactionId): Promise<PurchaseEntryLine> {
         const write = purchaseEntryLineToDTO(line)
         const { $id, ...data } = write
-        const doc = await this.databases.createDocument<PurchaseEntryLineDTO>(
-            this.databaseId,
-            APPWRITE_COLLECTIONS.purchaseEntryLine,
-            $id && $id.length > 0 ? $id : ID.unique(),
-            data as Omit<PurchaseEntryLineDTO, keyof import("appwrite").Models.Document>
-        )
+        const doc = await this.databases.createDocument<PurchaseEntryLineDTO>({
+            databaseId: this.databaseId,
+            collectionId: APPWRITE_COLLECTIONS.purchaseEntryLine,
+            documentId: $id && $id.length > 0 ? $id : ID.unique(),
+            data: data as Omit<PurchaseEntryLineDTO, keyof import("appwrite").Models.Document>,
+            transactionId,
+        })
         return purchaseEntryLineFromDTO(doc)
     }
 
-    async getEntryById(id: string): Promise<PurchaseEntry | null> {
+    async getEntryById(id: string, transactionId?: TransactionId): Promise<PurchaseEntry | null> {
         try {
-            const doc = await this.databases.getDocument<PurchaseEntryDTO>(
-                this.databaseId,
-                APPWRITE_COLLECTIONS.purchaseEntry,
-                id
-            )
+            const doc = await this.databases.getDocument<PurchaseEntryDTO>({
+                databaseId: this.databaseId,
+                collectionId: APPWRITE_COLLECTIONS.purchaseEntry,
+                documentId: id,
+                transactionId,
+            })
             return purchaseEntryFromDTO(doc)
         } catch {
             return null
         }
+    }
+
+    async updateEntry(id: string, patch: Partial<PurchaseEntry>, transactionId?: TransactionId): Promise<PurchaseEntry> {
+        const data: Record<string, unknown> = {}
+        if (patch.status !== undefined) data.status = patch.status
+        if (patch.reference !== undefined) data.reference = patch.reference
+        if (patch.notes !== undefined) data.notes = patch.notes
+
+        const doc = await this.databases.updateDocument<PurchaseEntryDTO>({
+            databaseId: this.databaseId,
+            collectionId: APPWRITE_COLLECTIONS.purchaseEntry,
+            documentId: id,
+            data,
+            transactionId,
+        })
+        return purchaseEntryFromDTO(doc)
     }
 
     async listEntries(limitOrOpts: number | ListPurchaseEntriesOpts = 50): Promise<PurchaseEntry[]> {
@@ -76,17 +97,32 @@ export class PurchaseEntryNetRepository implements PurchaseEntryRepository {
             APPWRITE_COLLECTIONS.purchaseEntry,
             queries
         )
-        return res.documents.map(purchaseEntryFromDTO)
+
+        // Un documento legacy inválido no debe tumbar todo el historial
+        const out: PurchaseEntry[] = []
+        for (const doc of res.documents) {
+            try {
+                out.push(purchaseEntryFromDTO(doc))
+            } catch (err) {
+                console.warn(
+                    "[purchase] skip invalid purchase_entry",
+                    doc.$id,
+                    err instanceof Error ? err.message : err
+                )
+            }
+        }
+        return out
     }
 
-    async listLinesByEntry(entryId: string): Promise<PurchaseEntryLine[]> {
+    async listLinesByEntry(entryId: string, transactionId?: TransactionId): Promise<PurchaseEntryLine[]> {
         const eid = String(entryId || "").trim()
         if (!eid) return []
-        const res = await this.databases.listDocuments<PurchaseEntryLineDTO>(
-            this.databaseId,
-            APPWRITE_COLLECTIONS.purchaseEntryLine,
-            [Query.equal("entry_id", eid), Query.limit(100)]
-        )
+        const res = await this.databases.listDocuments<PurchaseEntryLineDTO>({
+            databaseId: this.databaseId,
+            collectionId: APPWRITE_COLLECTIONS.purchaseEntryLine,
+            queries: [Query.equal("entry_id", eid), Query.limit(100)],
+            transactionId,
+        })
         return res.documents.map(purchaseEntryLineFromDTO)
     }
 

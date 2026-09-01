@@ -9,7 +9,8 @@ export interface PurchaseEntryDTO extends Models.Document {
     user_id: string
     notes?: string
     line_count: number
-    /** CUP por 1 USD — Appwrite: añadir atributos si aún no existen */
+    /** Core 3 B3. Legacy entries may omit it and are treated as ACTIVE. */
+    status?: "ACTIVE" | "CANCELLED"
     exchange_rate?: number
     exchange_rate_at?: string
     exchange_rate_source?: string

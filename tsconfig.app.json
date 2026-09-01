@@ -5,7 +5,7 @@
     "target": "ES2022",
     "useDefineForClassFields": true,
     "module": "ESNext",
-    "types": ["svelte", "vite/client", "vitest/globals"],
+    "types": ["svelte", "vite/client", "vitest/globals", "node"],
     "noEmit": true,
     "allowJs": true,
     "checkJs": false,

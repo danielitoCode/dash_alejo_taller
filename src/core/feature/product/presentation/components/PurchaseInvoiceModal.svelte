@@ -86,8 +86,6 @@
         resetInvoiceForm();
         void supplierStore.syncAll().catch(() => {});
         void exchangeStore.loadCached().then(() => {
-            // Best-effort refresh sin depender de $exchangeStore dentro del $:
-            // (eso también re-entraría el bloque al actualizar el store).
             void exchangeStore.refreshOnSession().catch(() => {});
         });
     } else if (!open && prevOpen) {
@@ -181,7 +179,7 @@
         }
 
         invoiceSubmitting = true;
-        toastStore.info("Preparando factura de entrada…", 3000);
+        const opId = toastStore.loading("Preparando factura de entrada…", "Factura de entrada");
 
         try {
             const resolved: {
@@ -190,6 +188,13 @@
                 unitCost: number;
                 concept: PurchaseLineConcept;
             }[] = [];
+
+            const newProductCount = invoiceLines.filter((l) => l.mode === "new").length;
+            if (newProductCount > 0) {
+                toastStore.patch(opId, {
+                    text: `Creando ${newProductCount} producto(s) nuevo(s)…`,
+                });
+            }
 
             for (const l of invoiceLines) {
                 const quantity = Math.floor(Number(l.quantity) || 0);
@@ -222,7 +227,9 @@
                 });
             }
 
-            toastStore.info(`Registrando factura (${resolved.length} línea(s))…`, 3500);
+            toastStore.patch(opId, {
+                text: `Registrando factura (${resolved.length} línea(s))…`,
+            });
 
             const supplierId =
                 supplierMode && supplierMode !== "__new__" && supplierMode !== ""
@@ -237,7 +244,6 @@
                     ? invoiceSupplierContact.trim() || undefined
                     : undefined;
 
-            // Snapshot de tasa leído una vez al confirmar (no en $: de apertura).
             let exchangeSnapshot: {
                 exchangeRate: number;
                 exchangeRateAt: string;
@@ -246,7 +252,6 @@
 
             if (invoiceCurrency === "CUP" && effectiveRate) {
                 let rateAt = new Date().toISOString();
-                // Lectura puntual del store sin reactividad en este path
                 let unsub: (() => void) | undefined;
                 const current = await new Promise<{
                     updatedAt?: string;
@@ -277,6 +282,7 @@
                 ...(exchangeSnapshot ?? {}),
             });
 
+            toastStore.patch(opId, { text: "Sincronizando catálogo…" });
             await productStore.syncAll().catch(() => {});
             await supplierStore.syncAll().catch(() => {});
             invoiceSubmitting = false;
@@ -286,17 +292,24 @@
                 entry.priceProtections && entry.priceProtections.length > 0
                     ? ` · ${entry.priceProtections.length} precio(s) auto-ajustado(s) (+30%).`
                     : "";
-            toastStore.success(
-                `Factura registrada (${entry.currency}): ${entry.lineCount} línea(s), total ${entry.totalCost}.${protectionNote}`,
-                6000
-            );
+            toastStore.patch(opId, {
+                type: "success",
+                text: `Factura registrada (${entry.currency}): ${entry.lineCount} línea(s), total ${entry.totalCost}.${protectionNote}`,
+                timeoutMs: 6000,
+                dismissible: true,
+            });
         } catch (e: unknown) {
             const err = e as { message?: string; stack?: string };
             logger.error(err?.message ?? e, err?.stack);
-            toastStore.error(
-                e instanceof Error ? e.message : "No se pudo registrar la factura de entrada.",
-                6000
-            );
+            toastStore.patch(opId, {
+                type: "error",
+                text:
+                    e instanceof Error
+                        ? e.message
+                        : "No se pudo registrar la factura de entrada.",
+                timeoutMs: 6000,
+                dismissible: true,
+            });
             invoiceSubmitting = false;
         }
     }

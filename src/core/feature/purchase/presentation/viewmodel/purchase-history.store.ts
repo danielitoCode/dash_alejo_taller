@@ -2,12 +2,15 @@ import { writable } from "svelte/store"
 import { purchaseContainer } from "../../di/purchase.container"
 import type { PurchaseEntry } from "../../domain/entity/PurchaseEntry"
 import type { PurchaseEntryDetail } from "../../domain/caseuse/GetPurchaseEntryDetailCaseUse"
+import type { CancelPurchaseEntryResult } from "../../domain/caseuse/CancelPurchaseEntryCaseUse"
 
 interface HistoryState {
     items: PurchaseEntry[]
     detail: PurchaseEntryDetail | null
     loading: boolean
     detailLoading: boolean
+    /** Core 3 B3.1 — anulación de entrada en curso. */
+    cancelling: boolean
     error: string | null
 }
 
@@ -16,6 +19,7 @@ const initial: HistoryState = {
     detail: null,
     loading: false,
     detailLoading: false,
+    cancelling: false,
     error: null,
 }
 
@@ -56,6 +60,42 @@ function createPurchaseHistoryStore() {
         update((s) => ({ ...s, detail: null }))
     }
 
+    /**
+     * Core 3 B3.1 — anula una entrada (compensación de stock, sin tocar
+     * reserved/lastUnitCost) y refresca detalle + listado en memoria.
+     *
+     * No es optimista: status CANCELLED solo se escribe en items/detail
+     * después de execute + getDetail exitosos. Si falla, no muta status.
+     */
+    async function cancelEntry(entryId: string): Promise<CancelPurchaseEntryResult> {
+        update((s) => ({ ...s, cancelling: true, error: null }))
+        try {
+            const result = await purchaseContainer.useCases.cancelPurchaseEntry.execute(entryId)
+
+            // Solo tras commit remoto: refrescar detalle y marcar listado.
+            const refreshedDetail = await purchaseContainer.useCases.getPurchaseEntryDetail.execute(
+                entryId
+            )
+
+            update((s) => ({
+                ...s,
+                cancelling: false,
+                detail: refreshedDetail,
+                items: s.items.map((item) =>
+                    item.id === entryId
+                        ? { ...item, status: refreshedDetail.entry.status || "CANCELLED" }
+                        : item
+                ),
+            }))
+
+            return result
+        } catch (error) {
+            // Fallo: no tocar status de items ni detail (evita badge "Anulada" falso).
+            update((s) => ({ ...s, cancelling: false, error: normalizeError(error) }))
+            throw error
+        }
+    }
+
     function clearError(): void {
         update((s) => ({ ...s, error: null }))
     }
@@ -69,6 +109,7 @@ function createPurchaseHistoryStore() {
         syncList,
         loadDetail,
         clearDetail,
+        cancelEntry,
         clearError,
         reset,
     }

@@ -32,12 +32,17 @@ export class ProductOfflineFirstRepository implements ProductRepository {
         }
     }
 
-    async getById(id: string): Promise<Product | null> {
+    async getById(id: string, transactionId?: string): Promise<Product | null> {
         try {
-            const remote = await this.net.getById(id)
-            await db.products.put(remote)
+            const remote = await this.net.getById(id, transactionId)
+            // Staged transaction data must not be mirrored locally before commit.
+            if (!transactionId) {
+                await db.products.put(remote)
+            }
             return productFromDTO(remote)
         } catch {
+            // A transaction read must never silently fall back to stale Dexie data.
+            if (transactionId) throw new Error(`Product with id ${id} not found in transaction`)
             const local = await db.products.get(id)
             return local ? productFromDTO(local) : null
         }
@@ -72,8 +77,8 @@ export class ProductOfflineFirstRepository implements ProductRepository {
         }
     }
 
-    async update(id: string, product: Partial<Product>): Promise<Product> {
-        const current = await this.getById(id)
+    async update(id: string, product: Partial<Product>, transactionId?: string): Promise<Product> {
+        const current = await this.getById(id, transactionId)
         if (!current) {
             throw new Error(`Product with id ${id} not found`)
         }
@@ -95,8 +100,10 @@ export class ProductOfflineFirstRepository implements ProductRepository {
 
         try {
             // Catálogo: no enviar reserved para no pisar soft-hold concurrente en Appwrite
-            const updated = await this.net.update(id, productToCatalogWriteDTO(merged))
-            await db.products.put(updated)
+            const updated = await this.net.update(id, productToCatalogWriteDTO(merged), transactionId)
+            if (!transactionId) {
+                await db.products.put(updated)
+            }
             return productFromDTO(updated)
         } catch (error: any) {
             logger.error(
