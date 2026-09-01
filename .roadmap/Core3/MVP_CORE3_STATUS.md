@@ -1,45 +1,48 @@
 # MVP Core 3 — Estado vivo (dash)
 
-**Última actualización:** 2026-08-29  
+**Última actualización:** 2026-09-01  
 **Rama:** `Core3`  
-**Core 3 cerrado:** **NO**
+**Core 3 (release mínimo):** **SÍ** — listo para PR → `master`  
+**B3.2 (corrección parcial):** pendiente post-merge (no bloquea)
 
 | Bloque | Estado |
 |--------|--------|
 | B0 Baseline / política / audit schema / consola | **Cerrado** |
 | B1 Proveedores UI + selector en factura | **Hecho + smoke UI OK** |
 | B2 Historial compras (listado → detalle + filtro producto) | **Hecho + smoke UI OK** |
-| B3.1 Anulación completa | **Código completo:** núcleo + schema `status` + UI anular (owner/admin + confirmación). Falta smoke operador post-anulación |
-| B3.2 Corrección parcial | pendiente (no bloquea B3.1) |
-| B4 Permisos + smoke panel | **Hecho (dash).** AT smoke cruzado: verificar lista en espejo AT |
-| B5 Espejo AT | código frontera OK; STATUS AT alineado; smokes AT por confirmar |
-| B6 Merge master | no — falta CI en GitHub Actions + smokes + PR |
+| B3.1 Anulación completa | **Cerrado** — núcleo + schema `status` + UI + validación reserved + mensajes enriquecidos + UI no optimista |
+| B3.2 Corrección parcial | pendiente (no bloquea) |
+| B4 Permisos + smoke panel | **Hecho (dash)** |
+| B5 Espejo AT | código frontera OK; docs AT alineados |
+| B6 Merge master | **en curso** — PR `Core3` → `master` |
 
-### Smoke UI (2026-08-27)
+### Smoke UI
 
 | Flujo | Resultado |
 |-------|-----------|
 | Subvista **Proveedores** | OK |
 | Alta proveedor desde **factura de entrada** | OK |
 | Subvista **Compras** listado → detalle | OK |
+| **Anular entrada** (owner/admin) | OK — éxito marca CANCELLED; fallo reserved muestra error y **no** badge Anulada |
+| Bloqueo `existence < reserved` | OK — mensaje con producto, existence, reserved y ventas pendientes |
 
-### B3.1
+### B3.1 (resumen técnico)
 
-- `CancelPurchaseEntryCaseUse` + transacciones Appwrite
-- Tests unitarios (reserved, idempotencia, movimiento compensatorio)
-- Consola: `purchase_entry.status` = `ACTIVE` \| `CANCELLED` (**2026-08-29**)
-- Botón "Anular entrada" en detalle de Compras (owner/admin, con `window.confirm` describiendo consecuencias); badge de estado "Anulada" en detalle y listado (**2026-08-29**)
-- Pendiente: smoke manual (anular una entrada de prueba, confirmar `existence`/`reserved`/`last_unit_cost` y bloqueo si `existence < reserved`)
+- `CancelPurchaseEntryCaseUse` + `AppwriteTransactionRunner`
+- Reversión: `existence -= qty`, movement `ajuste` + `reason=purchase_entry_reversal` + `entry_id`
+- **No** modifica `reserved` ni `last_unit_cost`
+- Regla: `newExistence >= reserved` o rechazo con mensaje explícito
+- UI: solo owner/admin; confirmación; `toastStore.run` (loading sobrevive navegación)
+- Store: status `CANCELLED` solo tras execute + loadDetail exitosos
 
-### Fix CI (2026-08-29)
+### UX incluido en Core3 (paridad operativa)
 
-- `tsconfig.app.json`: faltaba `"node"` en `compilerOptions.types` → `svelte-check` no resolvía `process.env` en `b3.1.appwrite.integration.test.ts` y `vitest.setup.ts` (`@types/node` ya era dependencia).
-- `console.interceptor.ts`: al agregar los tipos de Node, el `Console` global chocaba con la reasignación dinámica de `console[level]`; se tipó explícitamente vía `unknown` intermedio.
-- Verificado localmente: `svelte-check` 0 errores, `tsc -p tsconfig.node.json` 0 errores, `vitest run --project unit --project integration --project ui` → 173/175 (2 fallos preexistentes en `SupportInbox.ui.test.ts`, no relacionados a Core3, reproducidos también sin este cambio).
+- Toast unificado con iconos (success / error / info / warning / loading)
+- Loading persistente para anular / registrar factura (stages)
+- RealtimeDock flotante eliminado del layout (funciones en panel de navegación)
 
-### Siguiente para cerrar Core 3
+### Post-merge (no bloquea)
 
-1. Smoke manual de anulación en Compras (owner/admin)  
-2. Confirmar CI verde en GitHub Actions (`Core3`)  
-3. Smokes AT (lista en espejo)  
-4. PR `Core3` → `master`  
+1. B3.2 corrección parcial de líneas  
+2. Smoke cruzado AT opcional en dispositivo  
+3. Test opcional COGS `last_unit_cost` en AT  

@@ -1,8 +1,8 @@
 # Core 3 — Política de compras y abastecimiento
 
-**Fecha:** 2026-08-28  
+**Fecha:** 2026-08-28 (actualizado 2026-09-01)  
 **Rama:** `Core3`  
-**Estado:** aceptada para B0 (baseline) + moneda y protección de margen (ver POLICY_CURRENCY_CORE3)  
+**Estado:** aceptada — B0 + moneda + B3.1 anulación  
 **No altera** soft-hold Core 1 ni COGS Core 2 (`last_unit_cost × qty` al VERIFIED).
 
 ## 1. Quién escribe
@@ -13,7 +13,7 @@
 | Operador (`alejotallerscan`) | No (lectura no requerida) | No | Solo vía confirm venta (`salida_venta`) |
 | Dash staff (sales+) | CRUD según rol | Create + read | Create al registrar entrada |
 | Dash viewer | Solo lectura | Solo lectura | Solo lectura |
-| Owner/admin | CRUD + anulación (B3) | CRUD + anulación (B3) | Create |
+| Owner/admin | CRUD + anulación (B3.1) | CRUD + anulación (B3.1) | Create |
 
 ## 2. Proveedor (`supplier`)
 
@@ -35,11 +35,15 @@
   - Si `currency = CUP`, convertir con tasa del momento (misma API Directorio Cubano que AlejoTaller) antes de escribir `last_unit_cost`.  
   - Si el costo unitario USD de una línea `purchase` **supera** el `product.price` actual → el sistema ajusta el precio de venta a **costo × 1.30** y deja señal visible (protección anti-pérdida).
 
-## 4. Inmutabilidad vs anulación (B3 — no implementar en B0)
+## 4. Anulación completa (B3.1 — implementada)
 
-- Las entradas **confirmadas** no se editan línea a línea en caliente en B0–B2.
-- **Anulación/corrección** (B3): solo owner/admin; debe escribir traza compensatoria; **prohibido** si el resultado dejaría `existence < reserved`.
-- Hasta B3 no existe `status` en `purchase_entry` en producción (gap documentado).
+- Las entradas **confirmadas** no se editan línea a línea en caliente (B0–B2).
+- **Anulación (B3.1):** solo owner/admin; traza compensatoria; **prohibido** si el resultado dejaría `existence < reserved`.
+- `purchase_entry.status`: `ACTIVE` | `CANCELLED` (provisionado en consola 2026-08-29).
+- Reversión: reduce `existence`, crea movement `ajuste` con `reason=purchase_entry_reversal` y `entry_id`.
+- **No** modifica `reserved` ni `last_unit_cost`.
+- Si hay ventas pendientes que mantienen `reserved` por encima del stock post-reversión → el panel **bloquea** y pide rechazar o confirmar esas ventas primero.
+- B3.2 (corrección parcial de líneas) queda como trabajo futuro opcional.
 
 ## 5. Auditoría mínima
 
@@ -53,6 +57,7 @@ Toda entrada debe permitir reconstruir:
 - si CUP: tasa, momento y fuente del cambio
 - si se aplicó protección de precio: precio anterior/nuevo y producto
 - movements ligados por `entry_id`
+- si anulada: status `CANCELLED` + movement de reversión
 
 ## 6. Tipos (contrato código ↔ Appwrite)
 

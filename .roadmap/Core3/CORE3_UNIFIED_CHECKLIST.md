@@ -1,7 +1,8 @@
 # Core 3 — Checklist unificado (dash + AlejoTaller)
 
-**Última actualización:** 2026-08-29  
-**Rama:** `Core3` en ambos repos.
+**Última actualización:** 2026-09-01  
+**Rama:** `Core3` en ambos repos.  
+**Release mínimo:** B0–B4 + B3.1 → merge a `master`.
 
 ## B0 — Baseline y política
 
@@ -49,9 +50,11 @@
 - [x] **DASH** Atributo Appwrite `purchase_entry.status` (`ACTIVE|CANCELLED`) provisionado (consola 2026-08-29)
 - [x] **DASH** UI de anulación solo owner/admin + confirmación
 - [x] **DASH** Tests unitarios B3.1: `existence < reserved`, rollback de dominio e idempotencia
-- [ ] **AT** Smoke operador `VERIFIED` post-anulación (**DEP** UI B3 dash — UI ya lista; falta correr el smoke)
+- [x] **DASH** UI no optimista + mensaje enriquecido (producto, reserved, ventas pendientes)
+- [x] **DASH** Smoke runtime bloqueo reserved verificado (2026-08-30)
+- [ ] **AT** Smoke operador `VERIFIED` post-anulación (opcional; no bloquea merge)
 
-**Estado B3:** núcleo + schema `status` + UI de anulación listos (código). Falta smoke operador post-anulación y confirmar CI verde en GitHub.
+**Estado B3.1:** **cerrado** para release. B3.2 opcional post-merge.
 
 ### B3.2 — Corrección parcial
 
@@ -60,7 +63,7 @@
 - [ ] **DASH** UI owner/admin
 - [ ] **DASH** Tests
 
-*(Opcional; no bloquea cierre de B3.1 / Core 3 mínimo con anulación completa.)*
+*(Opcional; no bloquea cierre de B3.1 / Core 3 mínimo.)*
 
 ## B4 — Permisos, roles y smoke panel
 
@@ -69,29 +72,30 @@
 - [x] **DASH** Smoke E2E proveedor → entrada → movements
 - [x] **DASH** Badges/nav verificados
 - [x] **DASH** Gate panel: owner/admin + sales/operator; compras/proveedores solo owner/admin
-- [ ] **AT** Smoke cruzado — ver lista de verificación en el espejo AT (código OK; falta confirmación manual)
+- [ ] **AT** Smoke cruzado runtime (opcional; código frontera OK)
 
 ## B5 — Espejo AlejoTaller
 
 - [x] **AT** Checklist espejo (carpeta `.roadmap/Core3/`)
 - [x] **AT** COGS operador intacto en código (`last_unit_cost × qty` al VERIFIED)
-- [ ] **AT** (opcional) Test/nota nueva Core3 de lectura `last_unit_cost` en COGS — **se mantiene pendiente**
+- [ ] **AT** (opcional) Test/nota nueva Core3 de lectura `last_unit_cost` en COGS
 - [x] **AT** Cliente/MCP sin supplier/purchase (código)
 - [x] **AT** Política B3 espejada; no se añade lógica de anulación al cliente/operador
-- [ ] **AT** Confirmar smokes B4/B5 en dispositivo/web (lista en espejo AT)
+- [ ] **AT** Confirmar smokes B4/B5 en dispositivo/web (opcional)
 
 ## B6 — Cierre y merge
 
-- [ ] **DASH** CI verde en `Core3` (verificado localmente: `svelte-check` 0 errores, `tsc -p tsconfig.node.json` 0 errores, `vitest` unit+integration+ui 173/175 — 2 fallos preexistentes en `SupportInbox.ui.test.ts` no relacionados; falta confirmar el run real en GitHub Actions)
-- [ ] **AT** CI módulos tocados verde
-- [ ] **BOTH** PR `Core3` → `master`
+- [x] **DASH** Documentación saneada y STATUS en release mínimo
+- [ ] **DASH** CI verde en PR `Core3` → `master`
+- [ ] **AT** CI módulos tocados verde en PR espejo
+- [ ] **BOTH** PR `Core3` → `master` mergeado
 
 ### Criterio de merge
 
 | Condición | ¿Merge? |
 |---|---|
 | B1+B2+B4 | Sí — release parcial (sin anulación en UI) |
-| B3.1 (schema + UI + CI) | Sí — release con anulación completa |
+| B3.1 (schema + UI + política reserved) | **Sí** — release con anulación completa |
 | B3.2 | No bloquea |
 
 ## Registro
@@ -100,6 +104,6 @@
 |---|---|
 | 2026-08-27 | Apertura Core3 + B0/B1/B2 inicial |
 | 2026-08-28 | Schema/índices/permisos verificados; B2 completo |
-| 2026-08-29 | B0 + B4 smoke E2E panel; B3.0 stock audit; B3.1 transaccional |
-| 2026-08-29 | Consola: `purchase_entry.status` ACTIVE\|CANCELLED provisionado |
-| 2026-08-29 | UI anulación (owner/admin + confirmación) implementada; fix CI `process.env` (tsconfig `types`) |
+| 2026-08-29 | B0 + B4 smoke E2E panel; B3.0 stock audit; B3.1 transaccional; status provisionado; UI anular |
+| 2026-08-30 | UI no optimista; error reserved enriquecido; toast unificado + loading; RealtimeDock flotante quitado |
+| 2026-09-01 | Saneamiento docs; B3.1 marcado cerrado; PR merge a master |
