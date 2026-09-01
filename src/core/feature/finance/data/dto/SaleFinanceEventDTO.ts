@@ -8,4 +8,6 @@ export interface SaleFinanceEventDTO extends Models.Document {
     user_id: string
     at: string
     currency?: string
+    /** JSON string de SaleFinanceLine[] (Core 4 Opción A). Ausente en docs legacy. */
+    lines_json?: string
 }
