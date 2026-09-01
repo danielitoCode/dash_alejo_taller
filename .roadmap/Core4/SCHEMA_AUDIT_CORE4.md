@@ -7,9 +7,9 @@
 
 ---
 
-## 1. Contrato actual (Core 2)
+## 1. Contrato actual (Core 2 + Core 4)
 
-### Dominio (`SaleFinanceEvent`) — post B1
+### Dominio (`SaleFinanceEvent`)
 
 | Campo | Tipo | Notas |
 |-------|------|--------|
@@ -33,8 +33,8 @@
 | `margin` | number | existente |
 | `user_id` | string | existente |
 | `at` | string | existente |
-| `currency` | string? | existente (verificar entornos) |
-| **`lines_json`** | string? | **A PROVISIONAR** |
+| `currency` | string? | existente |
+| **`lines_json`** | string? | **Provisionado + smoke OK 2026-09-01** |
 
 ---
 
@@ -44,38 +44,26 @@
 lines_json: string  // serialización de SaleFinanceLine[]
 ```
 
-```ts
-interface SaleFinanceLine {
-  productId: string
-  quantity: number
-  unitPrice: number
-  unitCostSnapshot: number
-  lineRevenue: number
-  lineCogs: number
-  lineMargin: number
-}
-```
-
-- Agregados `revenue` / `cogs` / `margin` siguen siendo la fuente de resúmenes.
-- Docs legacy sin `lines_json` → `lines: []` (compatible).
+- Agregados `revenue` / `cogs` / `margin` = fuente de resúmenes.
+- Docs legacy sin `lines_json` → `lines: []`.
 - Opción B (colección `sale_finance_line`) **no** en release mínimo.
 
 ---
 
 ## 3. Acciones de consola / provisión
 
-- [ ] Verificar en Appwrite consola atributos reales vs DTO.
-- [ ] **Provisionar `lines_json`** (string, size suficiente p.ej. 16384+; required = false).
-- [ ] Índices: query por `sale_id` (ya usada); no índice de líneas en MVP.
-- [ ] Permisos: create alineado a roles que confirman; cliente B2C sin write.
-- [ ] Documentar gap si algún entorno no tiene `currency`.
+- [x] Verificar atributos reales vs DTO.
+- [x] **Provisionar `lines_json`** (string, required = false).
+- [x] Smoke create/read con líneas (panel 2026-09-01).
+- [x] Índices: query por `sale_id` (ya usada).
+- [ ] Permisos: create alineado a roles que confirman; cliente B2C sin write (revisar en B6).
 
 ---
 
 ## 4. Paridad operador (AlejoTaller)
 
-- `SaleFinanceWrite.lines` + repo escribe `lines_json` cuando `lines` no está vacío.
-- Case use operador debe **poblar** `lines` en B3 (tipos listos en B1).
+- `SaleFinanceWrite.lines` + repo escribe `lines_json`.
+- `ApplyOperatorStockDecisionCaseUse` pobla `lines` al VERIFIED (B3 código).
 
 ---
 
@@ -83,4 +71,4 @@ interface SaleFinanceLine {
 
 - [x] Tabla “actual vs propuesto” validada en código.
 - [x] Decisión Opción A registrada.
-- [x] Lista de atributos a provisionar: **`lines_json`**.
+- [x] Atributo **`lines_json`** provisionado y validado en runtime.
