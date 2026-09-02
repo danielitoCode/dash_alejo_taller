@@ -1,93 +1,64 @@
 # Core 4 — Checklist unificado (dash + AlejoTaller)
 
-**Última actualización:** 2026-09-02  
-**Rama:** `Core4` en ambos repos.  
-**Release mínimo:** B0–B5 + B6 (CI + frontera).
+**Estado:** **CERRADO** (2026-09-02)  
+**Rama:** `Core4` · PRs: [dash #21](https://github.com/danielitoCode/dash_alejo_taller/pull/21) · [AT #28](https://github.com/danielitoCode/AlejoTaller/pull/28)
 
 Convención: **DASH** = `dash_alejo_taller` · **AT** = `AlejoTaller` · **BOTH** = ambos.
 
 ---
 
-## B0 — Baseline, política y schema
+## B0 — Baseline, política y schema — **CERRADO**
 
-- [x] **BOTH** Core 2 confirmado: `sale_finance_event` al VERIFIED; UNVERIFIED/DELETED sin finance
-- [x] **BOTH** Core 3: dependencia de `last_unit_cost` documentada
-- [x] **DASH** Política [POLICY_SALE_FINANCE_CORE4.md](./POLICY_SALE_FINANCE_CORE4.md) aceptada
-- [x] **DASH** [SCHEMA_AUDIT_CORE4.md](./SCHEMA_AUDIT_CORE4.md) completado
-- [x] **DASH** Opción A (`lines_json`) — MVP
-- [x] **DASH** Atributo `lines_json` provisionado
-- [x] **AT** Política / docs espejo
+- [x] **BOTH** Core 2: finance solo en VERIFIED
+- [x] **BOTH** Core 3 / `last_unit_cost` documentado
+- [x] **DASH** Política + SCHEMA + Opción A (`lines_json`)
+- [x] **DASH** Atributo provisionado en Appwrite
+- [x] **AT** Docs espejo
 
-**Salida B0:** completa 2026-09-01.
+## B1 — Contrato de dominio — **CERRADO**
 
----
-
-## B1 — Contrato de dominio (snapshot + líneas)
-
-- [x] **DASH** Entidad + `buildFinanceEventFromSale` + mapper + Register use case
-- [x] **AT** `SaleFinanceWrite` / lines + repo `lines_json`
+- [x] **DASH** `SaleFinanceEvent` + líneas + `buildFinanceEventFromSale` + mapper
+- [x] **DASH** `RegisterSaleFinanceFromVerifiedCaseUse`
+- [x] **AT** `SaleFinanceWrite` / `SaleFinanceLineWrite` + repo `lines_json`
 - [x] **DASH** Unit build + mapper
 
-**Salida B1:** completa 2026-09-01.
+## B2 — Confirm panel — **CERRADO**
 
----
+- [x] Confirm con snapshot por línea
+- [x] Smoke panel 2026-09-01 (`lines_json`, cogs/margin)
 
-## B2 — Confirm panel (dash)
+## B3 — Confirm operador — **CERRADO**
 
-- [x] Confirm genera event con snapshot por línea
-- [x] Smoke panel 2026-09-01
+- [x] Case use + `createIdempotent` + unit (lines, DELETED, costo 0)
+- [x] Frontera cliente/MCP sin write (docs + código)
+- [ ] Smoke device (opcional, no bloquea cierre)
 
-**Salida B2:** completa.
-
----
-
-## B3 — Confirm operador (AT)
-
-- [x] Case use + createIdempotent + unit (DELETED / lines / costo 0)
-- [ ] Smoke device (opcional)
-
-**Salida B3:** código completo.
-
----
-
-## B4 — Idempotencia y estabilidad
+## B4 — Idempotencia y estabilidad — **CERRADO**
 
 - [x] **DASH** Unit no-reescritura + reconcile solo faltantes
-- [x] **AT** Unit createIdempotent / 2º confirm
+- [x] **AT** Unit 2º confirm / createIdempotent no sobrescribe
 
-**Salida B4:** completa 2026-09-02.
-
----
-
-## B5 — Tests y paridad
+## B5 — Tests y paridad — **CERRADO**
 
 - [x] Margen doc vs Σ líneas + POLICY §3.3
 - [x] [PARITY_PANEL_OPERATOR.md](./PARITY_PANEL_OPERATOR.md)
+- [x] Register idempotente (unit)
 
-**Salida B5:** completa 2026-09-02.
+## B6 — Permisos, smoke y cierre — **CERRADO (producto)**
 
----
-
-## B6 — Permisos, smoke y cierre
-
-- [x] **DASH** Frontera código: REJECT sin finance; confirm sí registra *(unit 2026-09-02)*
-- [x] **DASH** Smoke UI confirm *(B2)*
-- [x] **DASH** REJECT sin finance *(unit + código; smoke UI opcional)*
-- [x] **AT** MCP/docs prohíben write `sale_finance_event`; web sin create finance
-- [ ] **DASH** Permisos Appwrite consola: cliente sin write (checklist manual en [B6_PERMISSIONS_AND_BOUNDARY.md](./B6_PERMISSIONS_AND_BOUNDARY.md))
-- [ ] **AT** Smoke operador device (opcional)
-- [ ] **DASH** CI verde en [PR #21](https://github.com/danielitoCode/dash_alejo_taller/pull/21)
-- [ ] **AT** CI verde en PR `Core4` → `master`
-- [ ] **BOTH** Merge cuando CI verde
-
-**Salida B6:** en curso — código/frontera listos; CI + permisos consola + merge pendientes.
+- [x] REJECT sin finance (código + unit)
+- [x] Confirm registra finance (unit)
+- [x] MCP / web sin write finance
+- [x] PRs abiertos hacia `master`
+- [x] [B6_PERMISSIONS_AND_BOUNDARY.md](./B6_PERMISSIONS_AND_BOUNDARY.md)
+- [ ] CI verde + merge (operativo al aceptar PRs)
+- [ ] Checklist manual Appwrite: cliente sin write (operativo)
 
 ---
 
-## Registro
+## Registro de cierre
 
 | Fecha | Nota |
 |---|---|
 | 2026-09-01 | B0–B3 |
-| 2026-09-02 | B4–B5 |
-| 2026-09-02 | B6: unit REJECT/confirm finance; PR dash #21; permisos doc |
+| 2026-09-02 | B4–B5; B6 frontera/unit/PRs; **cierre oficial de producto** |
