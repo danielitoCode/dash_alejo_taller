@@ -2,27 +2,36 @@
 
 **Rama:** `Core5`  
 **Última actualización:** 2026-09-02  
-**Política:** [POLICY_SUPERVISION_REPORTS_CORE5.md](./POLICY_SUPERVISION_REPORTS_CORE5.md)  
+**Política:** [POLICY_SUPERVISION_REPORTS_CORE5.md](./POLICY_SUPERVISION_REPORTS_CORE5.md) (**aceptada**)  
 **Release mínimo:** B0 + B1 + B2 + B5. **Completo:** + B3 + B4.
-
-Este repo **implementa** supervisión y reportes. No escribe `sale_finance_event` desde pantallas de reporte (solo lectura + reconcile de faltantes ya existente en store).
 
 ---
 
-## B0 — Baseline e inventario
+## B0 — Baseline e inventario — **CERRADO** (2026-09-02)
 
-**Objetivo:** saber qué hay y no tocar write Core 4 por error.
+- [x] Core 4 finance en `master` / base de rama:
+  - [x] `SaleFinanceEvent` + `SaleFinanceLine` (`lines`, `unitCostSnapshot`)
+  - [x] `buildFinanceEventFromSale`
+  - [x] `RegisterSaleFinanceFromVerifiedCaseUse` idempotente (`getBySaleId` → no create)
+- [x] [POLICY_SUPERVISION_REPORTS_CORE5.md](./POLICY_SUPERVISION_REPORTS_CORE5.md) **aceptada**
+  - [x] Evaluación `.policies/`: **no** redefine SALE/WAREHOUSE/EXCHANGE de dominio; sin impacto en tests de stock/confirm
+  - [x] Puntero en `.policies/README.md` (lectura-only)
+- [x] Inventario de lectura (paths reales):
 
-- [ ] Confirmar en `master`/rama: Core 4 finance (`SaleFinanceEvent`, `lines`, `buildFinanceEventFromSale`, register idempotente)
-- [ ] Aceptar [POLICY_SUPERVISION_REPORTS_CORE5.md](./POLICY_SUPERVISION_REPORTS_CORE5.md)
-- [ ] Inventariar lectura actual y anotar rutas reales:
-  - [ ] `src/core/feature/finance/domain/util/aggregateFinanceSummary.ts`
-  - [ ] `src/core/feature/finance/presentation/viewmodel/finance.store.ts` (`loadSummary`)
-  - [ ] UI: localizar `FinanceSummaryPanel` (o equivalente en routes/components)
-  - [ ] Listado / cola de ventas (módulo `sale` presentation)
-- [ ] Anotar en STATUS: “B0 inventario OK” + paths
+| Pieza | Path |
+|-------|------|
+| Entidad | `src/core/feature/finance/domain/entity/SaleFinanceEvent.ts` |
+| Build event | `src/core/feature/finance/domain/util/buildFinanceEventFromSale.ts` |
+| Agregador | `src/core/feature/finance/domain/util/aggregateFinanceSummary.ts` |
+| Register (write Core4) | `src/core/feature/finance/domain/caseuse/RegisterSaleFinanceFromVerifiedCaseUse.ts` |
+| Store lectura + reconcile faltantes | `src/core/feature/finance/presentation/viewmodel/finance.store.ts` |
+| UI resumen | `src/core/feature/finance/presentation/components/FinanceSummaryPanel.svelte` |
+| Refresh post-confirm | `src/core/feature/sale/presentation/viewmodel/sale.store.ts` (`financeStore.loadSummary`) |
+| Faltantes reconcile helper | `src/core/feature/finance/domain/util/salesMissingFinanceEvent.ts` |
 
-**Salida:** mapa de archivos + política aceptada. **Siguiente:** B1.
+- [x] STATUS: “B0 inventario OK” + paths
+
+**Salida B0:** hecha. **Siguiente:** B1.
 
 ---
 
@@ -30,93 +39,67 @@ Este repo **implementa** supervisión y reportes. No escribe `sale_finance_event
 
 **Objetivo:** KPIs de período testeables sobre `SaleFinanceEvent[]`.
 
-- [ ] Revisar / documentar tipo `FinanceSummary` (revenue, cogs, margin, count u equivalentes)
-- [ ] Extender o envolver `aggregateFinanceSummary`:
-  - [ ] Σ revenue / cogs / margin / count en rango (el rango lo aplica el repo/listByDateRange; el agregador suma events ya filtrados)
-  - [ ] Opcional: bucket por `currency` si hay multi-moneda en el mismo listado
-- [ ] Helper de desglose por producto **solo si hay `lines`** (puede vivir en B3; en B1 al menos la regla documentada: sin lines → sin inventar)
-- [ ] Unit tests en `src/test/core/feature/finance/`:
+- [ ] Revisar / documentar tipo `FinanceSummary` (ya: revenue, cogs, margin, count, byCurrency)
+- [ ] Extender o envolver `aggregateFinanceSummary` según gaps Core 5 (p. ej. desglose producto → B3)
+- [ ] Regla: sin `lines` → sin desglose producto inventado
+- [ ] Unit tests:
   - [ ] Σ de N events = summary
   - [ ] Event legacy sin `lines` no rompe agregado documento
   - [ ] Lista vacía → empty summary
 
-**Archivos típicos**
+**Archivos**
 
 | Acción | Path |
 |--------|------|
-| Agregador | `.../finance/domain/util/aggregateFinanceSummary.ts` |
-| Tests | `src/test/core/feature/finance/aggregateFinanceSummary.unit.test.ts` (o nuevo) |
+| Agregador | `.../aggregateFinanceSummary.ts` |
+| Tests | `src/test/core/feature/finance/aggregateFinanceSummary.unit.test.ts` |
 
-**Salida:** tests verdes de agregación. **Siguiente:** B2.
+**Salida:** tests verdes de agregación.
 
 ---
 
 ## B2 — UI resumen financiero (MVP)
 
-**Objetivo:** el staff ve revenue / COGS / margen del período desde events.
-
-- [ ] UI de resumen (madurar panel existente o ruta dedicada):
-  - [ ] Selector de rango (días predefinidos y/o from–to)
-  - [ ] Cards o filas: revenue, cogs, margin, nº eventos
-  - [ ] Estados loading / empty / error
-- [ ] Cableado solo a `financeStore.loadSummary` (o case use de lectura nuevo que **no** registre finance salvo reconcile ya existente)
-- [ ] No añadir botones de “recalcular COGS” ni edición de events
-- [ ] Smoke manual: período con ventas VERIFIED conocidas vs totales del panel
-
-**Salida:** smoke resumen OK. **Siguiente:** B3 o B4 en paralelo; B5 al cerrar.
+- [ ] Madurar `FinanceSummaryPanel.svelte`: rango, KPIs, loading/empty/error
+- [ ] Solo `financeStore.loadSummary` (reconcile faltantes ya en store)
+- [ ] Sin UI de “recalcular COGS”
+- [ ] Smoke manual período conocido
 
 ---
 
-## B3 — Desglose por producto (`lines_json`)
+## B3 — Desglose por producto
 
-**Objetivo:** top productos por revenue/margen usando snapshot Core 4.
-
-- [ ] Función pura: `aggregateByProduct(events) → { productId, lineRevenue, lineCogs, lineMargin, qty }[]`
-- [ ] Ignorar events sin `lines` / `lines.length === 0` en el desglose (sí pueden seguir en totales doc)
-- [ ] Unit: fixture multi-línea; Σ lineCogs del desglose acotado a events con lines
-- [ ] UI: tabla o lista ordenable (margen o revenue)
-- [ ] **Prohibido:** leer `product.last_unit_cost` para rehacer el desglose histórico
-
-**Salida:** desglose usable en panel.
+- [ ] `aggregateByProduct(events)` desde `lines`
+- [ ] UI top productos
+- [ ] Unit; **prohibido** releer `last_unit_cost` para histórico
 
 ---
 
-## B4 — Supervisión operativa (cola)
+## B4 — Supervisión operativa
 
-**Objetivo:** indicadores de flujo de ventas, separados del dinero.
-
-- [ ] Contadores (lectura `sale`):
-  - [ ] UNVERIFIED abiertos (count)
-  - [ ] Aging simple (p. ej. pendientes > 24h / > 72h)
-  - [ ] VERIFIED vs DELETED en el mismo rango de fechas del resumen (o rango propio documentado)
-- [ ] UI: bloque “Operación” distinto del bloque “Finanzas” (etiquetas claras)
-- [ ] Enlaces a listado/detalle de ventas ya existentes (no reescribir el módulo sale)
-- [ ] No sumar UNVERIFIED al revenue
-
-**Salida:** supervisión de cola visible junto al resumen financiero.
+- [ ] UNVERIFIED count, aging, confirm/reject en período
+- [ ] Bloque Operación ≠ Finanzas
+- [ ] Enlaces a ventas existentes
 
 ---
 
-## B5 — Roles, calidad, frontera de write, PR
+## B5 — Roles, calidad, PR
 
-- [ ] Rutas/panel de reportes respetan roles (owner/admin/sales según RoleConfig vigente)
-- [ ] Grep / revisión: ningún componente de reporte llama `registerFromVerified` / `RegisterSaleFinance` excepto el reconcile ya acotado en `finance.store` (documentar si se mantiene)
-- [ ] Unit agregados + CI verde en rama `Core5`
-- [ ] Actualizar [MVP_CORE5_STATUS.md](./MVP_CORE5_STATUS.md) y este checklist
-- [ ] PR `Core5` → `master` (coordinar con AT si solo hubo docs allí)
-
-**Salida:** mergeable con CI verde.
+- [ ] Roles de lectura
+- [ ] Reportes no llaman register salvo reconcile documentado
+- [ ] CI verde; PR `Core5` → `master`
 
 ---
 
-## Orden de trabajo recomendado
+## Orden
 
 ```text
-B0 → B1 → B2 → (B3 ∥ B4) → B5
+B0 ✓ → B1 → B2 → (B3 ∥ B4) → B5
 ```
 
 ## Registro
 
 | Fecha | Nota |
 |-------|------|
-| 2026-09-02 | Checklist DASH de implementación creado |
+| 2026-09-02 | Checklist DASH creado |
+| 2026-09-02 | **B0 cerrado** |
