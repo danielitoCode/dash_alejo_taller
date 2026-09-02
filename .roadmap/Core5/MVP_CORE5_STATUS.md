@@ -2,25 +2,19 @@
 
 **Última actualización:** 2026-09-02  
 **Rama:** `Core5`  
-**Core 5 (release mínimo):** **NO** — apertura / B0 pendiente  
-**Base:** `master` @ creación de rama
+**Checklist:** [DASH_IMPLEMENTATION_CHECKLIST.md](./DASH_IMPLEMENTATION_CHECKLIST.md)  
+**Release mínimo:** **NO** — B0 pendiente
 
 | Bloque | Estado |
 |--------|--------|
-| B0 Política + inventario lectura | **Siguiente** |
+| B0 Baseline / inventario | **Siguiente** |
 | B1 Contrato agregados | pendiente |
 | B2 UI resumen financiero | pendiente |
 | B3 Desglose producto | pendiente |
 | B4 Supervisión operativa | pendiente |
-| B5 Roles / tests / PR | pendiente |
+| B5 Roles / CI / PR | pendiente |
+| CI rama Core5 | workflows añadidos |
 
 ### Siguiente
 
-1. Verificar Core 4 docs en `master` (PRs docs #22 si aplica).  
-2. Marcar B0 tras aceptar política e inventariar panel actual.  
-3. B1 helpers de agregación + unit.
-
-### Notas
-
-- Trabajar **solo** en `Core5` hasta estable.
-- No abrir write finance desde reportes.
+Ejecutar **B0** del DASH checklist (política + inventario de paths reales del panel finance/ventas).
