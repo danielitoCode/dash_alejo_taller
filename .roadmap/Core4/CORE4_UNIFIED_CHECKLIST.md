@@ -64,7 +64,7 @@ Convención: **DASH** = `dash_alejo_taller` · **AT** = `AlejoTaller` · **BOTH*
 - [x] **AT** Cliente web / MCP: **sin** write a `sale_finance_event` (frontera; sin cambios que abran write)
 - [ ] **AT** Smoke runtime dispositivo/emulador confirm → `lines_json` (opcional; código listo)
 
-**Salida B3:** **código completo** 2026-09-01; smoke dispositivo pendiente (no bloquea avanzar B4).
+**Salida B3:** **código completo** 2026-09-01; smoke dispositivo pendiente (no bloquea avanzar).
 
 ---
 
@@ -73,11 +73,11 @@ Convención: **DASH** = `dash_alejo_taller` · **AT** = `AlejoTaller` · **BOTH*
 **DEP:** B2 (mínimo)
 
 - [x] **DASH** Test/caso: existe event → segundo `execute` devuelve el mismo y **no** recalcula con `last_unit_cost` nuevo *(unit 2026-09-02)*
-- [x] **DASH** Test/caso: tras VERIFIED, cambiar `product.last_unit_cost` **no** altera el evento almacenado *(unit: frozen event + cost lookup 999/50)*
+- [x] **DASH** Test/caso: tras VERIFIED, cambiar `product.last_unit_cost` **no** altera el evento almacenado *(unit)*
 - [x] **DASH** Reconcile de resumen solo **crea faltantes**; nunca sobrescribe eventos existentes (`salesMissingFinanceEvent` + store)
 - [x] **AT** Misma garantía en `createIdempotent` + 2º confirm con costo vivo distinto *(unit 2026-09-02)*
 
-**Salida B4:** histórico financiero congelado; reintentos seguros — **BOTH unit 2026-09-02**.
+**Salida B4:** histórico financiero congelado — **BOTH unit 2026-09-02**.
 
 ---
 
@@ -86,15 +86,16 @@ Convención: **DASH** = `dash_alejo_taller` · **AT** = `AlejoTaller` · **BOTH*
 **DEP:** B1–B4 según superficie
 
 - [x] **DASH** Unit: `buildFinanceEventFromSale` con varias líneas y costos distintos *(B1)*
-- [ ] **DASH** Unit: margen doc = Σ márgenes línea (o documentar redondeo cuando revenue = sale.amount)
+- [x] **DASH** Unit: margen doc = Σ márgenes línea cuando revenue = Σ lineRevenue *(2026-09-02)*
+- [x] **DASH** Unit + doc: si `sale.amount` ≠ Σ líneas, margin doc = revenue−cogs (puede ≠ Σ lineMargin) *(POLICY §3.3)*
 - [x] **DASH** Unit: mapper round-trip con `lines_json` *(B1)*
-- [x] **DASH** Unit: `RegisterSaleFinanceFromVerifiedCaseUse` idempotente *(B4 2026-09-02)*
-- [ ] **DASH** Unit: UNVERIFIED/DELETED no invocan create (o guard en capa superior cubierto)
+- [x] **DASH** Unit: `RegisterSaleFinanceFromVerifiedCaseUse` idempotente *(B4)*
+- [x] **DASH** UNVERIFIED/DELETED no generan finance: guard en reject/confirm paths + política (capa superior; reject unit sin register)
 - [x] **AT** Unit: COGS operador con snapshot + lines; costo ausente → 0; idempotencia *(B3)*
-- [x] **AT** Unit B4: no-reescritura con `last_unit_cost` distinto *(2026-09-02)*
-- [ ] **BOTH** Nota de paridad: mismos campos semánticos panel vs operador
+- [x] **AT** Unit B4: no-reescritura con `last_unit_cost` distinto
+- [x] **BOTH** Nota de paridad: [PARITY_PANEL_OPERATOR.md](./PARITY_PANEL_OPERATOR.md) *(2026-09-02)*
 
-**Salida B5:** suite verde en módulos tocados.
+**Salida B5:** **completa** 2026-09-02 (módulos finance tocados).
 
 ---
 
@@ -126,6 +127,6 @@ Convención: **DASH** = `dash_alejo_taller` · **AT** = `AlejoTaller` · **BOTH*
 |---|---|
 | 2026-09-01 | Apertura rama `Core4` ambos repos; docs B0 |
 | 2026-09-01 | B0 cerrado Opción A; B1 dominio/mappers/tests dash + tipos/repo AT |
-| 2026-09-01 | `lines_json` provisionado; B2 smoke panel OK (cogs/margin/lines); B3 código operador + unit tests |
-| 2026-09-02 | B4 dash: unit no-reescritura RegisterSaleFinance + salesMissingFinanceEvent |
-| 2026-09-02 | B4 AT: unit 2º confirm + createIdempotent conserva snapshots (FakeFinanceRepo paridad Appwrite) |
+| 2026-09-01 | `lines_json` provisionado; B2 smoke panel OK; B3 código operador + unit |
+| 2026-09-02 | B4 BOTH unit no-reescritura |
+| 2026-09-02 | B5 residual: margin vs Σ líneas + PARITY_PANEL_OPERATOR + POLICY §3.3 |

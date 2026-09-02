@@ -1,8 +1,10 @@
 # Core 4 — Política de finanzas de venta
 
-**Estado:** borrador operativo · rama `Core4` · 2026-09-01  
+**Estado:** operativo · rama `Core4` · actualizado 2026-09-02  
 **Aplica a:** `dash_alejo_taller` (panel) y `AlejoTaller` (operador scan).  
 **No aplica a:** cliente B2C web (solo crea `UNVERIFIED`; no escribe finance).
+
+**Paridad de campos:** [PARITY_PANEL_OPERATOR.md](./PARITY_PANEL_OPERATOR.md)
 
 ---
 
@@ -36,7 +38,7 @@ DELETED     → sin sale_finance_event, sin ingreso
 ### 3.1 Revenue
 
 - Preferente: `sale.amount` si es finito y `> 0`.
-- Fallback: `Σ line.price × line.quantity`.
+- Fallback: `Σ line.price × line.quantity` (panel) / `Σ unitPrice × qty` (operador).
 - Moneda: la de la venta (`sale.currency`).
 
 ### 3.2 COGS (método Core 2 + Core 4)
@@ -48,8 +50,10 @@ DELETED     → sin sale_finance_event, sin ingreso
 
 ### 3.3 Margen
 
-- Documento: `margin = revenue − cogs`.
-- Línea: `line_margin = line_revenue − line_cogs` (si se persiste detalle).
+- **Documento:** `margin = revenue − cogs` siempre.
+- **Línea:** `line_margin = line_revenue − line_cogs`.
+- **Consistencia:** si `revenue = Σ line_revenue`, entonces `margin = Σ line_margin`.
+- **Descuento / amount distinto de la suma de líneas:** el documento usa `sale.amount` como revenue; las líneas conservan precios unitarios auditables. En ese caso `margin` del doc **puede diferir** de `Σ line_margin`. No se reescalan las líneas en el MVP.
 
 ### 3.4 Snapshot
 

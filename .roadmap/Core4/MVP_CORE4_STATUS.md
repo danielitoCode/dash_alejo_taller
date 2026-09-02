@@ -2,7 +2,7 @@
 
 **Última actualización:** 2026-09-02  
 **Rama:** `Core4`  
-**Core 4 (release mínimo):** **NO** — en implementación (B0–B4 dash unit OK; B5 residual + B6)  
+**Core 4 (release mínimo):** **casi** — B0–B5 hechos; falta B6 (smoke REJECT, permisos, CI, PRs)  
 **Base:** `master` @ apertura de rama
 
 | Bloque | Estado |
@@ -10,30 +10,23 @@
 | B0 Baseline / política / audit schema | **Cerrado** — Opción A (`lines_json`) |
 | B1 Contrato dominio snapshot + líneas | **Hecho** |
 | B2 Confirm panel con snapshot | **Cerrado** — smoke 2026-09-01 |
-| B3 Confirm operador (AT) | **Código hecho** — smoke dispositivo pendiente |
-| B4 Idempotencia + estabilidad histórica | **Hecho (dash unit)** 2026-09-02 |
-| B5 Tests + paridad | parcial (B4 register + missing-finance OK; residual margen/paridad) |
-| B6 Permisos + smoke residual + PR | pendiente |
+| B3 Confirm operador (AT) | **Código + unit** — smoke dispositivo opcional |
+| B4 Idempotencia + estabilidad histórica | **Hecho (BOTH unit)** 2026-09-02 |
+| B5 Tests + paridad | **Hecho** 2026-09-02 |
+| B6 Permisos + smoke residual + PR | **Siguiente** |
 
-### Smoke panel (B2) — verificado
+### B5 entregado
 
-- `lines_json` provisionado en `sale_finance_event`
-- Confirm → documento con líneas:
-  - producto con `last_unit_cost=2`, qty 3 → `lineCogs=6`, `unitCostSnapshot=2`
-  - producto legacy sin costo → `unitCostSnapshot=0`
-  - `cogs=6`, `margin=16.5` coherentes con revenue de líneas
+- Unit: `margin = Σ lineMargin` cuando `revenue = Σ lineRevenue`
+- Unit: si `sale.amount` (descuento) ≠ suma de líneas → `margin = amount − cogs` (documentado; no se reescalan líneas)
+- [PARITY_PANEL_OPERATOR.md](./PARITY_PANEL_OPERATOR.md) campos canónicos panel ↔ operador
+- POLICY §3.3 actualizado
 
-### B4 entregado (dash)
+### Siguiente (B6)
 
-1. `RegisterSaleFinanceFromVerifiedCaseUse`: 2º `execute` no llama `create` ni recalcula con costos nuevos
-2. Event congelado en repo no se muta aunque `last_unit_cost` vivo cambie
-3. Reconcile (`salesMissingFinanceEvent` + `finance.store`): solo candidatos sin event; nunca overwrite
-
-### Siguiente
-
-1. **AT** reforzar test B4 en `createIdempotent` si hace falta  
-2. B5 residual (margen doc vs Σ líneas; nota paridad)  
-3. B6: smoke REJECT, permisos, CI, PRs coordinados
+1. Smoke REJECT no crea event  
+2. Revisar permisos Appwrite (cliente sin write finance)  
+3. CI verde + PRs `Core4` → `master` coordinados  
 
 ### Notas
 
