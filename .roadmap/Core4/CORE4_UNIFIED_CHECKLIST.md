@@ -75,9 +75,9 @@ Convención: **DASH** = `dash_alejo_taller` · **AT** = `AlejoTaller` · **BOTH*
 - [x] **DASH** Test/caso: existe event → segundo `execute` devuelve el mismo y **no** recalcula con `last_unit_cost` nuevo *(unit 2026-09-02)*
 - [x] **DASH** Test/caso: tras VERIFIED, cambiar `product.last_unit_cost` **no** altera el evento almacenado *(unit: frozen event + cost lookup 999/50)*
 - [x] **DASH** Reconcile de resumen solo **crea faltantes**; nunca sobrescribe eventos existentes (`salesMissingFinanceEvent` + store)
-- [ ] **AT** Misma garantía en `createIdempotent` (base Core2 + lines; reforzar test si hace falta)
+- [x] **AT** Misma garantía en `createIdempotent` + 2º confirm con costo vivo distinto *(unit 2026-09-02)*
 
-**Salida B4 (dash):** histórico financiero congelado; reintentos seguros — **código + unit 2026-09-02**. AT pendiente de refuerzo opcional.
+**Salida B4:** histórico financiero congelado; reintentos seguros — **BOTH unit 2026-09-02**.
 
 ---
 
@@ -91,6 +91,7 @@ Convención: **DASH** = `dash_alejo_taller` · **AT** = `AlejoTaller` · **BOTH*
 - [x] **DASH** Unit: `RegisterSaleFinanceFromVerifiedCaseUse` idempotente *(B4 2026-09-02)*
 - [ ] **DASH** Unit: UNVERIFIED/DELETED no invocan create (o guard en capa superior cubierto)
 - [x] **AT** Unit: COGS operador con snapshot + lines; costo ausente → 0; idempotencia *(B3)*
+- [x] **AT** Unit B4: no-reescritura con `last_unit_cost` distinto *(2026-09-02)*
 - [ ] **BOTH** Nota de paridad: mismos campos semánticos panel vs operador
 
 **Salida B5:** suite verde en módulos tocados.
@@ -126,4 +127,5 @@ Convención: **DASH** = `dash_alejo_taller` · **AT** = `AlejoTaller` · **BOTH*
 | 2026-09-01 | Apertura rama `Core4` ambos repos; docs B0 |
 | 2026-09-01 | B0 cerrado Opción A; B1 dominio/mappers/tests dash + tipos/repo AT |
 | 2026-09-01 | `lines_json` provisionado; B2 smoke panel OK (cogs/margin/lines); B3 código operador + unit tests |
-| 2026-09-02 | B4 dash: unit no-reescritura RegisterSaleFinance + salesMissingFinanceEvent; store reconcile solo faltantes |
+| 2026-09-02 | B4 dash: unit no-reescritura RegisterSaleFinance + salesMissingFinanceEvent |
+| 2026-09-02 | B4 AT: unit 2º confirm + createIdempotent conserva snapshots (FakeFinanceRepo paridad Appwrite) |
