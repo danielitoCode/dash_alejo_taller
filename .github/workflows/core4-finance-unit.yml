@@ -1,0 +1,57 @@
+name: Core4 Finance Unit
+
+# Gate acotado al dominio financiero de Core 4 (snapshot / lines_json).
+# Corre en push/PR a Core4 y en cambios de finance o del propio workflow.
+# No despliega; no requiere secrets Appwrite.
+
+on:
+  push:
+    branches: [Core4]
+    paths:
+      - 'src/core/feature/finance/**'
+      - 'src/core/feature/sale/domain/caseuse/ConfirmSaleFromPanelCaseUse.ts'
+      - 'src/core/feature/sale/di/sale.container.ts'
+      - 'src/test/core/feature/finance/**'
+      - 'src/test/core/feature/sale/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.ts'
+      - '.github/workflows/core4-finance-unit.yml'
+  pull_request:
+    branches: [Core4, master]
+    paths:
+      - 'src/core/feature/finance/**'
+      - 'src/core/feature/sale/domain/caseuse/ConfirmSaleFromPanelCaseUse.ts'
+      - 'src/core/feature/sale/di/sale.container.ts'
+      - 'src/test/core/feature/finance/**'
+      - 'src/test/core/feature/sale/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.ts'
+      - '.github/workflows/core4-finance-unit.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: core4-finance-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  finance-unit:
+    name: Finance domain unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      - name: Unit tests (finance + confirm sale)
+        run: npx vitest run src/test/core/feature/finance src/test/core/feature/sale --reporter=default
+
+      - name: Typecheck (informational on full project)
+        run: npm run check

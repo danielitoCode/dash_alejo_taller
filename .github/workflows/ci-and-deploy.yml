@@ -1,13 +1,13 @@
 name: CI and Deploy
 
-# Quality en push/PR a master, Core2 y Core3.
-# Deploy Vercel solo en push a master (Core2/Core3 no despliegan producción).
+# Quality en push/PR a master, Core2, Core3 y Core4.
+# Deploy Vercel solo en push a master (ramos de núcleo no despliegan producción).
 
 on:
   push:
-    branches: [master, Core2, Core3]
+    branches: [master, Core2, Core3, Core4]
   pull_request:
-    branches: [master, Core2, Core3]
+    branches: [master, Core2, Core3, Core4]
   workflow_dispatch:
 
 concurrency:
@@ -55,7 +55,7 @@ jobs:
     needs: quality
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # Solo producción desde master; Core2/Core3 corren quality pero no deploy.
+    # Solo producción desde master; Core2/Core3/Core4 corren quality pero no deploy.
     if: needs.quality.result == 'success' && github.ref == 'refs/heads/master' && github.event_name == 'push'
     permissions:
       contents: read
