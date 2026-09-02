@@ -14,7 +14,7 @@ function sale(partial: Partial<Sale> & Pick<Sale, "id" | "verified">): Sale {
     }
 }
 
-describe("RejectSaleFromPanelCaseUse (Core1 5.2)", () => {
+describe("RejectSaleFromPanelCaseUse (Core1 5.2 + Core4 B6 sin finance)", () => {
     it("libera reserved (confirmed=false) y marca DELETED", async () => {
         const s = sale({ id: "s1", verified: BuyState.UNVERIFIED })
         const applyStockDeltas = vi.fn().mockResolvedValue({ existence: 10, reserved: 1 })
@@ -35,6 +35,13 @@ describe("RejectSaleFromPanelCaseUse (Core1 5.2)", () => {
         expect(applyStockDeltas).toHaveBeenCalledWith("p1", { confirmed: false, qty: 2 })
         expect(updateVerified).toHaveBeenCalledWith("s1", BuyState.DELETED)
         expect(out.verified).toBe(BuyState.DELETED)
+    })
+
+    it("B6: el case use de reject no tiene registrar finance (solo stock + DELETED)", () => {
+        // Contrato estático: constructor (salesRepo, stock) — sin PanelFinanceRegistrar
+        expect(RejectSaleFromPanelCaseUse.length).toBe(2)
+        const src = RejectSaleFromPanelCaseUse.toString()
+        expect(src).not.toMatch(/registerFromVerified|SaleFinance|finance/i)
     })
 
     it("idempotente si ya DELETED: no toca stock", async () => {

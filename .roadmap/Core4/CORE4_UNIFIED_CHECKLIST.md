@@ -2,7 +2,7 @@
 
 **Última actualización:** 2026-09-02  
 **Rama:** `Core4` en ambos repos.  
-**Release mínimo:** B0–B2 + B4 + B5 (dash) + B3 (operador) + B6.
+**Release mínimo:** B0–B5 + B6 (CI + frontera).
 
 Convención: **DASH** = `dash_alejo_taller` · **AT** = `AlejoTaller` · **BOTH** = ambos.
 
@@ -11,113 +11,76 @@ Convención: **DASH** = `dash_alejo_taller` · **AT** = `AlejoTaller` · **BOTH*
 ## B0 — Baseline, política y schema
 
 - [x] **BOTH** Core 2 confirmado: `sale_finance_event` al VERIFIED; UNVERIFIED/DELETED sin finance
-- [x] **BOTH** Core 3: dependencia de `last_unit_cost` documentada (merge Core3 a master recomendado antes del merge Core4)
+- [x] **BOTH** Core 3: dependencia de `last_unit_cost` documentada
 - [x] **DASH** Política [POLICY_SALE_FINANCE_CORE4.md](./POLICY_SALE_FINANCE_CORE4.md) aceptada
-- [x] **DASH** [SCHEMA_AUDIT_CORE4.md](./SCHEMA_AUDIT_CORE4.md) completado (actual vs propuesto)
-- [x] **DASH** Decisión de diseño: **Opción A** (`lines_json` en el documento) — MVP
-- [x] **DASH** Lista de atributos Appwrite a provisionar: `lines_json` (string, size generoso, opcional en docs legacy)
-- [x] **AT** Política espejada en `.roadmap/Core4/`
+- [x] **DASH** [SCHEMA_AUDIT_CORE4.md](./SCHEMA_AUDIT_CORE4.md) completado
+- [x] **DASH** Opción A (`lines_json`) — MVP
+- [x] **DASH** Atributo `lines_json` provisionado
+- [x] **AT** Política / docs espejo
 
-**Salida B0:** **completa** 2026-09-01.
+**Salida B0:** completa 2026-09-01.
 
 ---
 
 ## B1 — Contrato de dominio (snapshot + líneas)
 
-**DEP:** B0
+- [x] **DASH** Entidad + `buildFinanceEventFromSale` + mapper + Register use case
+- [x] **AT** `SaleFinanceWrite` / lines + repo `lines_json`
+- [x] **DASH** Unit build + mapper
 
-- [x] **DASH** Extender entidad `SaleFinanceEvent` con líneas (`SaleFinanceLine`: productId, qty, unitPrice, unitCostSnapshot, lineRevenue, lineCogs, lineMargin)
-- [x] **DASH** Actualizar `buildFinanceEventFromSale` para rellenar snapshot por línea y totales consistentes
-- [x] **DASH** Mapper DTO ↔ dominio (incl. serialización `lines_json`)
-- [x] **DASH** `RegisterSaleFinanceFromVerifiedCaseUse` usa el nuevo contrato sin romper idempotencia por `sale_id` (vía `buildFinanceEventFromSale`)
-- [x] **DASH** Tipado / validaciones: costs ≥ 0, qty > 0, margin = revenue − cogs a nivel doc y línea
-- [x] **AT** Espejo de tipos/`SaleFinanceWrite` + `SaleFinanceLineWrite` + repo `lines_json`
-- [x] **DASH** Tests unitarios build + mapper (legacy sin lines + round-trip lines_json)
-
-**Salida B1:** **completa** 2026-09-01.
+**Salida B1:** completa 2026-09-01.
 
 ---
 
 ## B2 — Confirm panel (dash)
 
-**DEP:** B1
+- [x] Confirm genera event con snapshot por línea
+- [x] Smoke panel 2026-09-01
 
-- [x] **DASH** `ConfirmSaleFromPanelCaseUse` genera evento con **snapshot por línea** (vía `buildFinanceEventFromSale`)
-- [x] **DASH** COGS del documento = Σ (unitCostSnapshot × qty) — smoke: cogs=6 con línea 2×3
-- [x] **DASH** No se genera finance en transiciones que no sean a VERIFIED (contrato Core2 + guards)
-- [x] **DASH** Si el producto no tiene `last_unit_cost`, snapshot = 0 (smoke: `p-vmm3da` legacy → 0)
-- [x] **DASH** Lectura `FinanceSummaryPanel` / store sigue agregando solo eventos fuente
-- [x] **DASH** Atributo `lines_json` provisionado en Appwrite; smoke create/read OK 2026-09-01
-
-**Salida B2:** **completa** 2026-09-01 — panel confirma → event con `lines_json` válido (cogs/margin coherentes).
+**Salida B2:** completa.
 
 ---
 
-## B3 — Confirm operador (AlejoTaller scan)
+## B3 — Confirm operador (AT)
 
-**DEP:** B1 (contrato) · paridad con B2
+- [x] Case use + createIdempotent + unit (DELETED / lines / costo 0)
+- [ ] Smoke device (opcional)
 
-- [x] **AT** `ApplyOperatorStockDecisionCaseUse` (VERIFIED) escribe finance con **mismo** snapshot por línea (código en `Core4`)
-- [x] **AT** `OperatorSaleFinanceRepository.createIdempotent` acepta/persiste el detalle (`lines_json`)
-- [x] **AT** DELETED sigue sin finance (test unitario)
-- [x] **AT** Idempotencia por `sale_id` intacta (test unitario)
-- [x] **AT** Cliente web / MCP: **sin** write a `sale_finance_event` (frontera; sin cambios que abran write)
-- [ ] **AT** Smoke runtime dispositivo/emulador confirm → `lines_json` (opcional; código listo)
-
-**Salida B3:** **código completo** 2026-09-01; smoke dispositivo pendiente (no bloquea avanzar).
+**Salida B3:** código completo.
 
 ---
 
-## B4 — Idempotencia, estabilidad histórica y reconcile
+## B4 — Idempotencia y estabilidad
 
-**DEP:** B2 (mínimo)
+- [x] **DASH** Unit no-reescritura + reconcile solo faltantes
+- [x] **AT** Unit createIdempotent / 2º confirm
 
-- [x] **DASH** Test/caso: existe event → segundo `execute` devuelve el mismo y **no** recalcula con `last_unit_cost` nuevo *(unit 2026-09-02)*
-- [x] **DASH** Test/caso: tras VERIFIED, cambiar `product.last_unit_cost` **no** altera el evento almacenado *(unit)*
-- [x] **DASH** Reconcile de resumen solo **crea faltantes**; nunca sobrescribe eventos existentes (`salesMissingFinanceEvent` + store)
-- [x] **AT** Misma garantía en `createIdempotent` + 2º confirm con costo vivo distinto *(unit 2026-09-02)*
-
-**Salida B4:** histórico financiero congelado — **BOTH unit 2026-09-02**.
+**Salida B4:** completa 2026-09-02.
 
 ---
 
 ## B5 — Tests y paridad
 
-**DEP:** B1–B4 según superficie
+- [x] Margen doc vs Σ líneas + POLICY §3.3
+- [x] [PARITY_PANEL_OPERATOR.md](./PARITY_PANEL_OPERATOR.md)
 
-- [x] **DASH** Unit: `buildFinanceEventFromSale` con varias líneas y costos distintos *(B1)*
-- [x] **DASH** Unit: margen doc = Σ márgenes línea cuando revenue = Σ lineRevenue *(2026-09-02)*
-- [x] **DASH** Unit + doc: si `sale.amount` ≠ Σ líneas, margin doc = revenue−cogs (puede ≠ Σ lineMargin) *(POLICY §3.3)*
-- [x] **DASH** Unit: mapper round-trip con `lines_json` *(B1)*
-- [x] **DASH** Unit: `RegisterSaleFinanceFromVerifiedCaseUse` idempotente *(B4)*
-- [x] **DASH** UNVERIFIED/DELETED no generan finance: guard en reject/confirm paths + política (capa superior; reject unit sin register)
-- [x] **AT** Unit: COGS operador con snapshot + lines; costo ausente → 0; idempotencia *(B3)*
-- [x] **AT** Unit B4: no-reescritura con `last_unit_cost` distinto
-- [x] **BOTH** Nota de paridad: [PARITY_PANEL_OPERATOR.md](./PARITY_PANEL_OPERATOR.md) *(2026-09-02)*
-
-**Salida B5:** **completa** 2026-09-02 (módulos finance tocados).
+**Salida B5:** completa 2026-09-02.
 
 ---
 
 ## B6 — Permisos, smoke y cierre
 
-- [ ] **DASH** Permisos Appwrite: cliente sin write finance; roles de confirm OK
-- [x] **DASH** Smoke UI: confirmar venta → event con líneas/snapshot *(B2 2026-09-01)*
-- [ ] **DASH** Smoke: REJECT no crea event (rápido de validar)
-- [ ] **AT** Smoke operador (dispositivo o emulador): confirm → finance; reject → no finance
-- [ ] **DASH** CI verde en PR `Core4` → `master`
-- [ ] **AT** CI módulos tocados verde en PR espejo
-- [ ] **BOTH** Documentación STATUS actualizada a cerrado
-- [ ] **BOTH** PR mergeado cuando estable (no a producción hasta verde)
+- [x] **DASH** Frontera código: REJECT sin finance; confirm sí registra *(unit 2026-09-02)*
+- [x] **DASH** Smoke UI confirm *(B2)*
+- [x] **DASH** REJECT sin finance *(unit + código; smoke UI opcional)*
+- [x] **AT** MCP/docs prohíben write `sale_finance_event`; web sin create finance
+- [ ] **DASH** Permisos Appwrite consola: cliente sin write (checklist manual en [B6_PERMISSIONS_AND_BOUNDARY.md](./B6_PERMISSIONS_AND_BOUNDARY.md))
+- [ ] **AT** Smoke operador device (opcional)
+- [ ] **DASH** CI verde en [PR #21](https://github.com/danielitoCode/dash_alejo_taller/pull/21)
+- [ ] **AT** CI verde en PR `Core4` → `master`
+- [ ] **BOTH** Merge cuando CI verde
 
-### Criterio de merge
-
-| Condición | ¿Merge? |
-|---|---|
-| B0+B1+B2+B4+B5 dash | Sí — panel con snapshot |
-| + B3 operador | **Sí** — release completo paridad |
-| B6 CI | Obligatorio |
-| Reportes Core 5 | No bloquean |
+**Salida B6:** en curso — código/frontera listos; CI + permisos consola + merge pendientes.
 
 ---
 
@@ -125,8 +88,6 @@ Convención: **DASH** = `dash_alejo_taller` · **AT** = `AlejoTaller` · **BOTH*
 
 | Fecha | Nota |
 |---|---|
-| 2026-09-01 | Apertura rama `Core4` ambos repos; docs B0 |
-| 2026-09-01 | B0 cerrado Opción A; B1 dominio/mappers/tests dash + tipos/repo AT |
-| 2026-09-01 | `lines_json` provisionado; B2 smoke panel OK; B3 código operador + unit |
-| 2026-09-02 | B4 BOTH unit no-reescritura |
-| 2026-09-02 | B5 residual: margin vs Σ líneas + PARITY_PANEL_OPERATOR + POLICY §3.3 |
+| 2026-09-01 | B0–B3 |
+| 2026-09-02 | B4–B5 |
+| 2026-09-02 | B6: unit REJECT/confirm finance; PR dash #21; permisos doc |
