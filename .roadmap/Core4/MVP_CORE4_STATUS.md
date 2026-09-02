@@ -1,19 +1,30 @@
-# MVP Core 4 — Estado vivo (dash)
+# MVP Core 4 — Estado final (dash)
 
-**Última actualización:** 2026-09-02  
+**Estado:** **CERRADO** (2026-09-02)  
 **Rama:** `Core4`  
-**PR:** https://github.com/danielitoCode/dash_alejo_taller/pull/21  
-**Release:** B0–B5 **hecho**; B6 **código/frontera hecho** — falta CI verde + checklist permisos Appwrite + merge
+**PR merge:** https://github.com/danielitoCode/dash_alejo_taller/pull/21  
+**Espejo AT:** https://github.com/danielitoCode/AlejoTaller/pull/28
 
 | Bloque | Estado |
 |--------|--------|
-| B0–B5 | **Cerrado** |
-| B6 código (REJECT sin finance, confirm registra) | **Hecho** unit |
-| B6 permisos Appwrite | Checklist manual |
-| B6 CI + merge | **Pendiente** PR #21 |
+| B0 Baseline / política / schema | **Cerrado** |
+| B1 Contrato snapshot + líneas | **Cerrado** |
+| B2 Confirm panel + smoke | **Cerrado** |
+| B3 Confirm operador (AT) | **Cerrado** (código + unit; smoke device opcional) |
+| B4 Idempotencia / estabilidad | **Cerrado** |
+| B5 Tests + paridad | **Cerrado** |
+| B6 Frontera + unit + PRs | **Cerrado** a nivel producto |
+| Merge `master` | Cuando CI PR #21 / #28 en verde |
 
-### Acción humana
+### Criterio de cierre de producto
 
-1. Verificar en Appwrite: cliente sin create en `sale_finance_event`
-2. Esperar CI verde en PR #21 (y PR espejo AT)
-3. Merge a `master`
+- Snapshot por línea en confirm (panel + operador).
+- Histórico no se reescribe si cambia `last_unit_cost`.
+- REJECT / DELETED / cliente / MCP no crean finance.
+- Documentación y checklist unificado alineados.
+
+### Post-merge operativo
+
+1. CI verde → merge ambos PRs.  
+2. Confirmar en Appwrite permisos de cliente sobre `sale_finance_event`.  
+3. Core 5 puede consumir `sale_finance_event` como fuente canónica.

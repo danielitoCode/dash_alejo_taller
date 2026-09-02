@@ -1,42 +1,28 @@
-# Core 4 B6 — Permisos, frontera y smoke
+# Core 4 B6 — Permisos, frontera y cierre
 
-**Fecha:** 2026-09-02 · rama `Core4`
+**Fecha cierre producto:** 2026-09-02
 
 ---
 
-## 1. Quién puede escribir `sale_finance_event`
+## 1. Write a `sale_finance_event`
 
 | Actor | Write | Evidencia |
 |-------|-------|-----------|
-| Panel dash (`ConfirmSaleFromPanelCaseUse` → `RegisterSaleFinanceFromVerifiedCaseUse`) | Sí | Código + unit B6 |
-| Operador scan (`ApplyOperatorStockDecisionCaseUse` → `createIdempotent`) | Sí | Unit B3/B4 |
-| `RejectSaleFromPanelCaseUse` | **No** | Sin dependencia finance; unit B6 |
-| Operador `confirmed=false` (DELETED) | **No** | Unit B3 |
-| Cliente web AlejoTaller | **No** | Sin create finance en `web/` |
-| MCP B2C | **No** | `SCOPE_B2C.md` / `DATA_CONTRACT.md` prohíben la colección |
+| Panel confirm | Sí | Código + unit |
+| Operador scan confirm | Sí | Unit B3/B4 |
+| Panel REJECT | No | Código + unit |
+| Operador DELETED | No | Unit |
+| Cliente web | No | Sin create en web |
+| MCP B2C | No | SCOPE / DATA_CONTRACT |
 
-### Appwrite (checklist manual en consola)
+## 2. Appwrite (operativo al merge)
 
-- Roles staff (owner/admin/sales/operator): create/read en `sale_finance_event` según rol de confirmación.
-- Rol cliente / anónimo: **sin** create/update en `sale_finance_event`.
-- Si hoy el cliente hereda write amplio, restringir antes de merge a producción.
+- [ ] Rol cliente / anónimo: sin create/update en `sale_finance_event`
+- [ ] Roles staff de confirmación: create/read según política de roles
 
----
-
-## 2. Smoke residual
-
-| Caso | Esperado | Estado |
-|------|----------|--------|
-| Panel confirm → event con `lines_json` | Doc creado | **Hecho** B2 2026-09-01 |
-| Panel REJECT UNVERIFIED | Sin finance nuevo | **Código + unit** (smoke UI manual opcional) |
-| Operador confirm | Finance + lines | Código listo; smoke device opcional |
-| Operador reject | Sin finance | Unit |
-
----
-
-## 3. PRs
+## 3. PRs de cierre
 
 - dash: https://github.com/danielitoCode/dash_alejo_taller/pull/21
-- AT: abrir/seguir PR `Core4` → `master` cuando CI verde
+- AT: https://github.com/danielitoCode/AlejoTaller/pull/28
 
-Merge solo con CI verde.
+Merge solo con **CI verde**.
