@@ -1,47 +1,70 @@
-# Core 5 — Supervisión y Reportes
+# Core 5 — Supervisión y reportes
+
+**Estado:** abierto · rama `Core5` · 2026-09-02  
+**Dependencias:** Core 2–4 (finance fuente canónica con snapshot)  
+**Espejo AT:** [AlejoTaller/.roadmap/Core5](https://github.com/danielitoCode/AlejoTaller/tree/Core5/.roadmap/Core5)
 
 ## Objetivo
 
-Convertir los datos confiables de inventario, compras y ventas en herramientas de supervisión operativa y reportes.
+Exponer **supervisión operativa y reportes financieros** en el panel, consumiendo **solo** datos ya persistidos — en particular `sale_finance_event` (Core 4) — **sin recalcular** costos ni reescribir el histórico.
 
-## Alcance
+```text
+Fuente financiera  = sale_finance_event (+ lines_json)
+Fuente operativa   = sale, stock (lectura), movements (lectura)
+Prohibido          = create/update finance desde reportes; COGS “a ojo”
+```
 
-- Dashboard operativo.
-- Ventas pendientes y antigüedad de `UNVERIFIED`.
-- Alertas de stock bajo.
-- Inventario y movimientos consultables.
-- Ingresos, COGS y margen por periodo.
-- Reportes de compras.
-- Filtros por fecha y producto.
-- Exportación CSV de datos operativos.
-- KPIs derivados de las fuentes canónicas.
+## Qué ya existe (no reinventar)
 
-## Regla
+| Base | Origen |
+|------|--------|
+| `sale_finance_event` + `lines_json` | Core 4 |
+| `FinanceSummaryPanel` / `finance.store.loadSummary` | Core 2–4 |
+| `aggregateFinanceSummary` | Core 2 |
+| Cola de ventas / confirm-reject | Core 1–2 |
 
-Los reportes deben leer datos fuente; no deben mantener una segunda contabilidad ni modificar inventario.
+Core 5 **madura** lectura y UI de supervisión; no cambia el contrato de write de Core 4.
+
+## Documentos
+
+| Doc | Rol |
+|------|-----|
+| [POLICY_SUPERVISION_REPORTS_CORE5.md](./POLICY_SUPERVISION_REPORTS_CORE5.md) | Quién lee, qué KPIs, exclusiones |
+| [CORE5_UNIFIED_CHECKLIST.md](./CORE5_UNIFIED_CHECKLIST.md) | Orden B0–B5 (DASH + notas AT) |
+| [MVP_CORE5_STATUS.md](./MVP_CORE5_STATUS.md) | Estado vivo |
+
+## Alcance (dash)
+
+- KPIs: revenue, COGS, margen por rango de fechas / moneda.
+- Desglose por producto (vía `lines_json`).
+- Supervisión: pendientes UNVERIFIED, aging, confirm vs reject (lectura).
+- Roles: visibilidad según owner/admin/sales.
+- Tests de agregación de solo lectura.
 
 ## Fuera de alcance
 
-- Nuevas reglas de stock.
-- Contabilidad general.
-- Reservas de taller.
+- Contabilidad doble partida, impuestos, FIFO/LIFO.
+- Anulación financiera de venta VERIFIED.
+- Write a `sale_finance_event` desde pantallas de reporte.
+- Reservas de taller → **Core 6**.
+- Reportes B2C en cliente web / MCP.
 
-## Definition of Done
+## Orden lógico
 
-- [ ] KPIs operativos disponibles.
-- [ ] Reportes de inventario.
-- [ ] Reportes de ventas.
-- [ ] Reportes de compras.
-- [ ] Reportes de margen.
-- [ ] Filtros funcionales.
-- [ ] Exportación CSV.
-- [ ] Datos reconciliados con las fuentes canónicas.
-- [ ] Tests de cálculo y filtros.
+```text
+B0 política + inventario de lectura
+  → B1 contrato de agregados / KPIs
+  → B2 UI resumen financiero (madurar panel)
+  → B3 desglose por producto / líneas
+  → B4 supervisión operativa (cola + indicadores)
+  → B5 tests + roles + PR
+```
 
-## Dependencias
+## Criterio de merge a `master`
 
-Core 2, Core 3 y Core 4.
-
-## Siguiente Core
-
-Core 6 — Taller y reservas.
+| Condición | ¿Merge? |
+|---|---|
+| B0–B2 + B5 (resumen fiable) | Sí — MVP supervisión |
+| + B3 desglose producto | Recomendado |
+| + B4 cola/aging | Recomendado para release completo |
+| CI verde | Obligatorio |
