@@ -1,15 +1,16 @@
 name: Core4 Finance Unit
 
-# Gate acotado al dominio financiero de Core 4 (snapshot / lines_json).
-# Corre en push/PR a Core4 y en cambios de finance o del propio workflow.
+# Gate acotado al dominio financiero (snapshot / lines_json) — Core 4 write + Core 5 lectura.
+# Corre en push/PR a Core4/Core5 y en cambios de finance o del propio workflow.
 # No despliega; no requiere secrets Appwrite.
 
 on:
   push:
-    branches: [Core4]
+    branches: [Core4, Core5]
     paths:
       - 'src/core/feature/finance/**'
       - 'src/core/feature/sale/domain/caseuse/ConfirmSaleFromPanelCaseUse.ts'
+      - 'src/core/feature/sale/domain/caseuse/RejectSaleFromPanelCaseUse.ts'
       - 'src/core/feature/sale/di/sale.container.ts'
       - 'src/test/core/feature/finance/**'
       - 'src/test/core/feature/sale/**'
@@ -18,10 +19,11 @@ on:
       - 'vite.config.ts'
       - '.github/workflows/core4-finance-unit.yml'
   pull_request:
-    branches: [Core4, master]
+    branches: [Core4, Core5, master]
     paths:
       - 'src/core/feature/finance/**'
       - 'src/core/feature/sale/domain/caseuse/ConfirmSaleFromPanelCaseUse.ts'
+      - 'src/core/feature/sale/domain/caseuse/RejectSaleFromPanelCaseUse.ts'
       - 'src/core/feature/sale/di/sale.container.ts'
       - 'src/test/core/feature/finance/**'
       - 'src/test/core/feature/sale/**'
@@ -50,7 +52,7 @@ jobs:
 
       - run: npm ci
 
-      - name: Unit tests (finance + confirm sale)
+      - name: Unit tests (finance + confirm/reject sale)
         run: npx vitest run src/test/core/feature/finance src/test/core/feature/sale --reporter=default
 
       - name: Typecheck (informational on full project)

@@ -1,0 +1,56 @@
+name: Core5 Reports Unit
+
+# Gate Core 5: agregación / lectura finance (sin deploy, sin secrets Appwrite).
+# Se dispara en Core5 y en PRs hacia Core5/master que toquen finance o el workflow.
+
+on:
+  push:
+    branches: [Core5]
+    paths:
+      - 'src/core/feature/finance/**'
+      - 'src/test/core/feature/finance/**'
+      - 'src/core/feature/sale/**'
+      - 'src/test/core/feature/sale/**'
+      - '.roadmap/Core5/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.ts'
+      - '.github/workflows/core5-reports-unit.yml'
+  pull_request:
+    branches: [Core5, master]
+    paths:
+      - 'src/core/feature/finance/**'
+      - 'src/test/core/feature/finance/**'
+      - 'src/core/feature/sale/**'
+      - 'src/test/core/feature/sale/**'
+      - '.roadmap/Core5/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.ts'
+      - '.github/workflows/core5-reports-unit.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: core5-reports-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  reports-unit:
+    name: Finance read / reports unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      - name: Unit tests (finance domain)
+        run: npx vitest run src/test/core/feature/finance --reporter=default
+
+      - name: Typecheck
+        run: npm run check
