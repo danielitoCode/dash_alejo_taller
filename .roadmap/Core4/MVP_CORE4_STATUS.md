@@ -1,8 +1,8 @@
 # MVP Core 4 — Estado vivo (dash)
 
-**Última actualización:** 2026-09-01  
+**Última actualización:** 2026-09-02  
 **Rama:** `Core4`  
-**Core 4 (release mínimo):** **NO** — en implementación (B0–B3 código/smoke panel OK)  
+**Core 4 (release mínimo):** **NO** — en implementación (B0–B4 dash unit OK; B5 residual + B6)  
 **Base:** `master` @ apertura de rama
 
 | Bloque | Estado |
@@ -11,8 +11,8 @@
 | B1 Contrato dominio snapshot + líneas | **Hecho** |
 | B2 Confirm panel con snapshot | **Cerrado** — smoke 2026-09-01 |
 | B3 Confirm operador (AT) | **Código hecho** — smoke dispositivo pendiente |
-| B4 Idempotencia + estabilidad histórica | **Siguiente** |
-| B5 Tests + paridad | parcial (build/mapper/operador unit OK) |
+| B4 Idempotencia + estabilidad histórica | **Hecho (dash unit)** 2026-09-02 |
+| B5 Tests + paridad | parcial (B4 register + missing-finance OK; residual margen/paridad) |
 | B6 Permisos + smoke residual + PR | pendiente |
 
 ### Smoke panel (B2) — verificado
@@ -23,11 +23,17 @@
   - producto legacy sin costo → `unitCostSnapshot=0`
   - `cogs=6`, `margin=16.5` coherentes con revenue de líneas
 
-### Siguiente (B4)
+### B4 entregado (dash)
 
-1. Tests/casos: segundo `RegisterSaleFinance` no recalcula ni duplica  
-2. Tras VERIFIED, cambiar `last_unit_cost` del producto **no** muta el event  
-3. Reconcile (si existe) solo crea faltantes
+1. `RegisterSaleFinanceFromVerifiedCaseUse`: 2º `execute` no llama `create` ni recalcula con costos nuevos
+2. Event congelado en repo no se muta aunque `last_unit_cost` vivo cambie
+3. Reconcile (`salesMissingFinanceEvent` + `finance.store`): solo candidatos sin event; nunca overwrite
+
+### Siguiente
+
+1. **AT** reforzar test B4 en `createIdempotent` si hace falta  
+2. B5 residual (margen doc vs Σ líneas; nota paridad)  
+3. B6: smoke REJECT, permisos, CI, PRs coordinados
 
 ### Notas
 

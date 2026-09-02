@@ -7,6 +7,7 @@ import {
     financeRangeLastDays,
     type FinanceSummary,
 } from "../../domain/util/aggregateFinanceSummary"
+import { salesMissingFinanceEvent } from "../../domain/util/salesMissingFinanceEvent"
 import { logger } from "../../../../infrastructure/presentation/util/logger.service"
 import { saleContainer } from "../../../sale/di/sale.container"
 import { productContainer } from "../../../product/di/product.container"
@@ -39,20 +40,41 @@ function createFinanceStore() {
         return t >= fromMs && t <= toMs
     }
 
+    /**
+     * Core 4 B4: solo crea faltantes. Si ya existe event por sale_id, se omite.
+     * RegisterSaleFinanceFromVerifiedCaseUse es además idempotente (doble red de seguridad).
+     */
     async function reconcileMissing(fromIso: string, toIso: string): Promise<number> {
         let fixed = 0
         try {
             const sales = await saleContainer.useCases.getAll.execute()
             const fromMs = Date.parse(fromIso)
             const toMs = Date.parse(toIso)
-            const verified = sales.filter(
+            const verifiedInRange = sales.filter(
                 (s) => s.verified === BuyState.VERIFIED && inRange(s, fromMs, toMs)
             )
-            for (const sale of verified) {
+
+            const existingIds = new Set<string>()
+            for (const sale of verifiedInRange) {
                 try {
                     const existing =
                         await financeContainer.repositories.saleFinance.getBySaleId(sale.id)
-                    if (existing) continue
+                    if (existing) existingIds.add(sale.id)
+                } catch {
+                    /* si falla lectura, intentamos create vía register (idempotente) */
+                }
+            }
+
+            const missingIds = new Set(
+                salesMissingFinanceEvent(
+                    verifiedInRange.map((s) => s.id),
+                    existingIds
+                )
+            )
+
+            for (const sale of verifiedInRange) {
+                if (!missingIds.has(sale.id)) continue
+                try {
                     const costMap: Record<string, number> = {}
                     for (const line of sale.products ?? []) {
                         if (!line.productId || line.productId in costMap) continue

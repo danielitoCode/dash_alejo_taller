@@ -1,6 +1,6 @@
 # Core 4 — Checklist unificado (dash + AlejoTaller)
 
-**Última actualización:** 2026-09-01  
+**Última actualización:** 2026-09-02  
 **Rama:** `Core4` en ambos repos.  
 **Release mínimo:** B0–B2 + B4 + B5 (dash) + B3 (operador) + B6.
 
@@ -72,12 +72,12 @@ Convención: **DASH** = `dash_alejo_taller` · **AT** = `AlejoTaller` · **BOTH*
 
 **DEP:** B2 (mínimo)
 
-- [ ] **DASH** Test/caso: existe event → segundo `execute` devuelve el mismo y **no** recalcula con `last_unit_cost` nuevo
-- [ ] **DASH** Test/caso: tras VERIFIED, cambiar `product.last_unit_cost` **no** altera el evento almacenado
-- [ ] **DASH** Reconcile de resumen (si existe) solo **crea faltantes**; nunca sobrescribe eventos existentes con costos actuales
+- [x] **DASH** Test/caso: existe event → segundo `execute` devuelve el mismo y **no** recalcula con `last_unit_cost` nuevo *(unit 2026-09-02)*
+- [x] **DASH** Test/caso: tras VERIFIED, cambiar `product.last_unit_cost` **no** altera el evento almacenado *(unit: frozen event + cost lookup 999/50)*
+- [x] **DASH** Reconcile de resumen solo **crea faltantes**; nunca sobrescribe eventos existentes (`salesMissingFinanceEvent` + store)
 - [ ] **AT** Misma garantía en `createIdempotent` (base Core2 + lines; reforzar test si hace falta)
 
-**Salida B4:** histórico financiero congelado; reintentos seguros.
+**Salida B4 (dash):** histórico financiero congelado; reintentos seguros — **código + unit 2026-09-02**. AT pendiente de refuerzo opcional.
 
 ---
 
@@ -88,7 +88,7 @@ Convención: **DASH** = `dash_alejo_taller` · **AT** = `AlejoTaller` · **BOTH*
 - [x] **DASH** Unit: `buildFinanceEventFromSale` con varias líneas y costos distintos *(B1)*
 - [ ] **DASH** Unit: margen doc = Σ márgenes línea (o documentar redondeo cuando revenue = sale.amount)
 - [x] **DASH** Unit: mapper round-trip con `lines_json` *(B1)*
-- [ ] **DASH** Unit: `RegisterSaleFinanceFromVerifiedCaseUse` idempotente
+- [x] **DASH** Unit: `RegisterSaleFinanceFromVerifiedCaseUse` idempotente *(B4 2026-09-02)*
 - [ ] **DASH** Unit: UNVERIFIED/DELETED no invocan create (o guard en capa superior cubierto)
 - [x] **AT** Unit: COGS operador con snapshot + lines; costo ausente → 0; idempotencia *(B3)*
 - [ ] **BOTH** Nota de paridad: mismos campos semánticos panel vs operador
@@ -126,3 +126,4 @@ Convención: **DASH** = `dash_alejo_taller` · **AT** = `AlejoTaller` · **BOTH*
 | 2026-09-01 | Apertura rama `Core4` ambos repos; docs B0 |
 | 2026-09-01 | B0 cerrado Opción A; B1 dominio/mappers/tests dash + tipos/repo AT |
 | 2026-09-01 | `lines_json` provisionado; B2 smoke panel OK (cogs/margin/lines); B3 código operador + unit tests |
+| 2026-09-02 | B4 dash: unit no-reescritura RegisterSaleFinance + salesMissingFinanceEvent; store reconcile solo faltantes |
