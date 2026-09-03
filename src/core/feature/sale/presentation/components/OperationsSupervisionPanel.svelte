@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { onMount } from "svelte";
     import type { NavController } from "../../../../../lib/navigation/NavController";
     import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
     import { saleStore } from "../viewmodel/sale.store";
@@ -12,6 +13,7 @@
         saleAgeHours,
     } from "../../domain/util/sortSalesByAge";
     import { formatSaleMoney } from "../../domain/util/formatSaleMoney";
+    import { BuyState } from "../../domain/entity/enums";
     import { sales, salesDetail } from "../../../../infrastructure/presentation/navigation/nested.router";
     import {
         Clock,
@@ -20,18 +22,52 @@
         XCircle,
         ChevronRight,
         CircleAlert,
+        RefreshCw,
     } from "lucide-svelte";
 
     export let navController: NavController;
 
     const PERIOD_DAYS = 30;
-    const PREVIEW_LIMIT = 5;
+    /** Preview en dashboard; listado completo en Ventas. */
+    const PREVIEW_LIMIT = 7;
 
-    $: salesList = $saleStore.items;
+    let syncing = false;
+
+    async function refreshFromServer(): Promise<void> {
+        if (syncing) return;
+        syncing = true;
+        try {
+            await saleStore.syncAll();
+        } catch {
+            /* error queda en saleStore */
+        } finally {
+            syncing = false;
+        }
+    }
+
+    onMount(() => {
+        // Asegura datos aunque el dashboard ya hubiera montado el store vacío
+        void refreshFromServer();
+        const onFocus = () => {
+            void refreshFromServer();
+        };
+        window.addEventListener("focus", onFocus);
+        return () => window.removeEventListener("focus", onFocus);
+    });
+
+    // Fuente canónica: store Svelte (misma que Ventas / KPIs del dashboard)
+    $: salesList = $saleStore.items ?? [];
     $: loading = $saleStore.loading;
+    // Firma de estado: fuerza recálculo cuando cambia verified/id (confirm/reject/create)
+    $: statusKey = salesList.map((s) => `${s.id}:${s.verified}`).join("|");
     $: nowMs = Date.now();
-    $: ops = aggregateSaleOperations(salesList, { periodDays: PERIOD_DAYS, nowMs });
+    $: ops = aggregateSaleOperations(salesList, {
+        periodDays: PERIOD_DAYS,
+        nowMs,
+    });
     $: queue = pendingQueuePreview(salesList, PREVIEW_LIMIT, nowMs);
+    // dependencia explícita para el compilador
+    $: void statusKey;
 
     function openSales() {
         navController.goToSection(sales.path);
@@ -42,7 +78,7 @@
     }
 </script>
 
-<section class="op" aria-label="Supervisión operativa de ventas">
+<section class="op" aria-label="Supervisión operativa de ventas" aria-busy={loading || syncing}>
     <div class="op-accent" aria-hidden="true"></div>
     <header class="op-head">
         <div class="op-brand">
@@ -53,17 +89,29 @@
                 <h2 class="op-title">Operación · cola de ventas</h2>
                 <p class="op-sub">
                     Estados de pedido (<code>Sale</code>) — <strong>no</strong> es el bloque financiero.
-                    Confirmados/rechazados en {PERIOD_DAYS} días; cola UNVERIFIED abierta con antigüedad.
+                    Confirmados/rechazados en {PERIOD_DAYS} días; cola UNVERIFIED (hasta {PREVIEW_LIMIT} en preview).
                 </p>
             </div>
         </div>
-        <button type="button" class="op-link" on:click={openSales}>
-            Ir a Ventas
-            <Icon icon={ChevronRight} size={16} ariaLabel="" />
-        </button>
+        <div class="op-actions">
+            <button
+                type="button"
+                class="op-link"
+                on:click={() => refreshFromServer()}
+                disabled={loading || syncing}
+                aria-label="Actualizar cola operativa"
+            >
+                <Icon icon={RefreshCw} size={16} ariaLabel="" />
+                {syncing || loading ? "Actualizando…" : "Actualizar"}
+            </button>
+            <button type="button" class="op-link primary" on:click={openSales}>
+                Ir a Ventas
+                <Icon icon={ChevronRight} size={16} ariaLabel="" />
+            </button>
+        </div>
     </header>
 
-    <div class="op-kpis" class:dim={loading}>
+    <div class="op-kpis" class:dim={loading || syncing}>
         <article class="op-kpi pending">
             <div class="op-ico"><Icon icon={Clock} size={18} ariaLabel="" /></div>
             <div>
@@ -108,10 +156,18 @@
             {/if}
         </div>
         {#if queue.length === 0}
-            <p class="op-empty">No hay pedidos pendientes. La cola operativa está vacía.</p>
+            <p class="op-empty">
+                {#if loading || syncing}
+                    Cargando ventas…
+                {:else if salesList.length === 0}
+                    No hay ventas en memoria. Pulsa <strong>Actualizar</strong> o abre Ventas.
+                {:else}
+                    No hay pedidos pendientes ({BuyState.UNVERIFIED}). La cola operativa está vacía.
+                {/if}
+            </p>
         {:else}
             <ul class="op-list">
-                {#each queue as s (s.id)}
+                {#each queue as s (s.id + ":" + s.verified)}
                     {@const urg = saleAgeUrgency(saleAgeHours(s, nowMs))}
                     <li>
                         <button type="button" class="op-row" on:click={() => openDetail(s.id)}>
@@ -159,17 +215,25 @@
         color: var(--md-sys-color-on-surface-variant); max-width: 40rem;
     }
     .op-sub code { font-size: 0.76rem; }
+    .op-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
     .op-link {
         display: inline-flex; align-items: center; gap: 4px; padding: 8px 12px; border-radius: 10px;
         border: 1px solid var(--md-sys-color-outline-variant); background: transparent;
         font-weight: 700; font-size: 0.82rem; cursor: pointer; color: inherit;
     }
-    .op-link:hover { border-color: color-mix(in srgb, #a855f7 40%, var(--md-sys-color-outline-variant)); }
+    .op-link:disabled { opacity: 0.6; cursor: not-allowed; }
+    .op-link:hover:not(:disabled) {
+        border-color: color-mix(in srgb, #a855f7 40%, var(--md-sys-color-outline-variant));
+    }
+    .op-link.primary {
+        background: color-mix(in srgb, #a855f7 12%, transparent);
+        border-color: color-mix(in srgb, #a855f7 28%, transparent);
+    }
     .op-kpis {
         display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 10px; padding: 4px 18px 14px;
     }
-    .op-kpis.dim { opacity: 0.7; }
+    .op-kpis.dim { opacity: 0.75; }
     .op-kpi {
         display: flex; gap: 10px; align-items: flex-start; padding: 12px; border-radius: 12px;
         border: 1px solid var(--md-sys-color-outline-variant);
@@ -230,6 +294,7 @@
     @media (max-width: 520px) {
         .op-kpis { grid-template-columns: 1fr; }
         .op-head { flex-direction: column; }
-        .op-link { width: 100%; justify-content: center; }
+        .op-actions { width: 100%; }
+        .op-link { flex: 1; justify-content: center; }
     }
 </style>
