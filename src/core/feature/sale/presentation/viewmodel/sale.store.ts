@@ -101,9 +101,10 @@ function createSaleStore() {
                 await syncAll()
                 return
             }
+            // Timestamp remoto ($updatedAt); no forzar now
             update((state) => ({
                 ...state,
-                items: upsertSaleItems(state.items, touchActivity(sale)),
+                items: upsertSaleItems(state.items, sale),
             }))
             logger.log({ scope: "sale.store.applyRealtimeSale", id: sale.id })
         } catch (e) {
