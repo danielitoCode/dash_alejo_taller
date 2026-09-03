@@ -8,6 +8,15 @@ export interface FinanceCurrencyBucket {
     count: number
 }
 
+/**
+ * Core 5 B1 — resumen de período solo a nivel documento.
+ *
+ * - Fuente: `SaleFinanceEvent` (escritos en VERIFIED; Core 4 snapshot).
+ * - Totales `revenue` / `cogs` / `margin` son suma bruta **sin** convertir moneda;
+ *   usar `byCurrency` para precisión multi-moneda.
+ * - **No** lee `lines`: sin desglose por producto aquí (eso es B3 `aggregateByProduct`).
+ * - Eventos legacy (Core 2, `lines` vacío o ausente) se agregan igual por totales de documento.
+ */
 export interface FinanceSummary {
     /** Totales sin convertir moneda (suma bruta; usar byCurrency para precisión). */
     revenue: number
@@ -18,8 +27,8 @@ export interface FinanceSummary {
 }
 
 /**
- * B4.2 — resumen solo a partir de sale_finance_event (escritos en VERIFIED).
- * No mezcla pedidos UNVERIFIED ni amount de Sale.
+ * Agrega KPIs de período desde `sale_finance_event`.
+ * Solo campos de documento; no inventa desglose producto si faltan `lines`.
  */
 export function aggregateFinanceSummary(
     events: readonly SaleFinanceEvent[]

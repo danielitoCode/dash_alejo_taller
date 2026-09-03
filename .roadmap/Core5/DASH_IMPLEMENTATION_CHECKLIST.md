@@ -31,30 +31,31 @@
 
 - [x] STATUS: “B0 inventario OK” + paths
 
-**Salida B0:** hecha. **Siguiente:** B1.
+**Salida B0:** hecha.
 
 ---
 
-## B1 — Contrato de agregados (solo lectura)
+## B1 — Contrato de agregados (solo lectura) — **CERRADO** (2026-09-02)
 
 **Objetivo:** KPIs de período testeables sobre `SaleFinanceEvent[]`.
 
-- [ ] Revisar / documentar tipo `FinanceSummary` (ya: revenue, cogs, margin, count, byCurrency)
-- [ ] Extender o envolver `aggregateFinanceSummary` según gaps Core 5 (p. ej. desglose producto → B3)
-- [ ] Regla: sin `lines` → sin desglose producto inventado
-- [ ] Unit tests:
-  - [ ] Σ de N events = summary
-  - [ ] Event legacy sin `lines` no rompe agregado documento
-  - [ ] Lista vacía → empty summary
+- [x] Revisar / documentar tipo `FinanceSummary` (revenue, cogs, margin, count, byCurrency) + JSDoc Core 5 B1
+- [x] `aggregateFinanceSummary` = solo totales de documento; desglose producto → B3
+- [x] Regla: sin `lines` → sin desglose producto inventado (agregador no lee `lines`)
+- [x] Unit tests:
+  - [x] Σ de N events = summary (+ byCurrency)
+  - [x] Event legacy sin `lines` no rompe agregado documento
+  - [x] Lista vacía → empty summary
+  - [x] Números no finitos → 0
 
 **Archivos**
 
 | Acción | Path |
 |--------|------|
-| Agregador | `.../aggregateFinanceSummary.ts` |
+| Agregador | `src/core/feature/finance/domain/util/aggregateFinanceSummary.ts` |
 | Tests | `src/test/core/feature/finance/aggregateFinanceSummary.unit.test.ts` |
 
-**Salida:** tests verdes de agregación.
+**Salida:** tests verdes de agregación. **Siguiente:** B2.
 
 ---
 
@@ -94,7 +95,7 @@
 ## Orden
 
 ```text
-B0 ✓ → B1 → B2 → (B3 ∥ B4) → B5
+B0 ✓ → B1 ✓ → B2 → (B3 ∥ B4) → B5
 ```
 
 ## Registro
@@ -103,3 +104,4 @@ B0 ✓ → B1 → B2 → (B3 ∥ B4) → B5
 |-------|------|
 | 2026-09-02 | Checklist DASH creado |
 | 2026-09-02 | **B0 cerrado** |
+| 2026-09-02 | **B1 cerrado** — contrato documento + tests legacy/NaN |
