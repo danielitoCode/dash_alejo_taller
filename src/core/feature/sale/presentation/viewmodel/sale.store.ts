@@ -36,11 +36,11 @@ function sortNewestFirst(items: Sale[]): Sale[] {
     })
 }
 
+/** Siempre marca actividad ahora (confirm/reject → entra en KPIs del período). */
 function touchActivity(sale: Sale): Sale {
-    const now = new Date().toISOString()
     return {
         ...sale,
-        updatedAtIso: sale.updatedAtIso && String(sale.updatedAtIso).trim() ? sale.updatedAtIso : now,
+        updatedAtIso: new Date().toISOString(),
     }
 }
 

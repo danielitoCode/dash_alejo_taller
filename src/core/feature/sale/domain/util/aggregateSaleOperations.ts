@@ -23,12 +23,14 @@ export interface SaleOpsSummary {
     /** Cola viva: todos los UNVERIFIED abiertos (sin filtrar por período). */
     unverifiedOpen: number
     aging: SaleOpsAgingBuckets
+    /** Resoluciones en el período (actividad = updatedAtIso || createdAtIso). */
     verifiedInPeriod: number
     deletedInPeriod: number
     createdInPeriod: number
     periodDays: number
 }
 
+/** Momento de última actividad operativa (confirm/reject deben setear updatedAtIso). */
 export function saleActivityMs(sale: Sale): number {
     const raw = sale.updatedAtIso || sale.createdAtIso || sale.date || ""
     const t = Date.parse(raw)
