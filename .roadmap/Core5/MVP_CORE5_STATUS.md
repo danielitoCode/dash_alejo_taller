@@ -10,14 +10,15 @@
 | **B1** Agregados documento | **Cerrado** |
 | **B2** UI resumen | **Cerrado (código)** · smoke manual pendiente |
 | **B3** Desglose producto | **Cerrado** |
-| B4 Supervisión operativa | **Siguiente** |
-| B5 Roles / CI / PR | pendiente |
+| **B4** Supervisión operativa | **Cerrado** |
+| B5 Roles / CI / PR | **Siguiente** |
 
-### B3
+### B4
 
-- `aggregateByProduct` solo desde `lines` (unitCostSnapshot); legacy sin lines → [].
-- UI: top 10 por `lineRevenue` en panel; nombre vía `productStore` si está en memoria.
+- Fuente: `Sale` (no finance events).
+- Cola UNVERIFIED + aging 12h/48h; confirm/reject en 30d.
+- Panel en dashboard **antes** de Finanzas; links a listado y detalle.
 
 ### Siguiente
 
-**B4** — UNVERIFIED count/aging + bloque operación distinto de finanzas.
+**B5** — roles lectura, CI, PR Core5 → master.

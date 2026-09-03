@@ -21,35 +21,35 @@
 
 ## B2 — UI resumen financiero — **CERRADO** (2026-09-02)
 
-- [x] `FinanceSummaryPanel` maduro (rango, KPIs, loading/empty/error)
-- [x] Solo `loadSummary`; sin UI recalcular COGS
+- [x] `FinanceSummaryPanel` maduro
 - [ ] Smoke manual período conocido
 
 ---
 
 ## B3 — Desglose por producto — **CERRADO** (2026-09-02)
 
-- [x] `aggregateByProduct(events)` desde `lines` (snapshot; no `last_unit_cost`)
-- [x] UI top productos (10) en `FinanceSummaryPanel`
-- [x] Unit tests: vacío, legacy sin lines, suma multi-event, NaN, no usa revenue documento
+- [x] `aggregateByProduct` + UI top productos + tests
+
+---
+
+## B4 — Supervisión operativa — **CERRADO** (2026-09-02)
+
+- [x] UNVERIFIED count + aging (fresh / warn / critical) via `aggregateSaleOperations`
+- [x] Confirmados / rechazados en período (30d)
+- [x] Bloque Operación ≠ Finanzas (`OperationsSupervisionPanel` separado de `FinanceSummaryPanel`)
+- [x] Enlaces a Ventas + detalle (`sales` / `sales-detail`)
+- [x] Unit tests cola / aging / período
 
 **Archivos**
 
 | Path | Rol |
 |------|-----|
-| `.../aggregateFinanceSummary.ts` | `aggregateByProduct` + `FinanceProductBucket` |
-| `src/test/.../aggregateByProduct.unit.test.ts` | Unit B3 |
-| `.../FinanceSummaryPanel.svelte` | Tabla top productos |
+| `src/core/feature/sale/domain/util/aggregateSaleOperations.ts` | KPIs operativos |
+| `src/test/core/feature/sale/aggregateSaleOperations.unit.test.ts` | Unit |
+| `src/core/feature/sale/presentation/components/OperationsSupervisionPanel.svelte` | UI |
+| `src/core/infrastructure/presentation/routes/DashboardHome.svelte` | Montaje (antes de finanzas) |
 
-**Salida B3:** hecha.
-
----
-
-## B4 — Supervisión operativa
-
-- [ ] UNVERIFIED count, aging, confirm/reject en período
-- [ ] Bloque Operación ≠ Finanzas
-- [ ] Enlaces a ventas existentes
+**Salida B4:** hecha.
 
 ---
 
@@ -64,11 +64,11 @@
 ## Orden
 
 ```text
-B0 ✓ → B1 ✓ → B2 ✓ → B3 ✓ → B4 → B5
+B0 ✓ → B1 ✓ → B2 ✓ → B3 ✓ → B4 ✓ → B5
 ```
 
 ## Registro
 
 | Fecha | Nota |
 |-------|------|
-| 2026-09-02 | B0–B3 cerrados (código); smoke B2 manual pendiente |
+| 2026-09-02 | B0–B4 cerrados (código); smoke B2 manual pendiente |
