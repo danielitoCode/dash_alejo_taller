@@ -23,10 +23,8 @@ export interface SaleOpsSummary {
     /** Cola viva: todos los UNVERIFIED abiertos (sin filtrar por período). */
     unverifiedOpen: number
     aging: SaleOpsAgingBuckets
-    /** Resoluciones en el período (por createdAt o updatedAt si existe). */
     verifiedInPeriod: number
     deletedInPeriod: number
-    /** Pedidos creados en el período (cualquier estado). */
     createdInPeriod: number
     periodDays: number
 }
@@ -42,11 +40,11 @@ function inPeriod(ms: number, fromMs: number, toMs: number): boolean {
     return ms >= fromMs && ms <= toMs
 }
 
-/**
- * Agrega métricas operativas de ventas.
- * - Cola / aging: todos los UNVERIFIED actuales.
- * - verified/deleted InPeriod: ventas en ese estado cuya actividad cae en el rango.
- */
+/** Compara BuyState tolerando casing / espacios del DTO. */
+function stateOf(sale: Sale): string {
+    return String(sale.verified ?? "").trim().toUpperCase()
+}
+
 export function aggregateSaleOperations(
     sales: readonly Sale[],
     opts: { periodDays: number; nowMs?: number }
@@ -61,11 +59,16 @@ export function aggregateSaleOperations(
     let deletedInPeriod = 0
     let createdInPeriod = 0
 
+    const U = String(BuyState.UNVERIFIED).toUpperCase()
+    const V = String(BuyState.VERIFIED).toUpperCase()
+    const D = String(BuyState.DELETED).toUpperCase()
+
     for (const s of sales) {
         const created = saleCreatedAtMs(s)
         if (inPeriod(created, fromMs, nowMs)) createdInPeriod++
 
-        if (s.verified === BuyState.UNVERIFIED) {
+        const st = stateOf(s)
+        if (st === U) {
             unverifiedOpen++
             const u = saleAgeUrgency(saleAgeHours(s, nowMs))
             aging[u]++
@@ -74,8 +77,8 @@ export function aggregateSaleOperations(
 
         const activity = saleActivityMs(s)
         if (!inPeriod(activity, fromMs, nowMs)) continue
-        if (s.verified === BuyState.VERIFIED) verifiedInPeriod++
-        else if (s.verified === BuyState.DELETED) deletedInPeriod++
+        if (st === V) verifiedInPeriod++
+        else if (st === D) deletedInPeriod++
     }
 
     return {
@@ -88,14 +91,15 @@ export function aggregateSaleOperations(
     }
 }
 
-/** Cola UNVERIFIED ordenada (más antiguas primero), tope `limit`. */
+/** Cola UNVERIFIED ordenada (más antiguas primero), tope `limit` (default 7). */
 export function pendingQueuePreview(
     sales: readonly Sale[],
-    limit: number = 5,
+    limit: number = 7,
     nowMs: number = Date.now()
 ): Sale[] {
     void nowMs
-    const pending = sales.filter((s) => s.verified === BuyState.UNVERIFIED)
+    const U = String(BuyState.UNVERIFIED).toUpperCase()
+    const pending = sales.filter((s) => stateOf(s) === U)
     const sorted = sortSalesForQueue(pending, BuyState.UNVERIFIED)
     return sorted.slice(0, Math.max(0, limit))
 }
