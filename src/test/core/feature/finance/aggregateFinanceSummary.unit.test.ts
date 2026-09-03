@@ -92,7 +92,6 @@ describe("aggregateFinanceSummary (Core5 B1)", () => {
         expect(s.revenue).toBe(250)
         expect(s.cogs).toBe(100)
         expect(s.margin).toBe(150)
-        // Contrato B1: no usa lines para el summary documento
         expect(s.byCurrency[0]?.count).toBe(2)
     })
 
