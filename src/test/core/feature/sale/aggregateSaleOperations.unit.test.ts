@@ -93,6 +93,30 @@ describe("aggregateSaleOperations (Core5 B4)", () => {
         expect(s.unverifiedOpen).toBe(0)
     })
 
+    it("confirm con updatedAtIso ligeramente después de nowMs aún cuenta (slack)", () => {
+        // Simula UI con nowMs congelado y touchActivity = wall clock un poco mayor
+        const frozenNow = NOW
+        const activityJustAfter = new Date(NOW + 30_000).toISOString()
+        const sales = [
+            sale({
+                id: "just-confirmed",
+                verified: BuyState.VERIFIED,
+                createdAtIso: new Date(NOW - 3 * 3600_000).toISOString(),
+                updatedAtIso: activityJustAfter,
+            }),
+            sale({
+                id: "just-rejected",
+                verified: BuyState.DELETED,
+                createdAtIso: new Date(NOW - 2 * 3600_000).toISOString(),
+                updatedAtIso: activityJustAfter,
+            }),
+        ]
+        const s = aggregateSaleOperations(sales, { periodDays: 30, nowMs: frozenNow })
+        expect(s.verifiedInPeriod).toBe(1)
+        expect(s.deletedInPeriod).toBe(1)
+        expect(s.unverifiedOpen).toBe(0)
+    })
+
     it("pendingQueuePreview ordena más antiguas primero", () => {
         const sales = [
             sale({

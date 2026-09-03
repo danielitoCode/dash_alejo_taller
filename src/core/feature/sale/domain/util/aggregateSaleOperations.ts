@@ -30,16 +30,22 @@ export interface SaleOpsSummary {
     periodDays: number
 }
 
-/** Momento de última actividad operativa (confirm/reject deben setear updatedAtIso). */
+/** Momento de última actividad operativa (confirm/reject setean updatedAtIso). */
 export function saleActivityMs(sale: Sale): number {
     const raw = sale.updatedAtIso || sale.createdAtIso || sale.date || ""
     const t = Date.parse(raw)
     return Number.isFinite(t) ? t : saleCreatedAtMs(sale)
 }
 
+/**
+ * Inclusión en período [from, to].
+ * Tolerancia +2 min en el tope: evita perder un confirm cuyo updatedAtIso
+ * es “ahora” frente a un nowMs ligeramente anterior (UI congelada / reloj).
+ */
 function inPeriod(ms: number, fromMs: number, toMs: number): boolean {
     if (ms <= 0) return false
-    return ms >= fromMs && ms <= toMs
+    const slackMs = 2 * 60 * 1000
+    return ms >= fromMs && ms <= toMs + slackMs
 }
 
 /** Compara BuyState tolerando casing / espacios del DTO. */

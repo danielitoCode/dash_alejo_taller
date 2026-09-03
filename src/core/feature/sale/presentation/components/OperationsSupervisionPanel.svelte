@@ -46,7 +46,6 @@
     }
 
     onMount(() => {
-        // Asegura datos aunque el dashboard ya hubiera montado el store vacío
         void refreshFromServer();
         const onFocus = () => {
             void refreshFromServer();
@@ -55,19 +54,24 @@
         return () => window.removeEventListener("focus", onFocus);
     });
 
-    // Fuente canónica: store Svelte (misma que Ventas / KPIs del dashboard)
     $: salesList = $saleStore.items ?? [];
     $: loading = $saleStore.loading;
-    // Firma de estado: fuerza recálculo cuando cambia verified/id (confirm/reject/create)
-    $: statusKey = salesList.map((s) => `${s.id}:${s.verified}`).join("|");
-    $: nowMs = Date.now();
+    // Firma de estado: cualquier confirm/reject/create cambia esto
+    $: statusKey = salesList
+        .map((s) => `${s.id}:${s.verified}:${s.updatedAtIso ?? ""}`)
+        .join("|");
+    /**
+     * IMPORTANTE: nowMs debe refrescarse cuando cambia statusKey.
+     * Si queda congelado al montar, un confirm con updatedAtIso=now queda
+     * *después* del tope del período y confirmados/rechazados no suben
+     * (pendientes sí, porque no usan período).
+     */
+    $: nowMs = (statusKey, Date.now());
     $: ops = aggregateSaleOperations(salesList, {
         periodDays: PERIOD_DAYS,
         nowMs,
     });
     $: queue = pendingQueuePreview(salesList, PREVIEW_LIMIT, nowMs);
-    // dependencia explícita para el compilador
-    $: void statusKey;
 
     function openSales() {
         navController.goToSection(sales.path);
