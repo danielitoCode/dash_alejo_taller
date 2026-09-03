@@ -3,9 +3,15 @@
     import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
     import LoadingSpinner from "../../../../infrastructure/presentation/components/LoadingSpinner.svelte";
     import { financeStore } from "../viewmodel/finance.store";
+    import { productStore } from "../../../product/presentation/viewmodel/product.store";
+    import {
+        aggregateByProduct,
+        type FinanceProductBucket,
+    } from "../../domain/util/aggregateFinanceSummary";
     import {
         BadgeDollarSign,
         CircleHelp,
+        Package,
         PiggyBank,
         RefreshCw,
         TrendingUp,
@@ -17,18 +23,23 @@
         maximumFractionDigits: 2,
     });
 
+    const TOP_N = 10;
+
+    /** Tips alineados Core 5: lectura sale_finance_event + snapshot Core 4; sin recalcular COGS. */
     const TIPS = {
         ingresos:
-            "Suma del importe de ventas confirmadas (VERIFIED) en el periodo. No incluye pedidos pendientes ni rechazados.",
-        cogs: "Costo de mercadería vendida: last_unit_cost × cantidad por línea al confirmar. Si el producto no tiene costo registrado, cuenta como 0.",
+            "Suma del importe de ventas confirmadas (VERIFIED) en el periodo. Solo sale_finance_event; no incluye UNVERIFIED ni rechazadas.",
+        cogs: "Costo de mercadería vendida congelado al confirmar (unitCostSnapshot × qty por línea). No se relee last_unit_cost del producto.",
         margen:
-            "Margen bruto = Ingresos − COGS. Refleja la ganancia operativa de las ventas confirmadas en el periodo.",
-        count: "Cantidad de ventas confirmadas con evento financiero (sale_finance_event) en el rango seleccionado.",
-        range: "Filtra los eventos por antigüedad desde hoy hacia atrás (7, 30 o 90 días).",
+            "Margen bruto = Ingresos − COGS del evento financiero. Histórico estable; no se recalcula al cambiar costos de catálogo.",
+        count: "Cantidad de eventos sale_finance_event en el rango (una venta confirmada → un evento).",
+        range: "Filtra eventos por antigüedad desde hoy hacia atrás (7, 30 o 90 días).",
         refresh:
-            "Recarga el resumen y reconcilia ventas ya confirmadas que aún no tengan evento financiero.",
+            "Recarga el resumen desde sale_finance_event y reconcilia ventas VERIFIED del rango sin evento (idempotente; no recalcula COGS de eventos ya existentes).",
         currency:
-            "Desglose por moneda del documento. Los totales del KPI principal priorizan CUP si hay varias monedas.",
+            "Desglose por moneda del documento. Los KPI principales priorizan CUP si hay varias monedas.",
+        byProduct:
+            "Top productos por ingresos de línea desde lines del evento (unitCostSnapshot). Eventos legacy sin lines no aportan filas. No se usa el costo actual del catálogo.",
     } as const;
 
     let rangeDays = 30;
@@ -47,18 +58,41 @@
     });
 
     $: summary = $financeStore.summary;
+    $: events = $financeStore.events;
     $: loading = $financeStore.loading;
     $: error = $financeStore.error;
     $: reconciled = $financeStore.reconciled;
+    $: storeDays = $financeStore.rangeDays;
+    $: if (storeDays && storeDays !== rangeDays && !loading) {
+        rangeDays = storeDays;
+    }
     $: primary =
         summary.byCurrency.length === 1
             ? summary.byCurrency[0]
             : summary.byCurrency.find((b) => b.currency === "CUP") ??
               summary.byCurrency[0] ??
               null;
+    $: marginPct =
+        primary && primary.revenue > 0
+            ? (primary.margin / primary.revenue) * 100
+            : summary.revenue > 0
+              ? (summary.margin / summary.revenue) * 100
+              : null;
+    $: initialLoading = loading && summary.count === 0 && !error;
+    $: refreshing = loading && summary.count > 0;
+
+    $: productRows = aggregateByProduct(events) as FinanceProductBucket[];
+    $: topProducts = productRows.slice(0, TOP_N);
+    $: productNameById = new Map(
+        ($productStore.items ?? []).map((p) => [p.id, p.name] as const)
+    );
+
+    function labelFor(productId: string): string {
+        return productNameById.get(productId) || productId;
+    }
 </script>
 
-<section class="fp" aria-label="Resumen financiero VERIFIED">
+<section class="fp" aria-label="Resumen financiero VERIFIED" aria-busy={loading}>
     <div class="fp-accent" aria-hidden="true"></div>
     <header class="fp-head">
         <div class="fp-head-main">
@@ -69,8 +103,8 @@
                 <div class="fp-brand-text">
                     <h2 class="fp-title">Finanzas operativas</h2>
                     <p class="fp-sub">
-                        Solo ventas <strong>confirmadas</strong> · ingresos, COGS y margen
-                        <code>sale_finance_event</code>
+                        Solo ventas <strong>confirmadas</strong> · lectura
+                        <code>sale_finance_event</code> (snapshot al VERIFIED)
                     </p>
                 </div>
             </div>
@@ -85,6 +119,7 @@
                         on:click={() => load(d)}
                         disabled={loading}
                         aria-label="Últimos {d} días"
+                        aria-pressed={rangeDays === d}
                         title={TIPS.range}
                     >
                         {d} días
@@ -95,146 +130,225 @@
             <button
                 type="button"
                 class="fp-refresh tip-host"
+                class:spinning={loading}
                 on:click={() => load(rangeDays)}
                 disabled={loading}
-                aria-label="Actualizar y reconciliar"
+                aria-label="Actualizar y reconciliar faltantes"
                 title={TIPS.refresh}
             >
                 <Icon icon={RefreshCw} size={16} ariaLabel="" />
-                <span class="fp-refresh-label">Actualizar</span>
+                <span class="fp-refresh-label">{loading ? "Cargando…" : "Actualizar"}</span>
                 <span class="fp-tip" role="tooltip">{TIPS.refresh}</span>
             </button>
         </div>
     </header>
 
     {#if reconciled > 0}
-        <p class="fp-banner">
+        <p class="fp-banner" role="status">
             Se sincronizaron {reconciled} venta(s) confirmada(s) sin evento financiero previo.
         </p>
     {/if}
 
-    {#if loading && summary.count === 0}
+    {#if initialLoading}
         <div class="fp-loading"><LoadingSpinner size={26} label="Cargando finanzas" /></div>
-    {:else if error}
-        <p class="fp-error">{error}</p>
+    {:else if error && summary.count === 0}
+        <div class="fp-error-block" role="alert">
+            <p class="fp-error">{error}</p>
+            <button type="button" class="fp-retry" on:click={() => load(rangeDays)} disabled={loading}>
+                Reintentar
+            </button>
+        </div>
     {:else if summary.count === 0}
         <div class="fp-empty">
             <p>No hay eventos financieros en los últimos {rangeDays} días.</p>
             <p class="fp-empty-hint">
                 Confirma ventas desde el panel o el operador; al confirmar se genera el evento de
-                ingresos/COGS/margen. Pulsa <strong>Actualizar</strong> para reconciliar ventas ya
-                confirmadas.
+                ingresos/COGS/margen con costo congelado. Pulsa <strong>Actualizar</strong> para
+                reconciliar ventas ya confirmadas sin evento.
             </p>
         </div>
     {:else}
-        <div class="fp-kpis">
-            <article class="fp-kpi tip-host" title={TIPS.ingresos}>
-                <div class="fp-ico revenue">
-                    <Icon icon={BadgeDollarSign} size={20} ariaLabel="Ingresos" />
+        <div class="fp-body" class:is-refreshing={refreshing}>
+            {#if refreshing}
+                <div class="fp-refresh-bar" aria-live="polite">
+                    <LoadingSpinner size={14} label="Actualizando" subtle />
+                    Actualizando resumen…
                 </div>
-                <div class="fp-kpi-body">
-                    <span class="fp-label">
-                        Ingresos
-                        <span class="fp-help" aria-hidden="true">
-                            <Icon icon={CircleHelp} size={12} ariaLabel="" />
+            {/if}
+            {#if error}
+                <p class="fp-error soft" role="alert">{error}</p>
+            {/if}
+            <div class="fp-kpis">
+                <article class="fp-kpi tip-host" title={TIPS.ingresos}>
+                    <div class="fp-ico revenue">
+                        <Icon icon={BadgeDollarSign} size={20} ariaLabel="Ingresos" />
+                    </div>
+                    <div class="fp-kpi-body">
+                        <span class="fp-label">
+                            Ingresos
+                            <span class="fp-help" aria-hidden="true">
+                                <Icon icon={CircleHelp} size={12} ariaLabel="" />
+                            </span>
                         </span>
-                    </span>
-                    <span class="fp-value">
-                        {money.format(primary ? primary.revenue : summary.revenue)}
-                        {#if primary}<span class="fp-cur">{primary.currency}</span>{/if}
-                    </span>
-                </div>
-                <span class="fp-tip" role="tooltip">{TIPS.ingresos}</span>
-            </article>
+                        <span class="fp-value">
+                            {money.format(primary ? primary.revenue : summary.revenue)}
+                            {#if primary}<span class="fp-cur">{primary.currency}</span>{/if}
+                        </span>
+                    </div>
+                    <span class="fp-tip" role="tooltip">{TIPS.ingresos}</span>
+                </article>
 
-            <article class="fp-kpi tip-host" title={TIPS.cogs}>
-                <div class="fp-ico cogs">
-                    <Icon icon={Wallet} size={20} ariaLabel="COGS" />
-                </div>
-                <div class="fp-kpi-body">
-                    <span class="fp-label">
-                        COGS
-                        <span class="fp-help" aria-hidden="true">
-                            <Icon icon={CircleHelp} size={12} ariaLabel="" />
+                <article class="fp-kpi tip-host" title={TIPS.cogs}>
+                    <div class="fp-ico cogs">
+                        <Icon icon={Wallet} size={20} ariaLabel="COGS" />
+                    </div>
+                    <div class="fp-kpi-body">
+                        <span class="fp-label">
+                            COGS
+                            <span class="fp-help" aria-hidden="true">
+                                <Icon icon={CircleHelp} size={12} ariaLabel="" />
+                            </span>
                         </span>
-                    </span>
-                    <span class="fp-value">
-                        {money.format(primary ? primary.cogs : summary.cogs)}
-                        {#if primary}<span class="fp-cur">{primary.currency}</span>{/if}
-                    </span>
-                </div>
-                <span class="fp-tip" role="tooltip">{TIPS.cogs}</span>
-            </article>
+                        <span class="fp-value">
+                            {money.format(primary ? primary.cogs : summary.cogs)}
+                            {#if primary}<span class="fp-cur">{primary.currency}</span>{/if}
+                        </span>
+                    </div>
+                    <span class="fp-tip" role="tooltip">{TIPS.cogs}</span>
+                </article>
 
-            <article class="fp-kpi tip-host" title={TIPS.margen}>
-                <div class="fp-ico margin">
-                    <Icon icon={TrendingUp} size={20} ariaLabel="Margen" />
-                </div>
-                <div class="fp-kpi-body">
-                    <span class="fp-label">
-                        Margen bruto
-                        <span class="fp-help" aria-hidden="true">
-                            <Icon icon={CircleHelp} size={12} ariaLabel="" />
+                <article class="fp-kpi tip-host" title={TIPS.margen}>
+                    <div class="fp-ico margin">
+                        <Icon icon={TrendingUp} size={20} ariaLabel="Margen" />
+                    </div>
+                    <div class="fp-kpi-body">
+                        <span class="fp-label">
+                            Margen bruto
+                            <span class="fp-help" aria-hidden="true">
+                                <Icon icon={CircleHelp} size={12} ariaLabel="" />
+                            </span>
                         </span>
-                    </span>
-                    <span class="fp-value">
-                        {money.format(primary ? primary.margin : summary.margin)}
-                        {#if primary}<span class="fp-cur">{primary.currency}</span>{/if}
-                    </span>
-                </div>
-                <span class="fp-tip" role="tooltip">{TIPS.margen}</span>
-            </article>
+                        <span class="fp-value">
+                            {money.format(primary ? primary.margin : summary.margin)}
+                            {#if primary}<span class="fp-cur">{primary.currency}</span>{/if}
+                        </span>
+                        {#if marginPct != null}
+                            <span class="fp-pct">{marginPct.toFixed(1)}% sobre ingresos</span>
+                        {/if}
+                    </div>
+                    <span class="fp-tip" role="tooltip">{TIPS.margen}</span>
+                </article>
 
-            <article class="fp-kpi tip-host" title={TIPS.count}>
-                <div class="fp-ico count">
-                    <Icon icon={PiggyBank} size={20} ariaLabel="Eventos" />
-                </div>
-                <div class="fp-kpi-body">
-                    <span class="fp-label">
-                        Ventas con finance
-                        <span class="fp-help" aria-hidden="true">
-                            <Icon icon={CircleHelp} size={12} ariaLabel="" />
+                <article class="fp-kpi tip-host" title={TIPS.count}>
+                    <div class="fp-ico count">
+                        <Icon icon={PiggyBank} size={20} ariaLabel="Eventos" />
+                    </div>
+                    <div class="fp-kpi-body">
+                        <span class="fp-label">
+                            Ventas con finance
+                            <span class="fp-help" aria-hidden="true">
+                                <Icon icon={CircleHelp} size={12} ariaLabel="" />
+                            </span>
                         </span>
-                    </span>
-                    <span class="fp-value">{summary.count}</span>
-                </div>
-                <span class="fp-tip" role="tooltip">{TIPS.count}</span>
-            </article>
-        </div>
-
-        {#if summary.byCurrency.length > 1}
-            <div class="fp-table-wrap tip-host" title={TIPS.currency}>
-                <table class="fp-table">
-                    <caption class="fp-caption">
-                        Desglose por moneda
-                        <span class="fp-help" aria-hidden="true">
-                            <Icon icon={CircleHelp} size={12} ariaLabel="" />
-                        </span>
-                    </caption>
-                    <thead>
-                        <tr>
-                            <th>Moneda</th>
-                            <th>Ventas</th>
-                            <th>Ingresos</th>
-                            <th>COGS</th>
-                            <th>Margen</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {#each summary.byCurrency as b}
-                            <tr>
-                                <td data-label="Moneda"><strong>{b.currency}</strong></td>
-                                <td data-label="Ventas">{b.count}</td>
-                                <td data-label="Ingresos">{money.format(b.revenue)}</td>
-                                <td data-label="COGS">{money.format(b.cogs)}</td>
-                                <td data-label="Margen">{money.format(b.margin)}</td>
-                            </tr>
-                        {/each}
-                    </tbody>
-                </table>
-                <span class="fp-tip fp-tip-table" role="tooltip">{TIPS.currency}</span>
+                        <span class="fp-value">{summary.count}</span>
+                        <span class="fp-pct">últimos {rangeDays} días</span>
+                    </div>
+                    <span class="fp-tip" role="tooltip">{TIPS.count}</span>
+                </article>
             </div>
-        {/if}
+
+            {#if summary.byCurrency.length > 1}
+                <div class="fp-table-wrap tip-host" title={TIPS.currency}>
+                    <table class="fp-table">
+                        <caption class="fp-caption">
+                            Desglose por moneda
+                            <span class="fp-help" aria-hidden="true">
+                                <Icon icon={CircleHelp} size={12} ariaLabel="" />
+                            </span>
+                        </caption>
+                        <thead>
+                            <tr>
+                                <th>Moneda</th>
+                                <th>Ventas</th>
+                                <th>Ingresos</th>
+                                <th>COGS</th>
+                                <th>Margen</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {#each summary.byCurrency as b}
+                                <tr>
+                                    <td data-label="Moneda"><strong>{b.currency}</strong></td>
+                                    <td data-label="Ventas">{b.count}</td>
+                                    <td data-label="Ingresos">{money.format(b.revenue)}</td>
+                                    <td data-label="COGS">{money.format(b.cogs)}</td>
+                                    <td data-label="Margen">{money.format(b.margin)}</td>
+                                </tr>
+                            {/each}
+                        </tbody>
+                    </table>
+                    <span class="fp-tip fp-tip-table" role="tooltip">{TIPS.currency}</span>
+                </div>
+            {/if}
+
+            <div class="fp-products tip-host" title={TIPS.byProduct}>
+                <div class="fp-products-head">
+                    <h3 class="fp-products-title">
+                        <Icon icon={Package} size={16} ariaLabel="" />
+                        Top productos
+                        <span class="fp-help" aria-hidden="true">
+                            <Icon icon={CircleHelp} size={12} ariaLabel="" />
+                        </span>
+                    </h3>
+                    <span class="fp-products-meta">
+                        {#if productRows.length === 0}
+                            sin lines en el rango
+                        {:else}
+                            {Math.min(TOP_N, productRows.length)} de {productRows.length} · por ingresos de línea
+                        {/if}
+                    </span>
+                </div>
+                {#if topProducts.length === 0}
+                    <p class="fp-products-empty">
+                        No hay desglose por producto: los eventos del rango no tienen
+                        <code>lines</code> (legacy Core 2) o aún no hay ventas confirmadas con snapshot.
+                    </p>
+                {:else}
+                    <div class="fp-table-wrap">
+                        <table class="fp-table">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th>Cant.</th>
+                                    <th>Ventas</th>
+                                    <th>Ingresos</th>
+                                    <th>COGS</th>
+                                    <th>Margen</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {#each topProducts as row (row.productId)}
+                                    <tr>
+                                        <td data-label="Producto">
+                                            <strong class="fp-prod-name">{labelFor(row.productId)}</strong>
+                                            {#if labelFor(row.productId) !== row.productId}
+                                                <span class="fp-prod-id">{row.productId}</span>
+                                            {/if}
+                                        </td>
+                                        <td data-label="Cant.">{row.quantity}</td>
+                                        <td data-label="Ventas">{row.saleCount}</td>
+                                        <td data-label="Ingresos">{money.format(row.lineRevenue)}</td>
+                                        <td data-label="COGS">{money.format(row.lineCogs)}</td>
+                                        <td data-label="Margen">{money.format(row.lineMargin)}</td>
+                                    </tr>
+                                {/each}
+                            </tbody>
+                        </table>
+                    </div>
+                {/if}
+                <span class="fp-tip fp-tip-table" role="tooltip">{TIPS.byProduct}</span>
+            </div>
+        </div>
     {/if}
 </section>
 
@@ -303,13 +417,14 @@
         background: var(--md-sys-color-surface); color: var(--md-sys-color-primary);
         box-shadow: 0 1px 3px color-mix(in srgb, black 8%, transparent);
     }
+    .fp-range:disabled, .fp-refresh:disabled { opacity: 0.6; cursor: not-allowed; }
     .fp-refresh {
         position: relative; display: inline-flex; align-items: center; gap: 6px;
         padding: 8px 14px; border-radius: 10px; border: 1px solid var(--md-sys-color-outline-variant);
         background: color-mix(in srgb, var(--md-sys-color-surface) 90%, transparent);
         color: inherit; font-weight: 700; font-size: 0.82rem; cursor: pointer; white-space: nowrap;
     }
-    .fp-refresh:hover {
+    .fp-refresh:hover:not(:disabled) {
         border-color: color-mix(in srgb, var(--md-sys-color-primary) 35%, var(--md-sys-color-outline-variant));
     }
     .fp-banner {
@@ -322,11 +437,30 @@
         margin: 0; padding: 28px 18px; text-align: center; color: var(--md-sys-color-on-surface-variant);
     }
     .fp-error { color: var(--md-sys-color-error); }
+    .fp-error.soft {
+        margin: 0 18px 8px; padding: 8px 12px; text-align: left; border-radius: 10px;
+        background: color-mix(in srgb, var(--md-sys-color-error) 10%, transparent);
+        border: 1px solid color-mix(in srgb, var(--md-sys-color-error) 22%, transparent);
+        font-size: 0.84rem;
+    }
+    .fp-error-block {
+        display: grid; gap: 12px; justify-items: center; padding: 28px 18px;
+    }
+    .fp-retry {
+        padding: 8px 16px; border-radius: 10px; border: 1px solid var(--md-sys-color-outline-variant);
+        background: var(--md-sys-color-surface); font-weight: 700; cursor: pointer;
+    }
     .fp-empty { padding: 24px 18px 28px; text-align: center; color: var(--md-sys-color-on-surface-variant); }
     .fp-empty p { margin: 0; }
     .fp-empty-hint {
         margin-top: 8px !important; font-size: 0.86rem; max-width: 36rem;
         margin-left: auto; margin-right: auto; line-height: 1.45;
+    }
+    .fp-body { position: relative; }
+    .fp-body.is-refreshing { opacity: 0.92; }
+    .fp-refresh-bar {
+        display: flex; align-items: center; gap: 8px; margin: 0 18px 8px;
+        font-size: 0.78rem; font-weight: 650; color: var(--md-sys-color-on-surface-variant);
     }
     .fp-kpis {
         display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -365,6 +499,38 @@
         overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .fp-cur { font-size: 0.72rem; font-weight: 750; margin-left: 4px; opacity: 0.75; }
+    .fp-pct {
+        font-size: 0.72rem; font-weight: 650; color: var(--md-sys-color-on-surface-variant);
+    }
+    .fp-products {
+        position: relative;
+        margin: 0 18px 18px;
+        padding: 12px 0 0;
+        border-top: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 80%, transparent);
+    }
+    .fp-products-head {
+        display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
+        gap: 8px; padding: 0 0 10px;
+    }
+    .fp-products-title {
+        margin: 0; display: inline-flex; align-items: center; gap: 8px;
+        font-size: 0.92rem; font-weight: 800;
+    }
+    .fp-products-meta {
+        font-size: 0.75rem; font-weight: 650; color: var(--md-sys-color-on-surface-variant);
+    }
+    .fp-products-empty {
+        margin: 0; padding: 12px 14px; border-radius: 12px; font-size: 0.86rem; line-height: 1.45;
+        color: var(--md-sys-color-on-surface-variant);
+        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 28%, transparent);
+        border: 1px dashed var(--md-sys-color-outline-variant);
+    }
+    .fp-products-empty code { font-size: 0.8rem; }
+    .fp-prod-name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 16rem; }
+    .fp-prod-id {
+        display: block; font-size: 0.68rem; font-weight: 600; opacity: 0.65;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 16rem;
+    }
     .tip-host { position: relative; }
     .fp-tip {
         position: absolute; z-index: 40; left: 50%; bottom: calc(100% + 10px);
@@ -393,10 +559,12 @@
     }
     .tip-host:hover > .fp-tip-table { transform: translateX(0) translateY(0); }
     .fp-table-wrap {
-        position: relative; margin: 0 18px 18px; overflow: auto; border-radius: 12px;
+        position: relative; overflow: auto; border-radius: 12px;
         border: 1px solid var(--md-sys-color-outline-variant);
         -webkit-overflow-scrolling: touch; outline: none;
     }
+    .fp-table-wrap + .fp-table-wrap,
+    .fp-kpis + .fp-table-wrap { margin: 0 18px 18px; }
     .fp-caption {
         caption-side: top; text-align: left; padding: 10px 12px 0;
         font-size: 0.78rem; font-weight: 750; color: var(--md-sys-color-on-surface-variant);
@@ -420,7 +588,8 @@
         .fp-head { flex-direction: column; align-items: stretch; padding: 14px 14px 10px; }
         .fp-actions { width: 100%; justify-content: space-between; }
         .fp-kpis { padding: 4px 14px 14px; gap: 10px; }
-        .fp-table-wrap { margin: 0 14px 14px; }
+        .fp-kpis + .fp-table-wrap { margin: 0 14px 14px; }
+        .fp-products { margin: 0 14px 14px; }
         .fp-banner { margin: 0 14px 10px; }
         .fp-value { font-size: 1.1rem; }
     }

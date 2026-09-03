@@ -29,21 +29,25 @@ Complementan (y no contradicen) las políticas canónicas del monorepo de venta/
 | Promociones | — | `.policies/notification` (política B; RT Appwrite) |
 | Tasa de mercado (API) | `AlejoTaller/.policies/exchange` + feature `exchange` | Misma API; **compras + snapshot + protección precio** aquí |
 | Costos / last_unit_cost | Escrito en dash | USD siempre; ver `.policies/exchange` |
+| **KPIs / reportes finance** | — | **Lectura** de `sale_finance_event` — [`.roadmap/Core5/POLICY_SUPERVISION_REPORTS_CORE5.md`](../.roadmap/Core5/POLICY_SUPERVISION_REPORTS_CORE5.md) (no redefine sale/warehouse) |
+| **Write finance** | — | Solo al VERIFIED — [`.roadmap/Core4/POLICY_SALE_FINANCE_CORE4.md`](../.roadmap/Core4/POLICY_SALE_FINANCE_CORE4.md) |
 
-## Estado (baseline) — 2026-08-28
+## Estado (baseline) — 2026-09-02
 
 | Política | Estado |
 |----------|--------|
 | Auth staff | Definida (doc); gates a validar en QA |
-| Sale (supervisión) | Definida; implementación a alinear con soft-hold |
-| Warehouse (panel) | Definida; modelo código aún incompleto (`reserved`) |
+| Sale (supervisión) | Definida; confirm/reject + soft-hold |
+| Warehouse (panel) | Definida |
 | Product | Definida |
 | Panel | Definida |
-| Promociones (B) | **Aceptada 2026-08-13** — ver `notification/PROMOTION_POLICY.md` |
-| Exchange / moneda compras | **Definida 2026-08-28** — ver `exchange/EXCHANGE_POLICY.md` (código + tests = siguiente) |
+| Promociones (B) | Aceptada 2026-08-13 |
+| Exchange / moneda compras | Definida 2026-08-28 |
+| Supervisión reportes (Core 5) | **Aceptada 2026-09-02** — roadmap Core5; **sin** cambio de reglas de dominio sale/warehouse |
 
 ## Regla de oro
 
 1. Si una regla afecta stock o estados de venta **compartidos**, primero alinear con AlejoTaller; el dash **adopta**, no inventa un segundo almacén lógico.
 2. Al cambiar comportamiento del panel, actualizar la política **antes o junto** con el código y el checklist Core correspondiente.
 3. Tasa y moneda de **compras**: canónico de escritura en este repo; tasa de **display** cliente canónica en AlejoTaller (misma API).
+4. Reportes financieros **leen** events Core 4; no recalculan COGS ni mutan `sale_finance_event` desde UI de KPIs.

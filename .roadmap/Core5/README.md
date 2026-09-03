@@ -1,47 +1,34 @@
-# Core 5 — Supervisión y Reportes
+# Core 5 — Supervisión y reportes
+
+**Estado:** abierto · rama `Core5` · 2026-09-02  
+**Dependencias:** Core 2–4 (`sale_finance_event` + snapshot)  
+**Espejo AT:** [AlejoTaller/.roadmap/Core5](https://github.com/danielitoCode/AlejoTaller/tree/Core5/.roadmap/Core5)
 
 ## Objetivo
 
-Convertir los datos confiables de inventario, compras y ventas en herramientas de supervisión operativa y reportes.
+Supervisión operativa y reportes financieros en el **panel**, leyendo `sale_finance_event` (**sin** recalcular COGS ni reescribir histórico).
 
-## Alcance
+## Checklists de implementación (usar estos)
 
-- Dashboard operativo.
-- Ventas pendientes y antigüedad de `UNVERIFIED`.
-- Alertas de stock bajo.
-- Inventario y movimientos consultables.
-- Ingresos, COGS y margen por periodo.
-- Reportes de compras.
-- Filtros por fecha y producto.
-- Exportación CSV de datos operativos.
-- KPIs derivados de las fuentes canónicas.
+| Repo | Doc |
+|------|-----|
+| **Este (dash)** | [DASH_IMPLEMENTATION_CHECKLIST.md](./DASH_IMPLEMENTATION_CHECKLIST.md) |
+| AlejoTaller | [AT_IMPLEMENTATION_CHECKLIST](https://github.com/danielitoCode/AlejoTaller/blob/Core5/.roadmap/Core5/AT_IMPLEMENTATION_CHECKLIST.md) |
+| Índice | [CORE5_UNIFIED_CHECKLIST.md](./CORE5_UNIFIED_CHECKLIST.md) |
 
-## Regla
+## Otros docs
 
-Los reportes deben leer datos fuente; no deben mantener una segunda contabilidad ni modificar inventario.
+| Doc | Rol |
+|------|-----|
+| [POLICY_SUPERVISION_REPORTS_CORE5.md](./POLICY_SUPERVISION_REPORTS_CORE5.md) | Política |
+| [MVP_CORE5_STATUS.md](./MVP_CORE5_STATUS.md) | Estado vivo |
+
+## Orden (dash)
+
+```text
+B0 inventario → B1 agregados → B2 UI resumen → B3 producto ∥ B4 cola → B5 PR
+```
 
 ## Fuera de alcance
 
-- Nuevas reglas de stock.
-- Contabilidad general.
-- Reservas de taller.
-
-## Definition of Done
-
-- [ ] KPIs operativos disponibles.
-- [ ] Reportes de inventario.
-- [ ] Reportes de ventas.
-- [ ] Reportes de compras.
-- [ ] Reportes de margen.
-- [ ] Filtros funcionales.
-- [ ] Exportación CSV.
-- [ ] Datos reconciliados con las fuentes canónicas.
-- [ ] Tests de cálculo y filtros.
-
-## Dependencias
-
-Core 2, Core 3 y Core 4.
-
-## Siguiente Core
-
-Core 6 — Taller y reservas.
+Contabilidad formal, impuestos, anulación VERIFIED, reportes B2C, Core 6 reservas taller.
