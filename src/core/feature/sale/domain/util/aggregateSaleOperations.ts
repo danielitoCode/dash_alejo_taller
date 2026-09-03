@@ -88,10 +88,10 @@ export function aggregateSaleOperations(
     }
 }
 
-/** Cola UNVERIFIED ordenada (más antiguas primero), tope `limit`. */
+/** Cola UNVERIFIED ordenada (más antiguas primero), tope `limit` (default 7 en dashboard). */
 export function pendingQueuePreview(
     sales: readonly Sale[],
-    limit: number = 5,
+    limit: number = 7,
     nowMs: number = Date.now()
 ): Sale[] {
     void nowMs
