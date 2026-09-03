@@ -1,12 +1,11 @@
 <script lang="ts">
-    import { onDestroy, onMount } from "svelte";
+    import { onMount } from "svelte";
     import type { NavController } from "../../../../../lib/navigation/NavController";
     import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
     import { saleStore } from "../viewmodel/sale.store";
     import {
         aggregateSaleOperations,
         pendingQueuePreview,
-        type SaleOpsSummary,
     } from "../../domain/util/aggregateSaleOperations";
     import {
         formatSaleAge,
@@ -14,7 +13,7 @@
         saleAgeHours,
     } from "../../domain/util/sortSalesByAge";
     import { formatSaleMoney } from "../../domain/util/formatSaleMoney";
-    import type { Sale } from "../../domain/entity/Sale";
+    import { BuyState } from "../../domain/entity/enums";
     import { sales, salesDetail } from "../../../../infrastructure/presentation/navigation/nested.router";
     import {
         Clock,
@@ -29,63 +28,46 @@
     export let navController: NavController;
 
     const PERIOD_DAYS = 30;
-    /** Tope de preview en dashboard; listado completo en Ventas. */
+    /** Preview en dashboard; listado completo en Ventas. */
     const PREVIEW_LIMIT = 7;
 
-    let salesList: Sale[] = [];
-    let loading = false;
     let syncing = false;
-    let revision = 0;
-    let unsub: (() => void) | null = null;
-
-    function recompute(items: Sale[]) {
-        salesList = items;
-        revision += 1;
-    }
 
     async function refreshFromServer(): Promise<void> {
+        if (syncing) return;
         syncing = true;
         try {
             await saleStore.syncAll();
         } catch {
-            /* error en store */
+            /* error queda en saleStore */
         } finally {
             syncing = false;
         }
     }
 
     onMount(() => {
-        unsub = saleStore.subscribe((state) => {
-            loading = state.loading;
-            recompute(state.items ?? []);
-        });
+        // Asegura datos aunque el dashboard ya hubiera montado el store vacío
         void refreshFromServer();
         const onFocus = () => {
             void refreshFromServer();
         };
         window.addEventListener("focus", onFocus);
-        return () => {
-            window.removeEventListener("focus", onFocus);
-        };
+        return () => window.removeEventListener("focus", onFocus);
     });
 
-    onDestroy(() => {
-        unsub?.();
-        unsub = null;
-    });
-
+    // Fuente canónica: store Svelte (misma que Ventas / KPIs del dashboard)
+    $: salesList = $saleStore.items ?? [];
+    $: loading = $saleStore.loading;
+    // Firma de estado: fuerza recálculo cuando cambia verified/id (confirm/reject/create)
+    $: statusKey = salesList.map((s) => `${s.id}:${s.verified}`).join("|");
     $: nowMs = Date.now();
-    $: ops = (() => {
-        void revision;
-        return aggregateSaleOperations(salesList, {
-            periodDays: PERIOD_DAYS,
-            nowMs: Date.now(),
-        }) as SaleOpsSummary;
-    })();
-    $: queue = (() => {
-        void revision;
-        return pendingQueuePreview(salesList, PREVIEW_LIMIT, Date.now());
-    })();
+    $: ops = aggregateSaleOperations(salesList, {
+        periodDays: PERIOD_DAYS,
+        nowMs,
+    });
+    $: queue = pendingQueuePreview(salesList, PREVIEW_LIMIT, nowMs);
+    // dependencia explícita para el compilador
+    $: void statusKey;
 
     function openSales() {
         navController.goToSection(sales.path);
@@ -107,7 +89,7 @@
                 <h2 class="op-title">Operación · cola de ventas</h2>
                 <p class="op-sub">
                     Estados de pedido (<code>Sale</code>) — <strong>no</strong> es el bloque financiero.
-                    Confirmados/rechazados en {PERIOD_DAYS} días; cola UNVERIFIED (preview hasta {PREVIEW_LIMIT}).
+                    Confirmados/rechazados en {PERIOD_DAYS} días; cola UNVERIFIED (hasta {PREVIEW_LIMIT} en preview).
                 </p>
             </div>
         </div>
@@ -120,7 +102,7 @@
                 aria-label="Actualizar cola operativa"
             >
                 <Icon icon={RefreshCw} size={16} ariaLabel="" />
-                {syncing ? "Actualizando…" : "Actualizar"}
+                {syncing || loading ? "Actualizando…" : "Actualizar"}
             </button>
             <button type="button" class="op-link primary" on:click={openSales}>
                 Ir a Ventas
@@ -174,7 +156,15 @@
             {/if}
         </div>
         {#if queue.length === 0}
-            <p class="op-empty">No hay pedidos pendientes. La cola operativa está vacía.</p>
+            <p class="op-empty">
+                {#if loading || syncing}
+                    Cargando ventas…
+                {:else if salesList.length === 0}
+                    No hay ventas en memoria. Pulsa <strong>Actualizar</strong> o abre Ventas.
+                {:else}
+                    No hay pedidos pendientes ({BuyState.UNVERIFIED}). La cola operativa está vacía.
+                {/if}
+            </p>
         {:else}
             <ul class="op-list">
                 {#each queue as s (s.id + ":" + s.verified)}
@@ -232,7 +222,9 @@
         font-weight: 700; font-size: 0.82rem; cursor: pointer; color: inherit;
     }
     .op-link:disabled { opacity: 0.6; cursor: not-allowed; }
-    .op-link:hover:not(:disabled) { border-color: color-mix(in srgb, #a855f7 40%, var(--md-sys-color-outline-variant)); }
+    .op-link:hover:not(:disabled) {
+        border-color: color-mix(in srgb, #a855f7 40%, var(--md-sys-color-outline-variant));
+    }
     .op-link.primary {
         background: color-mix(in srgb, #a855f7 12%, transparent);
         border-color: color-mix(in srgb, #a855f7 28%, transparent);
