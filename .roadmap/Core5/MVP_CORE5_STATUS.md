@@ -4,37 +4,23 @@
 **Rama:** `Core5`  
 **Checklist:** [DASH_IMPLEMENTATION_CHECKLIST.md](./DASH_IMPLEMENTATION_CHECKLIST.md)
 
-### B0 inventario OK
-
-Core 4 en master verificado (`SaleFinanceEvent.lines`, `buildFinanceEventFromSale`, register idempotente).  
-Política Core 5 **aceptada**; no redefine `.policies` de dominio (solo puntero README).
-
-### B1 contrato agregados OK
-
-- `FinanceSummary` documentado (totales + `byCurrency`; **no** producto).
-- `aggregateFinanceSummary` solo campos de documento; no lee `lines`.
-- Tests: vacío, Σ N events, legacy `lines: []`, NaN→0, `financeRangeLastDays`.
-
-| Path | Rol |
-|------|-----|
-| `src/core/feature/finance/domain/entity/SaleFinanceEvent.ts` | Entidad + lines |
-| `src/core/feature/finance/domain/util/buildFinanceEventFromSale.ts` | Build al confirm |
-| `src/core/feature/finance/domain/util/aggregateFinanceSummary.ts` | KPIs documento + byCurrency |
-| `src/core/feature/finance/domain/caseuse/RegisterSaleFinanceFromVerifiedCaseUse.ts` | Write idempotente |
-| `src/core/feature/finance/presentation/viewmodel/finance.store.ts` | `loadSummary` + reconcile faltantes |
-| `src/core/feature/finance/presentation/components/FinanceSummaryPanel.svelte` | UI resumen |
-| `src/core/feature/sale/presentation/viewmodel/sale.store.ts` | refresh finance post-confirm |
-| `src/test/core/feature/finance/aggregateFinanceSummary.unit.test.ts` | B1 unit |
-
 | Bloque | Estado |
 |--------|--------|
 | **B0** Baseline / inventario | **Cerrado** |
 | **B1** Contrato agregados | **Cerrado** |
-| B2 UI resumen | **Siguiente** |
-| B3 Desglose producto | pendiente |
-| B4 Supervisión operativa | pendiente |
-| B5 Roles / CI / PR | pendiente |
+| **B2** UI resumen financiero | **Cerrado (código)** · smoke manual pendiente |
+| B3 Desglose producto | **Siguiente (opcional completo)** |
+| B4 Supervisión operativa | pendiente (opcional completo) |
+| B5 Roles / CI / PR | pendiente (cierra mínimo con B2 smoke) |
+
+### B2 UI
+
+`FinanceSummaryPanel`: rango 7/30/90, KPIs + % margen, loading inicial / refresh sin blank, empty, error+retry, solo `loadSummary`, tips snapshot. Montado en `DashboardHome`.
 
 ### Siguiente
 
-**B2** — madurar `FinanceSummaryPanel.svelte`: rango, KPIs, loading/empty/error; solo `financeStore.loadSummary`; sin UI “recalcular COGS”.
+- Smoke manual B2 en staging (período con VERIFIED conocidos), **o**
+- **B3** `aggregateByProduct` + UI top productos, **o**
+- **B4** cola UNVERIFIED / aging.
+
+Release mínimo: B0–B2 + B5 tras smoke + CI.

@@ -4,17 +4,16 @@
 
 | Repo | Checklist |
 |------|-----------|
-| **dash** | [DASH_IMPLEMENTATION_CHECKLIST.md](./DASH_IMPLEMENTATION_CHECKLIST.md) — **B0✓ B1✓** |
+| **dash** | [DASH_IMPLEMENTATION_CHECKLIST.md](./DASH_IMPLEMENTATION_CHECKLIST.md) — **B0✓ B1✓ B2✓** |
 | **AT** | [AT checklist](https://github.com/danielitoCode/AlejoTaller/blob/Core5/.roadmap/Core5/AT_IMPLEMENTATION_CHECKLIST.md) |
 
 **Política:** aceptada · [POLICY_SUPERVISION_REPORTS_CORE5.md](./POLICY_SUPERVISION_REPORTS_CORE5.md)
 
 | Nivel | Bloques |
 |-------|---------|
-| Mínimo | B0✓ + B1✓ + B2 + B5 |
+| Mínimo | B0✓ + B1✓ + B2✓ + B5 |
 | Completo | + B3 + B4 |
 
 | Fecha | Nota |
 |-------|------|
-| 2026-09-02 | B0 dash cerrado |
-| 2026-09-02 | B1 dash cerrado (agregados + tests) |
+| 2026-09-02 | B0–B2 dash (UI madurada; smoke manual B2 pendiente) |
