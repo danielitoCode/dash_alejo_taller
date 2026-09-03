@@ -9,42 +9,39 @@
 
 ## B0 — Baseline e inventario — **CERRADO** (2026-09-02)
 
-- [x] Core 4 finance en `master` / base de rama
-- [x] Política aceptada + inventario paths
-
-**Salida B0:** hecha.
+- [x] Core 4 finance + política + inventario paths
 
 ---
 
-## B1 — Contrato de agregados (solo lectura) — **CERRADO** (2026-09-02)
+## B1 — Contrato de agregados — **CERRADO** (2026-09-02)
 
-- [x] `FinanceSummary` documentado
-- [x] `aggregateFinanceSummary` solo documento
-- [x] Tests: vacío, Σ N, legacy sin lines, NaN→0
-
-**Salida B1:** hecha.
+- [x] `FinanceSummary` + `aggregateFinanceSummary` + tests
 
 ---
 
-## B2 — UI resumen financiero (MVP) — **CERRADO** (2026-09-02)
+## B2 — UI resumen financiero — **CERRADO** (2026-09-02)
 
-- [x] Madurar `FinanceSummaryPanel.svelte`: rango 7/30/90, KPIs, loading inicial + refresh sin borrar KPIs, empty, error + reintentar
-- [x] Solo `financeStore.loadSummary` (reconcile faltantes ya en store; tip aclara no recalcula eventos existentes)
-- [x] Sin UI de “recalcular COGS”
-- [x] Tips alineados snapshot Core 4 (`unitCostSnapshot`); % margen sobre ingresos
-- [ ] Smoke manual período conocido (staging/prod — operador humano)
-
-**Archivo:** `src/core/feature/finance/presentation/components/FinanceSummaryPanel.svelte`
-
-**Salida B2 código:** hecha. Smoke manual pendiente de sesión.
+- [x] `FinanceSummaryPanel` maduro (rango, KPIs, loading/empty/error)
+- [x] Solo `loadSummary`; sin UI recalcular COGS
+- [ ] Smoke manual período conocido
 
 ---
 
-## B3 — Desglose por producto
+## B3 — Desglose por producto — **CERRADO** (2026-09-02)
 
-- [ ] `aggregateByProduct(events)` desde `lines`
-- [ ] UI top productos
-- [ ] Unit; **prohibido** releer `last_unit_cost` para histórico
+- [x] `aggregateByProduct(events)` desde `lines` (snapshot; no `last_unit_cost`)
+- [x] UI top productos (10) en `FinanceSummaryPanel`
+- [x] Unit tests: vacío, legacy sin lines, suma multi-event, NaN, no usa revenue documento
+
+**Archivos**
+
+| Path | Rol |
+|------|-----|
+| `.../aggregateFinanceSummary.ts` | `aggregateByProduct` + `FinanceProductBucket` |
+| `src/test/.../aggregateByProduct.unit.test.ts` | Unit B3 |
+| `.../FinanceSummaryPanel.svelte` | Tabla top productos |
+
+**Salida B3:** hecha.
 
 ---
 
@@ -67,13 +64,11 @@
 ## Orden
 
 ```text
-B0 ✓ → B1 ✓ → B2 ✓ (smoke manual) → (B3 ∥ B4) → B5
+B0 ✓ → B1 ✓ → B2 ✓ → B3 ✓ → B4 → B5
 ```
 
 ## Registro
 
 | Fecha | Nota |
 |-------|------|
-| 2026-09-02 | B0 cerrado |
-| 2026-09-02 | B1 cerrado |
-| 2026-09-02 | B2 UI madurada; smoke manual pendiente |
+| 2026-09-02 | B0–B3 cerrados (código); smoke B2 manual pendiente |

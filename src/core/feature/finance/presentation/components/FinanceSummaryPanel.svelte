@@ -3,9 +3,15 @@
     import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
     import LoadingSpinner from "../../../../infrastructure/presentation/components/LoadingSpinner.svelte";
     import { financeStore } from "../viewmodel/finance.store";
+    import { productStore } from "../../../product/presentation/viewmodel/product.store";
+    import {
+        aggregateByProduct,
+        type FinanceProductBucket,
+    } from "../../domain/util/aggregateFinanceSummary";
     import {
         BadgeDollarSign,
         CircleHelp,
+        Package,
         PiggyBank,
         RefreshCw,
         TrendingUp,
@@ -16,6 +22,8 @@
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     });
+
+    const TOP_N = 10;
 
     /** Tips alineados Core 5: lectura sale_finance_event + snapshot Core 4; sin recalcular COGS. */
     const TIPS = {
@@ -30,6 +38,8 @@
             "Recarga el resumen desde sale_finance_event y reconcilia ventas VERIFIED del rango sin evento (idempotente; no recalcula COGS de eventos ya existentes).",
         currency:
             "Desglose por moneda del documento. Los KPI principales priorizan CUP si hay varias monedas.",
+        byProduct:
+            "Top productos por ingresos de línea desde lines del evento (unitCostSnapshot). Eventos legacy sin lines no aportan filas. No se usa el costo actual del catálogo.",
     } as const;
 
     let rangeDays = 30;
@@ -48,6 +58,7 @@
     });
 
     $: summary = $financeStore.summary;
+    $: events = $financeStore.events;
     $: loading = $financeStore.loading;
     $: error = $financeStore.error;
     $: reconciled = $financeStore.reconciled;
@@ -67,9 +78,18 @@
             : summary.revenue > 0
               ? (summary.margin / summary.revenue) * 100
               : null;
-    /** Primera carga (sin datos): spinner full. Refresh con datos: overlay sutil. */
     $: initialLoading = loading && summary.count === 0 && !error;
     $: refreshing = loading && summary.count > 0;
+
+    $: productRows = aggregateByProduct(events) as FinanceProductBucket[];
+    $: topProducts = productRows.slice(0, TOP_N);
+    $: productNameById = new Map(
+        ($productStore.items ?? []).map((p) => [p.id, p.name] as const)
+    );
+
+    function labelFor(productId: string): string {
+        return productNameById.get(productId) || productId;
+    }
 </script>
 
 <section class="fp" aria-label="Resumen financiero VERIFIED" aria-busy={loading}>
@@ -270,6 +290,64 @@
                     <span class="fp-tip fp-tip-table" role="tooltip">{TIPS.currency}</span>
                 </div>
             {/if}
+
+            <div class="fp-products tip-host" title={TIPS.byProduct}>
+                <div class="fp-products-head">
+                    <h3 class="fp-products-title">
+                        <Icon icon={Package} size={16} ariaLabel="" />
+                        Top productos
+                        <span class="fp-help" aria-hidden="true">
+                            <Icon icon={CircleHelp} size={12} ariaLabel="" />
+                        </span>
+                    </h3>
+                    <span class="fp-products-meta">
+                        {#if productRows.length === 0}
+                            sin lines en el rango
+                        {:else}
+                            {Math.min(TOP_N, productRows.length)} de {productRows.length} · por ingresos de línea
+                        {/if}
+                    </span>
+                </div>
+                {#if topProducts.length === 0}
+                    <p class="fp-products-empty">
+                        No hay desglose por producto: los eventos del rango no tienen
+                        <code>lines</code> (legacy Core 2) o aún no hay ventas confirmadas con snapshot.
+                    </p>
+                {:else}
+                    <div class="fp-table-wrap">
+                        <table class="fp-table">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th>Cant.</th>
+                                    <th>Ventas</th>
+                                    <th>Ingresos</th>
+                                    <th>COGS</th>
+                                    <th>Margen</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {#each topProducts as row (row.productId)}
+                                    <tr>
+                                        <td data-label="Producto">
+                                            <strong class="fp-prod-name">{labelFor(row.productId)}</strong>
+                                            {#if labelFor(row.productId) !== row.productId}
+                                                <span class="fp-prod-id">{row.productId}</span>
+                                            {/if}
+                                        </td>
+                                        <td data-label="Cant.">{row.quantity}</td>
+                                        <td data-label="Ventas">{row.saleCount}</td>
+                                        <td data-label="Ingresos">{money.format(row.lineRevenue)}</td>
+                                        <td data-label="COGS">{money.format(row.lineCogs)}</td>
+                                        <td data-label="Margen">{money.format(row.lineMargin)}</td>
+                                    </tr>
+                                {/each}
+                            </tbody>
+                        </table>
+                    </div>
+                {/if}
+                <span class="fp-tip fp-tip-table" role="tooltip">{TIPS.byProduct}</span>
+            </div>
         </div>
     {/if}
 </section>
@@ -424,6 +502,35 @@
     .fp-pct {
         font-size: 0.72rem; font-weight: 650; color: var(--md-sys-color-on-surface-variant);
     }
+    .fp-products {
+        position: relative;
+        margin: 0 18px 18px;
+        padding: 12px 0 0;
+        border-top: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 80%, transparent);
+    }
+    .fp-products-head {
+        display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
+        gap: 8px; padding: 0 0 10px;
+    }
+    .fp-products-title {
+        margin: 0; display: inline-flex; align-items: center; gap: 8px;
+        font-size: 0.92rem; font-weight: 800;
+    }
+    .fp-products-meta {
+        font-size: 0.75rem; font-weight: 650; color: var(--md-sys-color-on-surface-variant);
+    }
+    .fp-products-empty {
+        margin: 0; padding: 12px 14px; border-radius: 12px; font-size: 0.86rem; line-height: 1.45;
+        color: var(--md-sys-color-on-surface-variant);
+        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 28%, transparent);
+        border: 1px dashed var(--md-sys-color-outline-variant);
+    }
+    .fp-products-empty code { font-size: 0.8rem; }
+    .fp-prod-name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 16rem; }
+    .fp-prod-id {
+        display: block; font-size: 0.68rem; font-weight: 600; opacity: 0.65;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 16rem;
+    }
     .tip-host { position: relative; }
     .fp-tip {
         position: absolute; z-index: 40; left: 50%; bottom: calc(100% + 10px);
@@ -452,10 +559,12 @@
     }
     .tip-host:hover > .fp-tip-table { transform: translateX(0) translateY(0); }
     .fp-table-wrap {
-        position: relative; margin: 0 18px 18px; overflow: auto; border-radius: 12px;
+        position: relative; overflow: auto; border-radius: 12px;
         border: 1px solid var(--md-sys-color-outline-variant);
         -webkit-overflow-scrolling: touch; outline: none;
     }
+    .fp-table-wrap + .fp-table-wrap,
+    .fp-kpis + .fp-table-wrap { margin: 0 18px 18px; }
     .fp-caption {
         caption-side: top; text-align: left; padding: 10px 12px 0;
         font-size: 0.78rem; font-weight: 750; color: var(--md-sys-color-on-surface-variant);
@@ -479,7 +588,8 @@
         .fp-head { flex-direction: column; align-items: stretch; padding: 14px 14px 10px; }
         .fp-actions { width: 100%; justify-content: space-between; }
         .fp-kpis { padding: 4px 14px 14px; gap: 10px; }
-        .fp-table-wrap { margin: 0 14px 14px; }
+        .fp-kpis + .fp-table-wrap { margin: 0 14px 14px; }
+        .fp-products { margin: 0 14px 14px; }
         .fp-banner { margin: 0 14px 10px; }
         .fp-value { font-size: 1.1rem; }
     }

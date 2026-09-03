@@ -6,21 +6,18 @@
 
 | Bloque | Estado |
 |--------|--------|
-| **B0** Baseline / inventario | **Cerrado** |
-| **B1** Contrato agregados | **Cerrado** |
-| **B2** UI resumen financiero | **Cerrado (código)** · smoke manual pendiente |
-| B3 Desglose producto | **Siguiente (opcional completo)** |
-| B4 Supervisión operativa | pendiente (opcional completo) |
-| B5 Roles / CI / PR | pendiente (cierra mínimo con B2 smoke) |
+| **B0** Baseline | **Cerrado** |
+| **B1** Agregados documento | **Cerrado** |
+| **B2** UI resumen | **Cerrado (código)** · smoke manual pendiente |
+| **B3** Desglose producto | **Cerrado** |
+| B4 Supervisión operativa | **Siguiente** |
+| B5 Roles / CI / PR | pendiente |
 
-### B2 UI
+### B3
 
-`FinanceSummaryPanel`: rango 7/30/90, KPIs + % margen, loading inicial / refresh sin blank, empty, error+retry, solo `loadSummary`, tips snapshot. Montado en `DashboardHome`.
+- `aggregateByProduct` solo desde `lines` (unitCostSnapshot); legacy sin lines → [].
+- UI: top 10 por `lineRevenue` en panel; nombre vía `productStore` si está en memoria.
 
 ### Siguiente
 
-- Smoke manual B2 en staging (período con VERIFIED conocidos), **o**
-- **B3** `aggregateByProduct` + UI top productos, **o**
-- **B4** cola UNVERIFIED / aging.
-
-Release mínimo: B0–B2 + B5 tras smoke + CI.
+**B4** — UNVERIFIED count/aging + bloque operación distinto de finanzas.
