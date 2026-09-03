@@ -2,6 +2,7 @@
  * Configuración centralizada de roles y permisos (panel back-office).
  * Core1 3.3: ROLE_LABELS es la única fuente de verdad labels ↔ BusinessRole.
  * Core3 B4: entrada al panel = owner | admin | sales (alias operator).
+ * Core5 B5: reportes finance/ops en dashboard = mismos staff que `canAccessDashboard`.
  */
 
 import type { BusinessRole } from "../entity/BusinessRole";
@@ -98,6 +99,15 @@ export function canAccessDashboard(role: string | null | undefined): boolean {
     if (role === null || role === undefined || String(role).trim() === "") return false;
     const r = normalizeBusinessRole(role);
     return STAFF_ROLES.includes(r);
+}
+
+/**
+ * Core 5 B5 — lectura de KPIs finance + supervisión operativa en dashboard.
+ * Alineado a POLICY_SUPERVISION_REPORTS_CORE5 §2: owner/admin/sales sí; viewer/cliente no.
+ * No es ruta separada: paneles viven en `dashboard` (gate = `canAccessDashboard`).
+ */
+export function canViewCore5Reports(role: string | null | undefined): boolean {
+    return canAccessDashboard(role);
 }
 
 export function dashboardDeniedMessage(): string {
@@ -214,6 +224,7 @@ export default {
     ROLE_COLORS,
     isAdminRole,
     canAccessDashboard,
+    canViewCore5Reports,
     dashboardDeniedMessage,
     canAccessRoute,
     getFirstAllowedRoute,

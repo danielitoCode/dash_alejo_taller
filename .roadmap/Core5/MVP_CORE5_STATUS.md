@@ -1,6 +1,6 @@
 # MVP Core 5 — Estado vivo (dash)
 
-**Última actualización:** 2026-09-02  
+**Última actualización:** 2026-09-03  
 **Rama:** `Core5`  
 **Checklist:** [DASH_IMPLEMENTATION_CHECKLIST.md](./DASH_IMPLEMENTATION_CHECKLIST.md)
 
@@ -11,14 +11,10 @@
 | **B2** UI resumen | **Cerrado (código)** · smoke manual pendiente |
 | **B3** Desglose producto | **Cerrado** |
 | **B4** Supervisión operativa | **Cerrado** |
-| B5 Roles / CI / PR | **Siguiente** |
+| **B5** Roles / CI / PR | **Código cerrado** · falta verde Actions + merge |
 
-### B4
+### B5
 
-- Fuente: `Sale` (no finance events).
-- Cola UNVERIFIED + aging 12h/48h; confirm/reject en 30d.
-- Panel en dashboard **antes** de Finanzas; links a listado y detalle.
-
-### Siguiente
-
-**B5** — roles lectura, CI, PR Core5 → master.
+- Lectura: `canViewCore5Reports` (staff panel).
+- Write finance: solo confirm Core4 + reconcile faltantes en `loadSummary`.
+- PR `Core5` → `master` para cerrar release.
