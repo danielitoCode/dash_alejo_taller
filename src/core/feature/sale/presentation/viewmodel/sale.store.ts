@@ -36,6 +36,27 @@ function sortNewestFirst(items: Sale[]): Sale[] {
     })
 }
 
+function touchActivity(sale: Sale): Sale {
+    const now = new Date().toISOString()
+    return {
+        ...sale,
+        updatedAtIso: sale.updatedAtIso && String(sale.updatedAtIso).trim() ? sale.updatedAtIso : now,
+    }
+}
+
+/** Reemplaza o inserta la venta (nueva referencia de array → UI reactiva). */
+function upsertSaleItems(items: Sale[], sale: Sale): Sale[] {
+    const id = String(sale.id || "").trim()
+    if (!id) return items
+    const idx = items.findIndex((s) => s.id === id)
+    if (idx >= 0) {
+        const next = items.slice()
+        next[idx] = sale
+        return sortNewestFirst(next)
+    }
+    return sortNewestFirst([sale, ...items])
+}
+
 function createSaleStore() {
     const { subscribe, update } = writable<SaleState>(initialState)
     let snapshot: SaleState = initialState
@@ -70,10 +91,6 @@ function createSaleStore() {
         }
     }
 
-    /**
-     * Aplica un documento sale crudo de Appwrite Realtime (create/update).
-     * Actualiza Dexie + store sin listDocuments completo.
-     */
     async function applyRealtimeSale(dto: SaleDTO): Promise<void> {
         const repo = offlineRepo()
         try {
@@ -81,14 +98,13 @@ function createSaleStore() {
             if (repo) {
                 sale = await repo.applyRemoteDocument(dto)
             } else {
-                // fallback: full sync
                 await syncAll()
                 return
             }
-            update((state) => {
-                const without = state.items.filter((s) => s.id !== sale.id)
-                return { ...state, items: sortNewestFirst([sale, ...without]) }
-            })
+            update((state) => ({
+                ...state,
+                items: upsertSaleItems(state.items, touchActivity(sale)),
+            }))
             logger.log({ scope: "sale.store.applyRealtimeSale", id: sale.id })
         } catch (e) {
             logger.warn(`[sale.store] realtime apply failed, full sync: ${e}`)
@@ -119,7 +135,7 @@ function createSaleStore() {
             const updated = await saleContainer.useCases.updateVerified.execute(id, verified as any)
             update((state) => ({
                 ...state,
-                items: state.items.map((s) => (s.id === id ? updated : s)),
+                items: upsertSaleItems(state.items, touchActivity(updated)),
             }))
         } catch (error) {
             update((state) => ({ ...state, error: normalizeError(error) }))
@@ -137,14 +153,15 @@ function createSaleStore() {
             void financeStore.loadSummary().catch((e) =>
                 logger.warn(`[sale.store] finance refresh after confirm: ${e}`)
             )
+            const patched = touchActivity(updated)
             update((state) => ({
                 ...state,
-                items: state.items.map((s) => (s.id === id ? updated : s)),
+                items: upsertSaleItems(state.items, patched),
             }))
             await productStore
-                .refreshStockForProducts(productIdsFromSale(snapshotSale ?? updated))
+                .refreshStockForProducts(productIdsFromSale(snapshotSale ?? patched))
                 .catch((e) => logger.warn(`[sale.store][6.4] refresh after confirm: ${e}`))
-            return updated
+            return patched
         } catch (error: any) {
             logger.error(error?.message ?? error, error?.stack)
             update((state) => ({ ...state, error: normalizeError(error) }))
@@ -159,14 +176,15 @@ function createSaleStore() {
         try {
             const snapshotSale = snapshot.items.find((s) => s.id === id) ?? null
             const updated = await saleContainer.useCases.rejectFromPanel.execute(id, snapshotSale)
+            const patched = touchActivity(updated)
             update((state) => ({
                 ...state,
-                items: state.items.map((s) => (s.id === id ? updated : s)),
+                items: upsertSaleItems(state.items, patched),
             }))
             await productStore
-                .refreshStockForProducts(productIdsFromSale(snapshotSale ?? updated))
+                .refreshStockForProducts(productIdsFromSale(snapshotSale ?? patched))
                 .catch((e) => logger.warn(`[sale.store][6.4] refresh after reject: ${e}`))
-            return updated
+            return patched
         } catch (error: any) {
             logger.error(error?.message ?? error, error?.stack)
             update((state) => ({ ...state, error: normalizeError(error) }))
@@ -181,7 +199,7 @@ function createSaleStore() {
     }
 
     function reset(): void {
-        update(() => initialState)
+        update(() => ({ ...initialState }))
     }
 
     const hasData = derived({ subscribe }, ($state) => $state.items.length > 0)
