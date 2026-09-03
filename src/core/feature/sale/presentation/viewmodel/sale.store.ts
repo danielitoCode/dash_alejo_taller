@@ -63,11 +63,12 @@ function createSaleStore() {
     subscribe((s) => (snapshot = s))
 
     function offlineRepo(): SaleOfflineFirstRepository | null {
-        const repo = saleContainer.repositories.offlineFirst
-        return repo instanceof SaleOfflineFirstRepository ? repo : null
+        const r = saleContainer.repositories?.offlineFirst
+        return r instanceof SaleOfflineFirstRepository ? r : null
     }
 
     async function syncAll(): Promise<void> {
+        logger.info("Sync sales from storage")
         update((state) => ({ ...state, loading: true, error: null }))
         try {
             const sales = await saleContainer.useCases.getAll.execute()
@@ -90,10 +91,6 @@ function createSaleStore() {
         }
     }
 
-    /**
-     * Aplica un documento sale crudo de Appwrite Realtime (create/update).
-     * Actualiza Dexie + store sin listDocuments completo.
-     */
     async function applyRealtimeSale(dto: SaleDTO): Promise<void> {
         const repo = offlineRepo()
         try {
