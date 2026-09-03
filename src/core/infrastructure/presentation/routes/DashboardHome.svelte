@@ -10,6 +10,8 @@
     import { saleStore } from "../../../feature/sale/presentation/viewmodel/sale.store";
     import { toastStore } from "../viewmodel/toast.store";
     import FinanceSummaryPanel from "../../../feature/finance/presentation/components/FinanceSummaryPanel.svelte";
+    import OperationsSupervisionPanel from "../../../feature/sale/presentation/components/OperationsSupervisionPanel.svelte";
+    import type { NavController } from "../../../../lib/navigation/NavController";
     import { getPrimaryProductImage } from "../../../feature/product/domain/entity/Product";
     import { logger } from "../util/logger.service";
     import {
@@ -29,6 +31,8 @@
         Tags,
         TrendingUp
     } from "lucide-svelte";
+
+    export let navController: NavController;
 
     const money = new Intl.NumberFormat(undefined, {
         minimumFractionDigits: 2,
@@ -261,6 +265,8 @@
             </div>
         </article>
     </section>
+
+    <OperationsSupervisionPanel {navController} />
 
     <FinanceSummaryPanel />
 
