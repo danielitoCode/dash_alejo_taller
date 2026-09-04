@@ -124,7 +124,7 @@
                 <span class="op-label">Pendientes abiertos</span>
                 <span class="op-value">{ops.unverifiedOpen}</span>
                 <span class="op-note">
-                    <12h {ops.aging.fresh} · 12–48h {ops.aging.warn} · ≥48h {ops.aging.critical}
+                    {'<'}12h {ops.aging.fresh} · 12–48h {ops.aging.warn} · ≥48h {ops.aging.critical}
                 </span>
             </div>
         </article>
