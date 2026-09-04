@@ -32,6 +32,7 @@
     const PREVIEW_LIMIT = 7;
 
     let syncing = false;
+    let nowMs = Date.now();
 
     async function refreshFromServer(): Promise<void> {
         if (syncing) return;
@@ -61,12 +62,13 @@
         .map((s) => `${s.id}:${s.verified}:${s.updatedAtIso ?? ""}`)
         .join("|");
     /**
-     * IMPORTANTE: nowMs debe refrescarse cuando cambia statusKey.
-     * Si queda congelado al montar, un confirm con updatedAtIso=now queda
-     * *después* del tope del período y confirmados/rechazados no suben
-     * (pendientes sí, porque no usan período).
+     * nowMs fresco cuando cambia statusKey (evita período con reloj congelado).
+     * Sin operador coma: CI / noUnusedLocals lo rechaza.
      */
-    $: nowMs = (statusKey, Date.now());
+    $: {
+        void statusKey;
+        nowMs = Date.now();
+    }
     $: ops = aggregateSaleOperations(salesList, {
         periodDays: PERIOD_DAYS,
         nowMs,
@@ -122,7 +124,7 @@
                 <span class="op-label">Pendientes abiertos</span>
                 <span class="op-value">{ops.unverifiedOpen}</span>
                 <span class="op-note">
-                    &lt;12h {ops.aging.fresh} · 12–48h {ops.aging.warn} · ≥48h {ops.aging.critical}
+                    <12h {ops.aging.fresh} · 12–48h {ops.aging.warn} · ≥48h {ops.aging.critical}
                 </span>
             </div>
         </article>
