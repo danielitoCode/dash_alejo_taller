@@ -23,4 +23,13 @@ export const ENV = {
     directorioCubanoApiUrl:
         import.meta.env.VITE_DIRECTORIO_CUBANO_API_URL ||
         "https://widgets.directoriocubano.info/api/tasas",
-}
+
+    // ——— Fase 1 migración: Auth0 (default provider sigue appwrite hasta activar) ———
+    /** `auth0` | `appwrite` — con auth0 se usa AuthPort/Auth0AuthAdapter. */
+    authProvider: import.meta.env.VITE_AUTH_PROVIDER as string | undefined,
+    auth0Domain: import.meta.env.VITE_AUTH0_DOMAIN as string | undefined,
+    auth0ClientId: import.meta.env.VITE_AUTH0_CLIENT_ID as string | undefined,
+    auth0Audience: import.meta.env.VITE_AUTH0_AUDIENCE as string | undefined,
+    auth0RedirectUri: import.meta.env.VITE_AUTH0_REDIRECT_URI as string | undefined,
+    auth0LogoutReturnTo: import.meta.env.VITE_AUTH0_LOGOUT_RETURN_TO as string | undefined,
+};
