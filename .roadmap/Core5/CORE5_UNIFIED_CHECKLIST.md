@@ -1,10 +1,10 @@
 # Core 5 — Índice de checklists
 
-**Rama:** `Core5` · **Actualizado:** 2026-09-03
+**Rama:** `Core5` · **Actualizado:** 2026-09-04
 
 | Repo | Checklist |
 |------|-----------|
-| **dash** | [DASH_IMPLEMENTATION_CHECKLIST.md](./DASH_IMPLEMENTATION_CHECKLIST.md) — **B0–B5 código ✓** |
+| **dash** | [DASH_IMPLEMENTATION_CHECKLIST.md](./DASH_IMPLEMENTATION_CHECKLIST.md) — **B0–B5 ✓ · CI ✓ · smoke ✓** |
 | **AT** | [AT checklist](https://github.com/danielitoCode/AlejoTaller/blob/Core5/.roadmap/Core5/AT_IMPLEMENTATION_CHECKLIST.md) |
 
 | Nivel | Bloques |
@@ -15,3 +15,4 @@
 | Fecha | Nota |
 |-------|------|
 | 2026-09-03 | B5 dash (roles + PR) |
+| 2026-09-04 | CI verde + smoke + listo merge → Core6 |
