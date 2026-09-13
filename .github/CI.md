@@ -6,17 +6,18 @@ Quality gate con typecheck, tests unitarios, build y deploy a **Vercel**.
 
 | Workflow | Cuándo | Qué hace |
 |----------|--------|----------|
-| **CI** | push/PR `master`, `Core2`, `Core3`, **`Core4`** | `check` + `test:unit` + `build` |
+| **CI** | push/PR `master`, `Core2`…`Core6` | `check` + `test:unit` + `build` |
 | **CI and Deploy** | push/PR mismas ramas | Mismo quality gate → Vercel **solo** en push a `master` |
-| **Core4 Finance Unit** | push/PR `Core4` (paths finance/sale) | Vitest acotado a finance + confirm sale |
-| **Core3 Appwrite Integration** | push `Core3` + secrets | Integración B3.1 (opcional) |
+| **Core5 Reports Unit** | push/PR paths finance/sale | Vitest reports Core 5 |
+| **Core4 Finance Unit** | push/PR paths finance | Vitest finance |
+| **Core3 Appwrite Integration** | push `Core3` + secrets | Integración opcional |
 | **Deploy Vercel (manual)** | `workflow_dispatch` | Redeploy bajo demanda |
 
-Ramos de núcleo (**Core2 / Core3 / Core4**) corren **quality sin deploy** a producción.
+Ramos de núcleo (**Core2–Core6**) corren **quality sin deploy** a producción.
 
 ### Branch protection (recomendado)
 
-En GitHub → Settings → Branches → `master` (y opcionalmente `Core4`):
+En GitHub → Settings → Branches → `master` (y opcionalmente `Core6`):
 
 - Require status checks:
   - `CI / Check · Unit tests · Build` **o** `CI and Deploy / Quality gate`
