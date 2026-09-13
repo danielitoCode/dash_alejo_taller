@@ -144,7 +144,8 @@ export class Auth0AuthAdapter implements AuthPort {
         const client = await this.ensureClient();
         if (!(await client.isAuthenticated())) return null;
         try {
-            return await client.getTokenSilently();
+            const token = await client.getTokenSilently();
+            return token ?? null;
         } catch {
             return null;
         }
@@ -164,7 +165,9 @@ export class Auth0AuthAdapter implements AuthPort {
 
         let accessToken = "";
         try {
-            accessToken = await client.getTokenSilently();
+            const token = await client.getTokenSilently();
+            if (!token) return null;
+            accessToken = token;
         } catch {
             return null;
         }
