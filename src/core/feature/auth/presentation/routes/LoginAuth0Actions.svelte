@@ -1,18 +1,18 @@
 <script lang="ts">
     /**
-     * Acciones Auth0 para el panel (login Universal Login).
-     * Tras redirect, Splash procesa code/state y gates de rol.
+     * Acciones Auth0 panel: Universal Login + Google directo (free plan, hasta 2 social).
+     * Requiere connection Google habilitada en Auth0 Dashboard → Authentication → Social.
      */
     import { getAuthPort } from "../../di/authPort.factory";
     import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
-    import { LogIn } from "lucide-svelte";
+    import { Chrome, LogIn } from "lucide-svelte";
 
     export let disabled = false;
 
     let loading = false;
     let error: string | null = null;
 
-    async function continueWithAuth0(signup = false) {
+    async function login(opts?: { connection?: string }) {
         const auth = getAuthPort();
         if (!auth) {
             error = "Auth0 no está activo (VITE_AUTH_PROVIDER=auth0)";
@@ -22,15 +22,14 @@
         error = null;
         try {
             await auth.init();
-            // screen_hint via appState no es estándar; loginWithRedirect usa Universal Login
             await auth.loginWithRedirect({
                 returnTo: typeof window !== "undefined" ? window.location.origin : undefined,
+                connection: opts?.connection,
             });
         } catch (e) {
             error = e instanceof Error ? e.message : "No se pudo iniciar Auth0";
             loading = false;
         }
-        // si redirect OK, la página se navega fuera
     }
 </script>
 
@@ -42,12 +41,21 @@
         class="btn primary"
         type="button"
         disabled={disabled || loading}
-        on:click={() => continueWithAuth0(false)}
+        on:click={() => login()}
     >
         <Icon icon={LogIn} size={18} className="btn-ico" ariaLabel="Auth0" />
         {#if loading}Redirigiendo...{:else}Continuar con Auth0{/if}
     </button>
-    <p class="hint">Staff: owner / admin / sales vía claim o rol en Auth0.</p>
+    <button
+        class="btn elevated"
+        type="button"
+        disabled={disabled || loading}
+        on:click={() => login({ connection: "google-oauth2" })}
+    >
+        <Icon icon={Chrome} size={18} className="btn-ico" ariaLabel="Google" />
+        Continuar con Google
+    </button>
+    <p class="hint">Google vía Auth0 Social (plan free). Staff: claim roles.</p>
 </div>
 
 <style>
@@ -67,8 +75,15 @@
         align-items: center;
         justify-content: center;
         gap: 10px;
+    }
+    .btn.primary {
         color: var(--md-sys-color-on-primary);
         background: var(--md-sys-color-primary);
+    }
+    .btn.elevated {
+        color: var(--md-sys-color-on-surface);
+        background: var(--md-sys-color-surface);
+        border: 1px solid var(--md-sys-color-outline-variant);
     }
     .btn:disabled {
         opacity: 0.6;
