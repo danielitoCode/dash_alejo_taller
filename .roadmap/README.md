@@ -2,18 +2,21 @@
 
 | Directorio | Alcance | Estado |
 |------------|---------|--------|
-| [`Core1/`](./Core1/) | Soft-hold, catálogo, ventas, roles, QA | **Cerrado** (2026-08-12) |
-| [`Core2/`](./Core2/) | Factura entrada, movements, finance base, cola, reservas | **Cerrado** (2026-08-24) |
-| [`Core3/`](./Core3/) | Compras y abastecimiento | **Cerrado / listo merge** · rama `Core3` |
-| [`Core4/`](./Core4/) | Finanzas de ventas (snapshot COGS, margen por línea) | **Cerrado** (2026-09-02) · PR [#21](https://github.com/danielitoCode/dash_alejo_taller/pull/21) |
-| [`Core5/`](./Core5/) | Supervisión y reportes (lectura `sale_finance_event`) | **Abierto** · rama `Core5` |
+| [`Core1/`](./Core1/) | Soft-hold, catálogo, ventas, roles, QA | **Cerrado** |
+| [`Core2/`](./Core2/) | Factura entrada, movements, finance base, cola | **Cerrado** |
+| [`Core3/`](./Core3/) | Compras y abastecimiento | **Cerrado** |
+| [`Core4/`](./Core4/) | Finanzas de ventas (snapshot COGS) | **Cerrado** |
+| [`Core5/`](./Core5/) | Supervisión y reportes | **Cerrado** · PR [#25](https://github.com/danielitoCode/dash_alejo_taller/pull/25) |
+| [`Core6/`](./Core6/) | **Taller y reservas** (`Appointment ≠ Sale`) | **Abierto** · rama `Core6` |
+| [`Core7/`](./Core7/) | Hardening y plataforma | Planificado |
 
-## Core 5 (abierto)
+## Core 6 (abierto)
 
-- README: [`Core5/README.md`](./Core5/README.md)
-- Checklist: [`Core5/CORE5_UNIFIED_CHECKLIST.md`](./CORE5_UNIFIED_CHECKLIST.md)
-- Estado: [`Core5/MVP_CORE5_STATUS.md`](./MVP_CORE5_STATUS.md)
-- Política: [`Core5/POLICY_SUPERVISION_REPORTS_CORE5.md`](./POLICY_SUPERVISION_REPORTS_CORE5.md)
-- **Trabajo en rama `Core5`**; merge a `master` solo con CI verde y release mínimo B0–B2+B5
+- README: [`Core6/README.md`](./Core6/README.md)
+- Checklist: [`Core6/DASH_IMPLEMENTATION_CHECKLIST.md`](./Core6/DASH_IMPLEMENTATION_CHECKLIST.md)
+- Unificado: [`Core6/CORE6_UNIFIED_CHECKLIST.md`](./Core6/CORE6_UNIFIED_CHECKLIST.md)
+- Estado: [`Core6/MVP_CORE6_STATUS.md`](./Core6/MVP_CORE6_STATUS.md)
+
+**Trabajo en rama `Core6`.** Merge a `master` solo con CI verde y release mínimo B0–B3+B6.
 
 **Políticas:** [`.policies/`](../.policies/)
