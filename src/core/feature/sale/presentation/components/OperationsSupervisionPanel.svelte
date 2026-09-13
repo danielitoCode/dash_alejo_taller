@@ -6,6 +6,7 @@
     import {
         aggregateSaleOperations,
         pendingQueuePreview,
+        type SaleOpsSummary,
     } from "../../domain/util/aggregateSaleOperations";
     import {
         formatSaleAge,
