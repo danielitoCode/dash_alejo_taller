@@ -27,11 +27,6 @@ function parseRolesFromClaims(claims: Record<string, unknown> | undefined): Busi
     return [...new Set(roles)];
 }
 
-/**
- * Defaults alineados con Auth0 Application (SPA):
- * Callback / Logout / Web Origins = http://localhost:5173/
- * → redirect_uri y returnTo = location.origin (no /callback).
- */
 function requireAuth0Config(): {
     domain: string;
     clientId: string;
@@ -54,10 +49,6 @@ function requireAuth0Config(): {
     return { domain, clientId, audience, redirectUri, logoutReturnTo };
 }
 
-/**
- * Adapter Auth0 SPA oficial (`@auth0/auth0-spa-js`).
- * No implementa OAuth a mano. Roles vía claim o fallback viewer.
- */
 export class Auth0AuthAdapter implements AuthPort {
     private client: Auth0Client | null = null;
     private initPromise: Promise<void> | null = null;
@@ -93,15 +84,16 @@ export class Auth0AuthAdapter implements AuthPort {
         return this.client;
     }
 
-    async loginWithRedirect(appState?: { returnTo?: string }): Promise<void> {
+    async loginWithRedirect(appState?: { returnTo?: string; connection?: string }): Promise<void> {
         const client = await this.ensureClient();
         const cfg = requireAuth0Config();
         const options: RedirectLoginOptions = {
             authorizationParams: {
                 redirect_uri: cfg.redirectUri,
                 ...(cfg.audience ? { audience: cfg.audience } : {}),
+                ...(appState?.connection ? { connection: appState.connection } : {}),
             },
-            appState: appState ?? undefined,
+            appState: appState?.returnTo ? { returnTo: appState.returnTo } : undefined,
         };
         await client.loginWithRedirect(options);
     }
@@ -110,7 +102,6 @@ export class Auth0AuthAdapter implements AuthPort {
         if (typeof window === "undefined") return;
         const q = window.location.search;
 
-        // Error devuelto por Auth0 tras redirect
         if (q.includes("error=")) {
             const params = new URLSearchParams(q);
             const msg = `${params.get("error")} — ${params.get("error_description") ?? ""}`;
