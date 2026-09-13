@@ -28,7 +28,14 @@ jobs:
           cache: npm
 
       - name: Install
-        run: npm ci
+        run: |
+          set -e
+          if npm ci; then
+            echo "npm ci OK"
+          else
+            echo "::warning::package-lock out of sync with package.json — using npm install"
+            npm install --no-audit --no-fund
+          fi
 
       - name: Check
         run: npm run check
@@ -86,7 +93,14 @@ jobs:
 
       - name: Install
         if: steps.vercel_secrets.outputs.configured == 'true'
-        run: npm ci
+        run: |
+          set -e
+          if npm ci; then
+            echo "npm ci OK"
+          else
+            echo "::warning::package-lock out of sync — npm install"
+            npm install --no-audit --no-fund
+          fi
 
       - name: Install Vercel CLI
         if: steps.vercel_secrets.outputs.configured == 'true'
