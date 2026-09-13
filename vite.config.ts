@@ -9,6 +9,18 @@ export default defineConfig({
   root: rootDir,
   envDir: rootDir,
   plugins: [svelte()],
+  // Auth0 Application: Callback / Logout / Web Origins = http://localhost:5173/
+  // Puerto fijo evita mismatch de redirect_uri.
+  server: {
+    host: "localhost",
+    port: 5173,
+    strictPort: true,
+  },
+  preview: {
+    host: "localhost",
+    port: 5173,
+    strictPort: true,
+  },
   test: {
       globals: true,
       environment: "jsdom",
@@ -27,7 +39,6 @@ export default defineConfig({
               test: {
                   name: "integration",
                   include: ["src/**/*.integration.test.ts"],
-                  // Live Appwrite tests must not inherit MSW (onUnhandledRequest: error).
                   exclude: ["src/test/integration/appwrite/**"],
               }
           },
@@ -39,7 +50,6 @@ export default defineConfig({
               }
           },
           {
-              // Node + no MSW: real fetch to Appwrite (B3.1 transactions).
               test: {
                   name: "appwrite",
                   environment: "node",

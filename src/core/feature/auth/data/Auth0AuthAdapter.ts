@@ -24,10 +24,14 @@ function parseRolesFromClaims(claims: Record<string, unknown> | undefined): Busi
           : [];
     if (list.length === 0) return ["viewer"];
     const roles = list.map((r) => normalizeBusinessRole(r));
-    // únicos, orden estable
     return [...new Set(roles)];
 }
 
+/**
+ * Defaults alineados con Auth0 Application (SPA):
+ * Callback / Logout / Web Origins = http://localhost:5173/
+ * → redirect_uri y returnTo = location.origin (no /callback).
+ */
 function requireAuth0Config(): {
     domain: string;
     clientId: string;
@@ -42,20 +46,17 @@ function requireAuth0Config(): {
             "Auth0: faltan VITE_AUTH0_DOMAIN y/o VITE_AUTH0_CLIENT_ID en el entorno",
         );
     }
-    const redirectUri =
-        (ENV.auth0RedirectUri ?? "").trim() ||
-        (typeof window !== "undefined" ? `${window.location.origin}/callback` : "");
-    const logoutReturnTo =
-        (ENV.auth0LogoutReturnTo ?? "").trim() ||
-        (typeof window !== "undefined" ? `${window.location.origin}/` : "");
+    const origin =
+        typeof window !== "undefined" ? window.location.origin : "http://localhost:5173";
+    const redirectUri = (ENV.auth0RedirectUri ?? "").trim() || origin;
+    const logoutReturnTo = (ENV.auth0LogoutReturnTo ?? "").trim() || origin;
     const audience = (ENV.auth0Audience ?? "").trim() || undefined;
     return { domain, clientId, audience, redirectUri, logoutReturnTo };
 }
 
 /**
- * Adapter Auth0 SPA. No usa Appwrite Account.
- * Roles: claim `https://alejotaller.app/roles` o fallback viewer
- * (resolver staff por sub en capa superior si hace falta).
+ * Adapter Auth0 SPA oficial (`@auth0/auth0-spa-js`).
+ * No implementa OAuth a mano. Roles vía claim o fallback viewer.
  */
 export class Auth0AuthAdapter implements AuthPort {
     private client: Auth0Client | null = null;
@@ -108,10 +109,19 @@ export class Auth0AuthAdapter implements AuthPort {
     async handleRedirectCallback(): Promise<void> {
         if (typeof window === "undefined") return;
         const q = window.location.search;
+
+        // Error devuelto por Auth0 tras redirect
+        if (q.includes("error=")) {
+            const params = new URLSearchParams(q);
+            const msg = `${params.get("error")} — ${params.get("error_description") ?? ""}`;
+            window.history.replaceState({}, document.title, window.location.pathname);
+            throw new Error(`Auth0: ${msg}`);
+        }
+
         if (!q.includes("code=") || !q.includes("state=")) return;
+
         const client = await this.ensureClient();
         await client.handleRedirectCallback();
-        // limpiar query para no re-procesar
         window.history.replaceState({}, document.title, window.location.pathname);
     }
 
@@ -159,7 +169,6 @@ export class Auth0AuthAdapter implements AuthPort {
             return null;
         }
 
-        // Claims del id token / user object (Action puede inyectar roles)
         const claims = user as Record<string, unknown>;
         const roles = parseRolesFromClaims(claims);
 
