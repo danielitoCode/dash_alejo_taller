@@ -1,13 +1,14 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { authContainer } from "../../di/auth.container";
+    import { getAuthPort } from "../../di/authPort.factory";
     import { canAccessDashboard, dashboardDeniedMessage } from "../../domain/config/RoleConfig";
+    import { userLikeFromAuthSession } from "../../domain/util/authSessionBridge";
     import { exchangeStore } from "../../../exchange/presentation/viewmodel/exchange.store";
     import alejoIcon from "/alejoicon_clean.svg";
 
     export let navController;
 
-    /** UX bajo el logo — mismo lenguaje visual que tienda web (órbitas + copy) */
     type SplashStatus = "loading" | "welcome" | "unauthorized" | "guest";
     let status: SplashStatus = "loading";
     let displayName = "";
@@ -19,7 +20,7 @@
         return new Promise<void>((resolve) => setTimeout(resolve, ms));
     }
 
-    function resolveDisplayName(user: any): string {
+    function resolveDisplayName(user: { name?: string; email?: string }): string {
         const name = typeof user?.name === "string" ? user.name.trim() : "";
         if (name) return name;
         const email = typeof user?.email === "string" ? user.email.trim() : "";
@@ -37,6 +38,32 @@
         status = "loading";
         busy = true;
         try {
+            const authPort = getAuthPort();
+
+            if (authPort) {
+                await authPort.init();
+                await authPort.handleRedirectCallback();
+                const session = await authPort.getSession();
+                if (!session) {
+                    await holdStatus("guest");
+                    navController.navigate("welcome");
+                    return;
+                }
+                const user = userLikeFromAuthSession(session);
+                if (!canAccessDashboard(user.role)) {
+                    await holdStatus("unauthorized", resolveDisplayName(user));
+                    navController.navigate("unauthorized", {
+                        message: dashboardDeniedMessage(),
+                    });
+                    return;
+                }
+                void exchangeStore.refreshOnSession();
+                await holdStatus("welcome", resolveDisplayName(user));
+                navController.navigate("home", { id: user.id });
+                return;
+            }
+
+            // Legacy Appwrite
             const user = await authContainer.useCases.accounts.getCurrentUser();
 
             if (!canAccessDashboard(user.role)) {
@@ -47,9 +74,7 @@
                 return;
             }
 
-            // Tasa del día al recuperar sesión (best-effort; no bloquea entrada)
             void exchangeStore.refreshOnSession();
-
             await holdStatus("welcome", resolveDisplayName(user));
             navController.navigate("home", { id: user.id });
         } catch {
