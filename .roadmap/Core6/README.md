@@ -24,6 +24,11 @@ Ciclo de vida de **citas y servicios de taller** en el back-office: clientes de 
 - Gestión avanzada de repuestos
 - Facturación formal de servicios
 
+## Plataforma (previo / paralelo)
+
+Migración fuera de Appwrite monolítico: **Auth0 + R2 + Turso + Pusher**.  
+Ver [../PLATFORM_MIGRATION.md](../PLATFORM_MIGRATION.md) — Core 6 debe usar esos puertos, no Appwrite.
+
 ## Checklists
 
 - [DASH_IMPLEMENTATION_CHECKLIST.md](./DASH_IMPLEMENTATION_CHECKLIST.md) — trabajo en este repo
@@ -32,7 +37,7 @@ Ciclo de vida de **citas y servicios de taller** en el back-office: clientes de 
 
 ## Dependencias
 
-Core 1 (identidad/roles) · Core 5 (supervisión futura de ops, no bloqueante).
+Core 1 (identidad/roles) · Core 5 (supervisión) · stack plataforma desacoplado.
 
 ## Siguiente
 
