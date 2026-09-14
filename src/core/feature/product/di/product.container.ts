@@ -2,6 +2,7 @@ import { infrastructureContainer } from "../../../infrastructure/di/infrastructu
 import { authContainer } from "../../auth/di/auth.container"
 import { inventoryContainer } from "../../inventory/di/inventory.container"
 import ProductNetRepository from "../data/repository/product.net.repository"
+import { ProductTursoRepository } from "../data/repository/product.turso.repository"
 import { ProductOfflineFirstRepository } from "../data/repository/product.offline-first.repository"
 import { GetAllProductCaseUse } from "../domain/caseuse/GetAllProductCaseUse"
 import { GetProductByIdCaseUse } from "../domain/caseuse/GetProductByIdCaseUse"
@@ -11,10 +12,15 @@ import { UpdateProductPriceCaseUse } from "../domain/caseuse/UpdateProductPriceC
 import { UpdateProductCatalogCaseUse } from "../domain/caseuse/UpdateProductCatalogCaseUse"
 import { RegisterStockEntryCaseUse } from "../domain/caseuse/RegisterStockEntryCaseUse"
 import { RegisterStockAdjustmentCaseUse } from "../domain/caseuse/RegisterStockAdjustmentCaseUse"
+import { isTursoDataProvider } from "../../../infrastructure/turso/turso.client"
+import { getAuthPort } from "../../auth/di/authPort.factory"
 
 const database = infrastructureContainer.appwrite.databases
 
-const productNetRepository = new ProductNetRepository(database)
+const productNetRepository = isTursoDataProvider()
+    ? (new ProductTursoRepository() as unknown as ProductNetRepository)
+    : new ProductNetRepository(database)
+
 const productOfflineFirstRepository = new ProductOfflineFirstRepository(productNetRepository)
 
 const getAllProductsCaseUse = new GetAllProductCaseUse(productOfflineFirstRepository)
@@ -26,6 +32,11 @@ const saveProductCaseUse = new SaveProductCaseUse(productOfflineFirstRepository)
 
 async function resolveStaffUserId(): Promise<string> {
     try {
+        const authPort = getAuthPort()
+        if (authPort) {
+            const session = await authPort.getSession()
+            if (session?.subject) return session.subject
+        }
         const user = await authContainer.useCases.accounts.getCurrentUser()
         const id = String(
             (user as { $id?: string })?.$id || (user as { id?: string })?.id || ""

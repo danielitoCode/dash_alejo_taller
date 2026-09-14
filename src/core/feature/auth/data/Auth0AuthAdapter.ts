@@ -12,7 +12,7 @@ import {
     normalizeBusinessRole,
     type BusinessRole,
 } from "../domain/entity/BusinessRole";
-import { ENV } from "../../../infrastructure/env";
+import { ENV, parseCsvEnv } from "../../../infrastructure/env";
 import { logger } from "../../../infrastructure/presentation/util/logger.service";
 
 function parseRolesFromClaims(claims: Record<string, unknown> | undefined): BusinessRole[] {
@@ -26,6 +26,24 @@ function parseRolesFromClaims(claims: Record<string, unknown> | undefined): Busi
     if (list.length === 0) return ["viewer"];
     const roles = list.map((r) => normalizeBusinessRole(r));
     return [...new Set(roles)];
+}
+
+/** Bootstrap admin: VITE_ADMIN_SUBJECTS / VITE_ADMIN_EMAILS → fuerza rol admin. */
+function applyAdminAllowlist(
+    subject: string,
+    email: string | null | undefined,
+    roles: BusinessRole[],
+): BusinessRole[] {
+    const subjects = parseCsvEnv(ENV.adminSubjects);
+    const emails = parseCsvEnv(ENV.adminEmails);
+    const sub = subject.trim().toLowerCase();
+    const mail = (email ?? "").trim().toLowerCase();
+    const isAdmin =
+        (sub && subjects.includes(sub)) || (mail && emails.includes(mail));
+    if (!isAdmin) return roles;
+    if (roles.includes("admin") || roles.includes("owner")) return roles;
+    logger.info(`[Auth0] admin allowlist match → role=admin (${mail || sub})`);
+    return ["admin", ...roles.filter((r) => r !== "viewer")];
 }
 
 function requireAuth0Config(): {
@@ -204,7 +222,8 @@ export class Auth0AuthAdapter implements AuthPort {
         }
 
         const claims = user as Record<string, unknown>;
-        const roles = parseRolesFromClaims(claims);
+        let roles = parseRolesFromClaims(claims);
+        roles = applyAdminAllowlist(user.sub, user.email ?? null, roles);
 
         logger.info(
             `[Auth0] session sub=${mask(user.sub, 12)} email=${user.email ?? "—"} roles=[${roles.join(",")}]`,
