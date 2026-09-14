@@ -15,20 +15,64 @@ import {
 import { ENV, parseCsvEnv } from "../../../infrastructure/env";
 import { logger } from "../../../infrastructure/presentation/util/logger.service";
 
-function parseRolesFromClaims(claims: Record<string, unknown> | undefined): BusinessRole[] {
-    if (!claims) return ["viewer"];
-    const raw = claims[AUTH_ROLES_CLAIM] ?? claims["roles"];
+/**
+ * Roles de autorización: SOLO claim namespaced del JWT (inyectado por Action
+ * desde app_metadata). Nunca app_metadata en el cliente ni claim genérico "roles".
+ * @see .roadmap/Core6/AUTH0_ROLES_ACTION.md
+ */
+function parseRolesFromNamespacedClaim(raw: unknown): BusinessRole[] {
     const list: unknown[] = Array.isArray(raw)
         ? raw
         : typeof raw === "string"
           ? raw.split(/[\s,]+/).filter(Boolean)
           : [];
-    if (list.length === 0) return ["viewer"];
-    const roles = list.map((r) => normalizeBusinessRole(r));
-    return [...new Set(roles)];
+    if (list.length === 0) return [];
+    return [...new Set(list.map((r) => normalizeBusinessRole(r)))];
 }
 
-/** Bootstrap admin: VITE_ADMIN_SUBJECTS / VITE_ADMIN_EMAILS → fuerza rol admin. */
+/** Decodifica payload JWT (sin verificar firma: el token ya viene de Auth0 SDK). */
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+    try {
+        const parts = token.split(".");
+        if (parts.length < 2) return null;
+        const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+        const pad = b64.length % 4 === 0 ? "" : "=".repeat(4 - (b64.length % 4));
+        const json =
+            typeof atob === "function"
+                ? atob(b64 + pad)
+                : Buffer.from(b64 + pad, "base64").toString("utf8");
+        const payload = JSON.parse(json) as Record<string, unknown>;
+        return payload && typeof payload === "object" ? payload : null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Extrae roles únicamente de https://alejotaller.app/roles en access token
+ * y, si falta, en el perfil ID token (getUser) — nunca app_metadata local.
+ */
+function resolveRolesFromTokens(
+    accessToken: string,
+    idTokenUser: Record<string, unknown> | undefined,
+): BusinessRole[] {
+    const fromAccess = decodeJwtPayload(accessToken);
+    if (fromAccess && AUTH_ROLES_CLAIM in fromAccess) {
+        const roles = parseRolesFromNamespacedClaim(fromAccess[AUTH_ROLES_CLAIM]);
+        if (roles.length > 0) return roles;
+    }
+
+    // ID token: Auth0 refleja custom claims del Action en getUser()
+    if (idTokenUser && AUTH_ROLES_CLAIM in idTokenUser) {
+        const roles = parseRolesFromNamespacedClaim(idTokenUser[AUTH_ROLES_CLAIM]);
+        if (roles.length > 0) return roles;
+    }
+
+    // Sin claim firmado → sin privilegios de negocio (viewer)
+    return ["viewer"];
+}
+
+/** Bootstrap temporal — no sustituye Action + app_metadata en prod. */
 function applyAdminAllowlist(
     subject: string,
     email: string | null | undefined,
@@ -36,6 +80,8 @@ function applyAdminAllowlist(
 ): BusinessRole[] {
     const subjects = parseCsvEnv(ENV.adminSubjects);
     const emails = parseCsvEnv(ENV.adminEmails);
+    if (subjects.length === 0 && emails.length === 0) return roles;
+
     const sub = subject.trim().toLowerCase();
     const mail = (email ?? "").trim().toLowerCase();
     const isAdmin =
@@ -221,12 +267,16 @@ export class Auth0AuthAdapter implements AuthPort {
             return null;
         }
 
-        const claims = user as Record<string, unknown>;
-        let roles = parseRolesFromClaims(claims);
+        // Autorización: solo claim JWT namespaced (Action ← app_metadata).
+        // No se lee user.app_metadata ni claims["roles"] sueltos.
+        let roles = resolveRolesFromTokens(
+            accessToken,
+            user as Record<string, unknown>,
+        );
         roles = applyAdminAllowlist(user.sub, user.email ?? null, roles);
 
         logger.info(
-            `[Auth0] session sub=${mask(user.sub, 12)} email=${user.email ?? "—"} roles=[${roles.join(",")}]`,
+            `[Auth0] session sub=${mask(user.sub, 12)} email=${user.email ?? "—"} roles=[${roles.join(",")}] claim=${AUTH_ROLES_CLAIM}`,
         );
 
         return {
