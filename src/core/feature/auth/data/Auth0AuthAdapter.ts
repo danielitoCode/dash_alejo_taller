@@ -13,6 +13,7 @@ import {
     type BusinessRole,
 } from "../domain/entity/BusinessRole";
 import { ENV } from "../../../infrastructure/env";
+import { logger } from "../../../infrastructure/presentation/util/logger.service";
 
 function parseRolesFromClaims(claims: Record<string, unknown> | undefined): BusinessRole[] {
     if (!claims) return ["viewer"];
@@ -49,6 +50,12 @@ function requireAuth0Config(): {
     return { domain, clientId, audience, redirectUri, logoutReturnTo };
 }
 
+function mask(value: string | null | undefined, keep = 6): string {
+    if (!value) return "—";
+    if (value.length <= keep) return "***";
+    return `${value.slice(0, keep)}…`;
+}
+
 export class Auth0AuthAdapter implements AuthPort {
     private client: Auth0Client | null = null;
     private initPromise: Promise<void> | null = null;
@@ -66,6 +73,9 @@ export class Auth0AuthAdapter implements AuthPort {
 
     private async doInit(): Promise<void> {
         const cfg = requireAuth0Config();
+        logger.info(
+            `[Auth0] init domain=${cfg.domain} clientId=${mask(cfg.clientId)} redirect=${cfg.redirectUri}`,
+        );
         this.client = await createAuth0Client({
             domain: cfg.domain,
             clientId: cfg.clientId,
@@ -76,6 +86,7 @@ export class Auth0AuthAdapter implements AuthPort {
             cacheLocation: "localstorage",
             useRefreshTokens: true,
         });
+        logger.info("[Auth0] client listo (cache=localstorage, refreshTokens=on)");
     }
 
     private async ensureClient(): Promise<Auth0Client> {
@@ -87,11 +98,15 @@ export class Auth0AuthAdapter implements AuthPort {
     async loginWithRedirect(appState?: { returnTo?: string; connection?: string }): Promise<void> {
         const client = await this.ensureClient();
         const cfg = requireAuth0Config();
+        const connection = appState?.connection;
+        logger.info(
+            `[Auth0] loginWithRedirect connection=${connection ?? "universal"} returnTo=${appState?.returnTo ?? cfg.redirectUri}`,
+        );
         const options: RedirectLoginOptions = {
             authorizationParams: {
                 redirect_uri: cfg.redirectUri,
                 ...(cfg.audience ? { audience: cfg.audience } : {}),
-                ...(appState?.connection ? { connection: appState.connection } : {}),
+                ...(connection ? { connection } : {}),
             },
             appState: appState?.returnTo ? { returnTo: appState.returnTo } : undefined,
         };
@@ -105,20 +120,27 @@ export class Auth0AuthAdapter implements AuthPort {
         if (q.includes("error=")) {
             const params = new URLSearchParams(q);
             const msg = `${params.get("error")} — ${params.get("error_description") ?? ""}`;
+            logger.error(`[Auth0] callback error: ${msg}`);
             window.history.replaceState({}, document.title, window.location.pathname);
             throw new Error(`Auth0: ${msg}`);
         }
 
-        if (!q.includes("code=") || !q.includes("state=")) return;
+        if (!q.includes("code=") || !q.includes("state=")) {
+            logger.log("[Auth0] callback: sin code/state (no-op)");
+            return;
+        }
 
+        logger.info("[Auth0] handleRedirectCallback: procesando code/state…");
         const client = await this.ensureClient();
         await client.handleRedirectCallback();
         window.history.replaceState({}, document.title, window.location.pathname);
+        logger.info("[Auth0] callback OK — query limpia");
     }
 
     async logout(): Promise<void> {
         const client = await this.ensureClient();
         const cfg = requireAuth0Config();
+        logger.info(`[Auth0] logout → returnTo=${cfg.logoutReturnTo}`);
         await client.logout({
             logoutParams: {
                 returnTo: cfg.logoutReturnTo,
@@ -128,7 +150,9 @@ export class Auth0AuthAdapter implements AuthPort {
 
     async isAuthenticated(): Promise<boolean> {
         const client = await this.ensureClient();
-        return client.isAuthenticated();
+        const ok = await client.isAuthenticated();
+        logger.log(`[Auth0] isAuthenticated=${ok}`);
+        return ok;
     }
 
     async getAccessToken(): Promise<string | null> {
@@ -136,8 +160,12 @@ export class Auth0AuthAdapter implements AuthPort {
         if (!(await client.isAuthenticated())) return null;
         try {
             const token = await client.getTokenSilently();
+            logger.log(`[Auth0] getAccessToken ok len=${token?.length ?? 0}`);
             return token ?? null;
-        } catch {
+        } catch (e) {
+            logger.warn(
+                `[Auth0] getAccessToken falló: ${e instanceof Error ? e.message : String(e)}`,
+            );
             return null;
         }
     }
@@ -149,22 +177,38 @@ export class Auth0AuthAdapter implements AuthPort {
 
     async getSession(): Promise<AuthSession | null> {
         const client = await this.ensureClient();
-        if (!(await client.isAuthenticated())) return null;
+        if (!(await client.isAuthenticated())) {
+            logger.log("[Auth0] getSession: no autenticado");
+            return null;
+        }
 
         const user = await client.getUser();
-        if (!user?.sub) return null;
+        if (!user?.sub) {
+            logger.warn("[Auth0] getSession: user sin sub");
+            return null;
+        }
 
         let accessToken = "";
         try {
             const token = await client.getTokenSilently();
-            if (!token) return null;
+            if (!token) {
+                logger.warn("[Auth0] getSession: token vacío");
+                return null;
+            }
             accessToken = token;
-        } catch {
+        } catch (e) {
+            logger.warn(
+                `[Auth0] getSession token: ${e instanceof Error ? e.message : String(e)}`,
+            );
             return null;
         }
 
         const claims = user as Record<string, unknown>;
         const roles = parseRolesFromClaims(claims);
+
+        logger.info(
+            `[Auth0] session sub=${mask(user.sub, 12)} email=${user.email ?? "—"} roles=[${roles.join(",")}]`,
+        );
 
         return {
             subject: user.sub,
