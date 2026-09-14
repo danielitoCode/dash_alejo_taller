@@ -35,6 +35,12 @@
         return email || "usuario";
     }
 
+    /** Entrada al shell del panel (ruta histórica = home). */
+    function goHome(userId: string) {
+        logger.info(`[Auth] navigate → home id=${userId.slice(0, 12)}…`);
+        navController.navigate("home", { id: userId });
+    }
+
     onMount(async () => {
         status = "loading";
         try {
@@ -51,31 +57,41 @@
                     navController.navigate("welcome");
                     return;
                 }
-                logger.info(`[Auth] Splash: sesión OK roles=[${session.roles.join(",")}]`);
+                logger.info(
+                    `[Auth] Splash: sesión OK roles=[${session.roles.join(",")}]`,
+                );
                 const user = userLikeFromAuthSession(session);
                 if (!canAccessDashboard(user.role)) {
                     logger.warn(`[Auth] acceso denegado role=${user.role}`);
                     denyMessage = dashboardDeniedMessage();
                     await holdStatus("denied", resolveDisplayName(user));
-                    navController.navigate("unauthorized");
+                    navController.navigate("unauthorized", {
+                        message: denyMessage,
+                    });
                     return;
                 }
                 await holdStatus("authenticated", resolveDisplayName(user));
-                navController.resetTo("dashboard", { id: user.id });
+                goHome(user.id);
                 return;
             }
 
             logger.info("[Auth] Splash: provider=appwrite (legacy)");
             const user = await authContainer.useCases.accounts.getCurrentUser();
+            const userId =
+                (user as { $id?: string; id?: string }).$id ??
+                (user as { id?: string }).id ??
+                "";
             if (!canAccessDashboard(user.role)) {
                 logger.warn(`[Auth] acceso denegado role=${user.role}`);
                 denyMessage = dashboardDeniedMessage();
                 await holdStatus("denied", resolveDisplayName(user));
-                navController.navigate("unauthorized");
+                navController.navigate("unauthorized", {
+                    message: denyMessage,
+                });
                 return;
             }
             await holdStatus("authenticated", resolveDisplayName(user));
-            navController.resetTo("dashboard", { id: user.$id ?? user.id });
+            goHome(userId);
         } catch (e) {
             logger.error(
                 `[Auth] Splash error: ${e instanceof Error ? e.message : String(e)}`,
