@@ -55,7 +55,7 @@
                 const user = userLikeFromAuthSession(session);
                 if (!canAccessDashboard(user.role)) {
                     logger.warn(`[Auth] acceso denegado role=${user.role}`);
-                    denyMessage = dashboardDeniedMessage(user.role);
+                    denyMessage = dashboardDeniedMessage();
                     await holdStatus("denied", resolveDisplayName(user));
                     navController.navigate("unauthorized");
                     return;
@@ -65,12 +65,11 @@
                 return;
             }
 
-            // Legacy Appwrite path
             logger.info("[Auth] Splash: provider=appwrite (legacy)");
             const user = await authContainer.useCases.accounts.getCurrentUser();
             if (!canAccessDashboard(user.role)) {
                 logger.warn(`[Auth] acceso denegado role=${user.role}`);
-                denyMessage = dashboardDeniedMessage(user.role);
+                denyMessage = dashboardDeniedMessage();
                 await holdStatus("denied", resolveDisplayName(user));
                 navController.navigate("unauthorized");
                 return;
