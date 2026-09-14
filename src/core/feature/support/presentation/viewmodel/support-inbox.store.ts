@@ -32,6 +32,12 @@ function normalizeError(error: unknown): string {
     return error instanceof Error ? error.message : "Unexpected error";
 }
 
+function asString(value: unknown, fallback = ""): string {
+    if (typeof value === "string" && value.trim()) return value.trim();
+    if (typeof value === "number" || typeof value === "boolean") return String(value);
+    return fallback;
+}
+
 function createSupportInboxStore() {
     const { subscribe, update } = writable<SupportInboxState>(initialState);
     let unsubscribe: (() => void) | null = null;
@@ -111,8 +117,16 @@ function createSupportInboxStore() {
             let senderName = "Soporte";
             try {
                 const user = await sessionStore.getCurrentUser();
-                senderId = user.$id || senderId;
-                senderName = user.name || user.email || senderName;
+                // getCurrentUser → Record (Auth0 o Appwrite); no asumir tipado Models.User
+                senderId =
+                    asString(user.$id) ||
+                    asString(user.id) ||
+                    asString(user.sub) ||
+                    senderId;
+                senderName =
+                    asString(user.name) ||
+                    asString(user.email) ||
+                    senderName;
             } catch {
                 // sesión no disponible: snapshot genérico
             }
