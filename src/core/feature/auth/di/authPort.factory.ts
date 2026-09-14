@@ -4,23 +4,21 @@ import { ENV } from "../../../infrastructure/env";
 
 export type AuthProviderId = "auth0" | "appwrite";
 
+/** Auth0 si flag auth0; si DATA_PROVIDER=turso y no hay flag, preferir auth0. */
 export function resolveAuthProvider(): AuthProviderId {
-    const p = (ENV.authProvider ?? "appwrite").toLowerCase().trim();
+    const p = (ENV.authProvider ?? "").toLowerCase().trim();
     if (p === "auth0") return "auth0";
+    if (p === "appwrite") return "appwrite";
+    const data = String(ENV.dataProvider ?? "").toLowerCase().trim();
+    if (data === "turso") return "auth0";
     return "appwrite";
 }
 
-/**
- * Fase 1: solo Auth0 implementa AuthPort.
- * Con VITE_AUTH_PROVIDER=appwrite el flujo legacy (SessionNetManager) sigue activo;
- * no se instancia Auth0 hasta que el flag sea auth0.
- */
 export function createAuthPort(): AuthPort | null {
     if (resolveAuthProvider() !== "auth0") return null;
     return new Auth0AuthAdapter();
 }
 
-/** Singleton lazy para UI / guards. */
 let cached: AuthPort | null | undefined;
 
 export function getAuthPort(): AuthPort | null {

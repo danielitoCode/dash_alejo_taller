@@ -1,5 +1,7 @@
 import { derived, writable } from "svelte/store";
 import { infrastructureContainer } from "../../../../infrastructure/di/infrastructure.container";
+import { getAuthPort, resolveAuthProvider } from "../../di/authPort.factory";
+import { userLikeFromAuthSession } from "../../domain/util/authSessionBridge";
 
 interface SessionState {
     loading: boolean;
@@ -10,7 +12,7 @@ interface SessionState {
 const initialState: SessionState = {
     loading: false,
     error: null,
-    lastAction: null
+    lastAction: null,
 };
 
 function normalizeError(error: unknown): string {
@@ -34,8 +36,25 @@ function createSessionStore() {
         }
     }
 
-    async function getCurrentUser() {
-        return runAction("getCurrentUser", async () => infrastructureContainer.appwrite.account.get());
+    async function getCurrentUser(): Promise<Record<string, unknown>> {
+        return runAction("getCurrentUser", async () => {
+            if (resolveAuthProvider() === "auth0") {
+                const auth = getAuthPort();
+                if (!auth) throw new Error("Auth0 no configurado");
+                await auth.init();
+                const session = await auth.getSession();
+                if (!session) throw new Error("No hay sesión Auth0");
+                const u = userLikeFromAuthSession(session);
+                return {
+                    ...u,
+                    $id: u.id,
+                    id: u.id,
+                };
+            }
+            return infrastructureContainer.appwrite.account.get() as Promise<
+                Record<string, unknown>
+            >;
+        });
     }
 
     function clearError(): void {
@@ -53,7 +72,7 @@ function createSessionStore() {
         hasError,
         getCurrentUser,
         clearError,
-        reset
+        reset,
     };
 }
 
