@@ -1,9 +1,10 @@
 <script lang="ts">
     /**
-     * Acciones Auth0 panel: Universal Login + Google directo (free plan, hasta 2 social).
-     * Requiere connection Google habilitada en Auth0 Dashboard → Authentication → Social.
+     * Acciones Auth0 panel: Universal Login + Google directo (free plan).
+     * Requiere connection Google en Auth0 Dashboard → Authentication → Social.
      */
     import { getAuthPort } from "../../di/authPort.factory";
+    import { logger } from "../../../../infrastructure/presentation/util/logger.service";
     import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
     import { Chrome, LogIn } from "lucide-svelte";
 
@@ -16,11 +17,15 @@
         const auth = getAuthPort();
         if (!auth) {
             error = "Auth0 no está activo (VITE_AUTH_PROVIDER=auth0)";
+            logger.warn("[Auth] Login: Auth0 inactivo (VITE_AUTH_PROVIDER)");
             return;
         }
         loading = true;
         error = null;
         try {
+            logger.info(
+                `[Auth] Login: click connection=${opts?.connection ?? "universal"}`,
+            );
             await auth.init();
             await auth.loginWithRedirect({
                 returnTo: typeof window !== "undefined" ? window.location.origin : undefined,
@@ -28,6 +33,7 @@
             });
         } catch (e) {
             error = e instanceof Error ? e.message : "No se pudo iniciar Auth0";
+            logger.error(`[Auth] Login falló: ${error}`);
             loading = false;
         }
     }
@@ -55,7 +61,7 @@
         <Icon icon={Chrome} size={18} className="btn-ico" ariaLabel="Google" />
         Continuar con Google
     </button>
-    <p class="hint">Google vía Auth0 Social (plan free). Staff: claim roles.</p>
+    <p class="hint">Google vía Auth0 Social. Staff: claim roles. Ver panel Logs abajo.</p>
 </div>
 
 <style>
