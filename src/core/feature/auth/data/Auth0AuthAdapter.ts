@@ -16,21 +16,23 @@ import { ENV, parseCsvEnv } from "../../../infrastructure/env";
 import { logger } from "../../../infrastructure/presentation/util/logger.service";
 
 /**
- * Roles de autorización: SOLO claim namespaced del JWT (inyectado por Action
- * desde app_metadata). Nunca app_metadata en el cliente ni claim genérico "roles".
+ * Un solo rol de negocio (app_metadata.role → claim).
+ * Acepta string o array de 1 elemento en el JWT; dominio interno: roles[].
+ * Nunca app_metadata en el cliente.
  * @see .roadmap/Core6/AUTH0_ROLES_ACTION.md
  */
-function parseRolesFromNamespacedClaim(raw: unknown): BusinessRole[] {
-    const list: unknown[] = Array.isArray(raw)
-        ? raw
-        : typeof raw === "string"
-          ? raw.split(/[\s,]+/).filter(Boolean)
-          : [];
-    if (list.length === 0) return [];
-    return [...new Set(list.map((r) => normalizeBusinessRole(r)))];
+function parseRoleClaim(raw: unknown): BusinessRole[] {
+    if (typeof raw === "string" && raw.trim()) {
+        return [normalizeBusinessRole(raw.trim())];
+    }
+    if (Array.isArray(raw) && raw.length > 0) {
+        // compat claim antiguo array; se usa el primero (un rol por cuenta)
+        const first = raw.map(String).map((s) => s.trim()).filter(Boolean)[0];
+        return first ? [normalizeBusinessRole(first)] : [];
+    }
+    return [];
 }
 
-/** Decodifica payload JWT (sin verificar firma: el token ya viene de Auth0 SDK). */
 function decodeJwtPayload(token: string): Record<string, unknown> | null {
     try {
         const parts = token.split(".");
@@ -48,31 +50,24 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
     }
 }
 
-/**
- * Extrae roles únicamente de https://alejotaller.app/roles en access token
- * y, si falta, en el perfil ID token (getUser) — nunca app_metadata local.
- */
 function resolveRolesFromTokens(
     accessToken: string,
     idTokenUser: Record<string, unknown> | undefined,
 ): BusinessRole[] {
     const fromAccess = decodeJwtPayload(accessToken);
     if (fromAccess && AUTH_ROLES_CLAIM in fromAccess) {
-        const roles = parseRolesFromNamespacedClaim(fromAccess[AUTH_ROLES_CLAIM]);
+        const roles = parseRoleClaim(fromAccess[AUTH_ROLES_CLAIM]);
         if (roles.length > 0) return roles;
     }
 
-    // ID token: Auth0 refleja custom claims del Action en getUser()
     if (idTokenUser && AUTH_ROLES_CLAIM in idTokenUser) {
-        const roles = parseRolesFromNamespacedClaim(idTokenUser[AUTH_ROLES_CLAIM]);
+        const roles = parseRoleClaim(idTokenUser[AUTH_ROLES_CLAIM]);
         if (roles.length > 0) return roles;
     }
 
-    // Sin claim firmado → sin privilegios de negocio (viewer)
     return ["viewer"];
 }
 
-/** Bootstrap temporal — no sustituye Action + app_metadata en prod. */
 function applyAdminAllowlist(
     subject: string,
     email: string | null | undefined,
@@ -89,7 +84,7 @@ function applyAdminAllowlist(
     if (!isAdmin) return roles;
     if (roles.includes("admin") || roles.includes("owner")) return roles;
     logger.info(`[Auth0] admin allowlist match → role=admin (${mail || sub})`);
-    return ["admin", ...roles.filter((r) => r !== "viewer")];
+    return ["admin"];
 }
 
 function requireAuth0Config(): {
@@ -267,8 +262,6 @@ export class Auth0AuthAdapter implements AuthPort {
             return null;
         }
 
-        // Autorización: solo claim JWT namespaced (Action ← app_metadata).
-        // No se lee user.app_metadata ni claims["roles"] sueltos.
         let roles = resolveRolesFromTokens(
             accessToken,
             user as Record<string, unknown>,
@@ -276,7 +269,7 @@ export class Auth0AuthAdapter implements AuthPort {
         roles = applyAdminAllowlist(user.sub, user.email ?? null, roles);
 
         logger.info(
-            `[Auth0] session sub=${mask(user.sub, 12)} email=${user.email ?? "—"} roles=[${roles.join(",")}] claim=${AUTH_ROLES_CLAIM}`,
+            `[Auth0] session sub=${mask(user.sub, 12)} email=${user.email ?? "—"} role=${roles[0] ?? "viewer"} claim=${AUTH_ROLES_CLAIM}`,
         );
 
         return {
