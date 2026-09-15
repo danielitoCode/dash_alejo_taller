@@ -36,10 +36,21 @@ export const ENV = {
     tursoAuthToken: import.meta.env.VITE_TURSO_AUTH_TOKEN as string | undefined,
 
     /**
+     * Files: cloudinary | appwrite
+     * Si falta, auto-activa Cloudinary cuando hay cloud_name + preset.
+     */
+    filesProvider: import.meta.env.VITE_FILES_PROVIDER as string | undefined,
+    cloudinaryCloudName: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME as string | undefined,
+    cloudinaryPresetProducts: import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET_PRODUCTS as
+        | string
+        | undefined,
+    cloudinaryPresetAvatars: import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET_AVATARS as
+        | string
+        | undefined,
+
+    /**
      * Bootstrap admin sin Action Auth0.
      * Coma-separado: subjects (sub) y/o emails que reciben rol admin.
-     * Ej: VITE_ADMIN_SUBJECTS=google-oauth2|123
-     *     VITE_ADMIN_EMAILS=tu@gmail.com
      */
     adminSubjects: import.meta.env.VITE_ADMIN_SUBJECTS as string | undefined,
     adminEmails: import.meta.env.VITE_ADMIN_EMAILS as string | undefined,
