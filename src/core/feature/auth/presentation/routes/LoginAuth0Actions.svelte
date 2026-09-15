@@ -1,35 +1,36 @@
 <script lang="ts">
     /**
-     * Acciones Auth0 panel: Universal Login + Google directo (free plan).
-     * Requiere connection Google en Auth0 Dashboard → Authentication → Social.
+     * Acciones Auth0 panel: solo Database (usuario/contraseña).
+     * Google eliminado del backoffice.
      */
     import { getAuthPort } from "../../di/authPort.factory";
+    import { AUTH0_DB_CONNECTION } from "../../data/Auth0AuthAdapter";
     import { logger } from "../../../../infrastructure/presentation/util/logger.service";
     import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
-    import { Chrome, LogIn } from "lucide-svelte";
+    import { LogIn } from "lucide-svelte";
 
     export let disabled = false;
+    export let loginHint = "";
 
     let loading = false;
     let error: string | null = null;
 
-    async function login(opts?: { connection?: string }) {
+    async function login() {
         const auth = getAuthPort();
         if (!auth) {
             error = "Auth0 no está activo (VITE_AUTH_PROVIDER=auth0)";
-            logger.warn("[Auth] Login: Auth0 inactivo (VITE_AUTH_PROVIDER)");
+            logger.warn("[Auth] Login: Auth0 inactivo");
             return;
         }
         loading = true;
         error = null;
         try {
-            logger.info(
-                `[Auth] Login: click connection=${opts?.connection ?? "universal"}`,
-            );
+            logger.info(`[Auth] Login DB connection=${AUTH0_DB_CONNECTION}`);
             await auth.init();
             await auth.loginWithRedirect({
                 returnTo: typeof window !== "undefined" ? window.location.origin : undefined,
-                connection: opts?.connection,
+                connection: AUTH0_DB_CONNECTION,
+                loginHint: loginHint.trim() || undefined,
             });
         } catch (e) {
             error = e instanceof Error ? e.message : "No se pudo iniciar Auth0";
@@ -50,18 +51,9 @@
         on:click={() => login()}
     >
         <Icon icon={LogIn} size={18} className="btn-ico" ariaLabel="Auth0" />
-        {#if loading}Redirigiendo...{:else}Continuar con Auth0{/if}
+        {#if loading}Redirigiendo…{:else}Entrar con usuario y contraseña{/if}
     </button>
-    <button
-        class="btn elevated"
-        type="button"
-        disabled={disabled || loading}
-        on:click={() => login({ connection: "google-oauth2" })}
-    >
-        <Icon icon={Chrome} size={18} className="btn-ico" ariaLabel="Google" />
-        Continuar con Google
-    </button>
-    <p class="hint">Google vía Auth0 Social. Staff: claim roles. Ver panel Logs abajo.</p>
+    <p class="hint">Solo Auth0 Database · sin Google · sin Appwrite</p>
 </div>
 
 <style>
@@ -85,11 +77,6 @@
     .btn.primary {
         color: var(--md-sys-color-on-primary);
         background: var(--md-sys-color-primary);
-    }
-    .btn.elevated {
-        color: var(--md-sys-color-on-surface);
-        background: var(--md-sys-color-surface);
-        border: 1px solid var(--md-sys-color-outline-variant);
     }
     .btn:disabled {
         opacity: 0.6;

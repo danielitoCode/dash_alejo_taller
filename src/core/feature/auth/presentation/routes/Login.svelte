@@ -1,30 +1,27 @@
 <script lang="ts">
+    /**
+     * Login panel: SOLO Auth0 Database (usuario/contraseña).
+     * Sin Google, sin Appwrite openSession.
+     * SPA no puede enviar password al IdP de forma segura → redirect
+     * a Universal Login con connection Username-Password-Authentication.
+     */
     import type { NavController } from "../../../../../lib/navigation/NavController";
-    import { authContainer } from "../../di/auth.container";
-    import { canAccessDashboard, dashboardDeniedMessage } from "../../domain/config/RoleConfig";
-    import FrameModal from "../components/FrameModal.svelte";
-    import { ENV } from "../../../../infrastructure/env";
-    import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
-    import { parseGoogleIdToken, type GoogleIdTokenProfile } from "../util/google-id-token";
-    import { registerStore } from "../viewmodel/register.store";
-    import { Chrome, LogIn, Link2, UserPlus } from "lucide-svelte";
-    import { exchangeStore } from "../../../exchange/presentation/viewmodel/exchange.store";
     import { getAuthPort } from "../../di/authPort.factory";
-    import LoginAuth0Actions from "./LoginAuth0Actions.svelte";
+    import { AUTH0_DB_CONNECTION } from "../../data/Auth0AuthAdapter";
+    import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
+    import { LogIn } from "lucide-svelte";
+    import { logger } from "../../../../infrastructure/presentation/util/logger.service";
 
     export let navController: NavController;
 
-    const useAuth0 = !!getAuthPort();
-
     let email = "";
-    let password = "";
     let loading = false;
     let error: string | null = null;
     let contentVisible = false;
 
     const glowAlpha = 0.45;
 
-    $: canSubmit = email.trim().length > 3 && password.trim().length > 3 && !loading;
+    $: canSubmit = email.trim().length > 3 && !loading;
 
     setTimeout(() => {
         contentVisible = true;
@@ -33,176 +30,35 @@
     async function signIn() {
         if (!canSubmit) return;
 
-        loading = true;
-        error = null;
-
-        try {
-            const userId = await authContainer.useCases.sessions.openSession.openCustomSession(
-                email.trim(),
-                password
-            );
-            const current = await authContainer.useCases.accounts.getCurrentUser();
-            if (!canAccessDashboard(current.role)) {
-                navController.navigate("unauthorized", { message: dashboardDeniedMessage() });
-                return;
-            }
-            void exchangeStore.refreshOnSession();
-            navController.navigate("home", { id: userId });
-        } catch (e) {
-            error = e instanceof Error ? e.message : "No se pudo iniciar sesión";
-        } finally {
-            loading = false;
-        }
-    }
-
-    let googleFrameOpen = false;
-    let registerFrameOpen = false;
-    let googleProfile: GoogleIdTokenProfile | null = null;
-    let googleAuthSrc = "";
-    let googleRegisterSrc = "";
-    let linkOpen = false;
-    let linkPassword = "";
-    let linkError: string | null = null;
-
-    function getGoogleAuthSrc(): string {
-        const clientId = ENV.googleClientId;
-        if (!clientId) throw new Error("Falta configurar VITE_GOOGLE_CLIENT_ID");
-        const params = new URLSearchParams({
-            client_id: clientId,
-            parent_origin: window.location.origin
-        });
-        return `/google-auth.html#${params.toString()}`;
-    }
-
-    function getGoogleRegisterSrc(profile: GoogleIdTokenProfile): string {
-        const params = new URLSearchParams({
-            email: profile.email,
-            name: profile.name,
-            picture: profile.picture,
-            parent_origin: window.location.origin
-        });
-        return `/google-register.html#${params.toString()}`;
-    }
-
-    async function handleGoogleProfile(profile: GoogleIdTokenProfile) {
-        googleProfile = profile;
-
-        loading = true;
-        error = null;
-        linkError = null;
-
-        try {
-            try {
-                const userId = await authContainer.useCases.sessions.openSession.openCustomSession(profile.email, profile.sub);
-                const current = await authContainer.useCases.accounts.getCurrentUser();
-                if (!canAccessDashboard(current.role)) {
-                navController.navigate("unauthorized", { message: dashboardDeniedMessage() });
-                return;
-            }
-                void exchangeStore.refreshOnSession();
-                navController.navigate("home", { id: userId });
-                return;
-            } catch {
-                googleRegisterSrc = getGoogleRegisterSrc(profile);
-                registerFrameOpen = true;
-                return;
-            }
-        } catch (e) {
-            error = e instanceof Error ? e.message : "No se pudo iniciar sesión con Google";
-        } finally {
-            loading = false;
-        }
-    }
-
-    async function linkGoogleAccount() {
-        if (!googleProfile) return;
-        if (!linkPassword.trim()) {
-            linkError = "Ingresa tu contraseña actual.";
+        const auth = getAuthPort();
+        if (!auth) {
+            error =
+                "Auth0 no está activo. Configura VITE_AUTH_PROVIDER=auth0 y VITE_AUTH0_DOMAIN / CLIENT_ID.";
             return;
         }
 
         loading = true;
-        linkError = null;
         error = null;
 
         try {
-            const userId = await authContainer.useCases.accounts.linkGoogleAccount({
-                email: googleProfile.email,
-                currentPassword: linkPassword,
-                googleSub: googleProfile.sub,
-                name: googleProfile.name || googleProfile.email.split("@")[0] || "Usuario",
-                photoUrl: googleProfile.picture || ""
+            const hint = email.trim();
+            logger.info(`[Auth] Login panel → Auth0 DB connection hint=${hint.slice(0, 4)}…`);
+            await auth.init();
+            await auth.loginWithRedirect({
+                connection: AUTH0_DB_CONNECTION,
+                loginHint: hint,
+                returnTo: typeof window !== "undefined" ? window.location.origin : undefined,
             });
-
-            const current = await authContainer.useCases.accounts.getCurrentUser();
-            if (!canAccessDashboard(current.role)) {
-                navController.navigate("unauthorized", { message: dashboardDeniedMessage() });
-                return;
-            }
-
-            linkOpen = false;
-            linkPassword = "";
-            void exchangeStore.refreshOnSession();
-            navController.navigate("home", { id: userId });
-        } catch (e: any) {
-            const code = typeof e?.code === "number" ? e.code : null;
-            linkError = code === 401 ? "Contraseña incorrecta." : (e instanceof Error ? e.message : "No se pudo vincular la cuenta.");
-        } finally {
-            loading = false;
-        }
-    }
-
-    async function continueWithGoogle() {
-        if (loading) return;
-        error = null;
-        try {
-            googleAuthSrc = getGoogleAuthSrc();
-            googleFrameOpen = true;
+            // redirect: no vuelve aquí
         } catch (e) {
-            error = e instanceof Error ? e.message : "No se pudo iniciar sesión con Google";
-        }
-    }
-
-    function goToRegister() {
-        navController.navigate("register");
-    }
-
-    async function registerStoreFromGoogle(profile: GoogleIdTokenProfile) {
-        loading = true;
-        error = null;
-
-        try {
-            await registerStore.createAccount({
-                name: profile.name || profile.email.split("@")[0] || "Usuario",
-                email: profile.email,
-                password: profile.sub,
-                phone: "",
-                photo_url: profile.picture,
-                role: "viewer",
-                sub: profile.sub,
-                verification: true
-            });
-
-            const current = await authContainer.useCases.accounts.getCurrentUser();
-            if (!canAccessDashboard(current.role)) {
-                navController.navigate("unauthorized", { message: dashboardDeniedMessage() });
-                return;
-            }
-            void exchangeStore.refreshOnSession();
-            navController.navigate("home", { id: current.id });
-        } catch (e: any) {
-            const code = typeof e?.code === "number" ? e.code : null;
-            if (code === 409) {
-                registerFrameOpen = false;
-                linkPassword = "";
-                linkError = null;
-                linkOpen = true;
-                return;
-            }
-            error = e instanceof Error ? e.message : "No se pudo crear la cuenta";
-        } finally {
+            error = e instanceof Error ? e.message : "No se pudo iniciar sesión con Auth0";
+            logger.error(`[Auth] Login falló: ${error}`);
             loading = false;
         }
+    }
+
+    function onKeydown(e: KeyboardEvent) {
+        if (e.key === "Enter" && canSubmit) void signIn();
     }
 </script>
 
@@ -214,27 +70,23 @@
                 <img src="/alejoicon_clean.svg" alt="App icon" class="logo" />
             </div>
             <h1>Iniciar sesión</h1>
-            <p>Accede con tu cuenta para continuar.</p>
+            <p>Panel de gestión · Auth0 (usuario y contraseña)</p>
         </section>
 
         <section class="form-card" aria-label="Formulario de acceso">
-            {#if useAuth0}
-                <LoginAuth0Actions disabled={loading} />
-                <p class="auth0-or">— o acceso legacy —</p>
-            {/if}
+            <p class="hint">
+                Introduce tu correo de staff. Auth0 pedirá la contraseña de la conexión
+                <strong>Database</strong> (sin Google).
+            </p>
 
             <label class="field">
                 <span>Correo</span>
-                <input type="email" bind:value={email} placeholder="correo@dominio.com" autocomplete="email" />
-            </label>
-
-            <label class="field">
-                <span>Contraseña</span>
                 <input
-                    type="password"
-                    bind:value={password}
-                    placeholder="••••••••"
-                    autocomplete="current-password"
+                    type="email"
+                    bind:value={email}
+                    placeholder="correo@dominio.com"
+                    autocomplete="username"
+                    on:keydown={onKeydown}
                 />
             </label>
 
@@ -243,113 +95,18 @@
             {/if}
 
             <div class="actions">
-                <button class="btn primary" on:click={signIn} disabled={!canSubmit}>
+                <button class="btn primary" type="button" on:click={signIn} disabled={!canSubmit}>
                     <Icon icon={LogIn} size={18} className="btn-ico" ariaLabel="Entrar" />
-                    {#if loading}Entrando...{:else}Entrar{/if}
-                </button>
-
-                <button class="btn elevated" on:click={continueWithGoogle} disabled={loading}>
-                    <Icon icon={Chrome} size={18} className="btn-ico" ariaLabel="Google" />
-                    <span>Continuar con Google</span>
-                    <img src="/icon/googleIcon.png" alt="Google icon" class="g-badge" />
+                    {#if loading}Redirigiendo a Auth0…{:else}Entrar{/if}
                 </button>
             </div>
 
-            <button class="link-btn" on:click={goToRegister}>¿No tienes cuenta? Regístrate</button>
+            <p class="foot">
+                Roles vía <code>app_metadata.role</code> + Action. Sin Appwrite.
+            </p>
         </section>
     </div>
 </section>
-
-<FrameModal
-    open={googleFrameOpen}
-    title="Google"
-    ariaLabel="Autenticación con Google"
-    src={googleFrameOpen ? googleAuthSrc : ""}
-    on:close={() => (googleFrameOpen = false)}
-    on:frameMessage={(event) => {
-        const data = (event as CustomEvent<{ data: any }>).detail.data;
-        if (data?.type === 'google-cancel') googleFrameOpen = false;
-        if (data?.type === 'google-credential' && typeof data.credential === 'string') {
-            googleFrameOpen = false;
-            try {
-                handleGoogleProfile(parseGoogleIdToken(data.credential));
-            } catch (e) {
-                error = e instanceof Error ? e.message : 'Credencial inválida';
-            }
-        }
-    }}
-/>
-
-<FrameModal
-    open={registerFrameOpen}
-    title="Crear cuenta"
-    ariaLabel="Registro con Google"
-    src={registerFrameOpen ? googleRegisterSrc : ""}
-    on:close={() => (registerFrameOpen = false)}
-    on:frameMessage={(event) => {
-        const data = (event as CustomEvent<{ data: any }>).detail.data;
-        if (data?.type === 'google-register-cancel') registerFrameOpen = false;
-        if (data?.type === 'google-register-accept' && googleProfile) {
-            registerFrameOpen = false;
-            registerStoreFromGoogle(googleProfile);
-        }
-    }}
-/>
-
-{#if linkOpen && googleProfile}
-    <div class="link-overlay" role="button" tabindex="0" aria-label="Cerrar vinculación" on:click|self={() => (linkOpen = false)} on:keydown|self={(e) => (e.key === "Enter" || e.key === " " ? (linkOpen = false) : null)}>
-        <div class="link-card" role="dialog" aria-label="Resolver cuenta existente">
-            <header class="link-head">
-                <div class="link-title">
-                    <strong>Cuenta existente detectada</strong>
-                    <span>Este correo ya existe. Ingresa tu contraseña actual para vincular Google y conservar acceso con un toque.</span>
-                </div>
-                <button class="link-x" type="button" aria-label="Cerrar" on:click={() => (linkOpen = false)} disabled={loading}>&times;</button>
-            </header>
-
-            <div class="link-user">
-                {#if googleProfile.picture}
-                    <img class="link-avatar" src={googleProfile.picture} alt="" aria-hidden="true" />
-                {/if}
-                <div>
-                    <div class="link-name">{googleProfile.name || "Cuenta de Google"}</div>
-                    <div class="link-email">{googleProfile.email}</div>
-                </div>
-            </div>
-
-            <label class="link-field">
-                            <span>Contraseña actual</span>
-                <input type="password" bind:value={linkPassword} placeholder="Tu contraseña" autocomplete="current-password" />
-            </label>
-
-            {#if linkError}
-                <div class="link-error">{linkError}</div>
-            {/if}
-
-            <div class="link-actions">
-                <button class="link-btn ghost" type="button" on:click={() => (linkOpen = false)} disabled={loading}>
-                    Cancelar
-                </button>
-                <button
-                    class="link-btn ghost"
-                    type="button"
-                    on:click={() => {
-                        linkOpen = false;
-                        registerFrameOpen = true;
-                    }}
-                    disabled={loading}
-                >
-                    <Icon icon={UserPlus} size={18} className="btn-ico" ariaLabel="Crear cuenta" />
-                    Crear otra cuenta
-                </button>
-                <button class="link-btn primary" type="button" on:click={linkGoogleAccount} disabled={loading}>
-                    <Icon icon={Link2} size={18} className="btn-ico" ariaLabel="Vincular" />
-                    {#if loading}Vinculando...{:else}Vincular cuenta{/if}
-                </button>
-            </div>
-        </div>
-    </div>
-{/if}
 
 <style>
     .login-screen {
@@ -368,7 +125,7 @@
     }
 
     .login-shell {
-        width: min(100%, 980px);
+        width: min(100%, 520px);
         display: grid;
         gap: 24px;
         opacity: 0;
@@ -425,15 +182,19 @@
 
     .form-card {
         width: 100%;
-        max-width: 520px;
-        justify-self: center;
         background: var(--md-sys-color-surface);
         border: 1px solid var(--md-sys-color-outline-variant);
         border-radius: 20px;
         padding: 20px;
         display: grid;
-        gap: 10px;
+        gap: 12px;
         box-shadow: 0 10px 24px color-mix(in srgb, var(--md-sys-color-outline) 20%, transparent);
+    }
+
+    .hint {
+        font-size: 0.88rem;
+        color: var(--md-sys-color-on-surface-variant);
+        line-height: 1.4;
     }
 
     .field {
@@ -455,15 +216,17 @@
         font: inherit;
         color: var(--md-sys-color-on-surface);
         background: color-mix(in srgb, var(--md-sys-color-surface) 88%, var(--md-sys-color-surface-variant));
+        box-sizing: border-box;
     }
 
     .error {
         color: var(--md-sys-color-error);
         font-size: 0.92rem;
+        margin: 0;
     }
 
     .actions {
-        margin-top: 5px;
+        margin-top: 4px;
         display: grid;
         gap: 10px;
     }
@@ -481,10 +244,6 @@
         gap: 10px;
     }
 
-    .btn-ico {
-        opacity: 0.95;
-    }
-
     .btn:disabled {
         opacity: 0.6;
         cursor: not-allowed;
@@ -495,51 +254,15 @@
         background: var(--md-sys-color-primary);
     }
 
-    .elevated {
-        color: var(--md-sys-color-on-surface);
-        background: var(--md-sys-color-surface);
-        border: 1px solid var(--md-sys-color-outline-variant);
+    .foot {
+        margin: 0;
+        font-size: 0.78rem;
+        color: var(--md-sys-color-on-surface-variant);
+        text-align: center;
     }
 
-    .g-badge {
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        display: inline-grid;
-        place-items: center;
-    }
-
-    .link-btn {
-        margin-top: 4px;
-        border: 0;
-        background: transparent;
-        color: var(--md-sys-color-primary);
-        cursor: pointer;
-        justify-self: center;
-    }
-
-    @media (min-width: 900px), (orientation: landscape) and (max-height: 650px) {
-        .login-shell {
-            grid-template-columns: 1fr 1fr;
-            align-items: center;
-            gap: 18px;
-        }
-
-        .login-title {
-            justify-items: center;
-            align-content: center;
-            min-height: 420px;
-        }
-
-        .form-card {
-            max-width: none;
-            align-self: stretch;
-            align-content: center;
-        }
-
-        .actions {
-            grid-template-columns: 1fr 1fr;
-        }
+    .foot code {
+        font-size: 0.75rem;
     }
 
     @keyframes pulse {
@@ -549,153 +272,5 @@
         to {
             opacity: 0.78;
         }
-    }
-
-    .link-overlay {
-        position: fixed;
-        inset: 0;
-        z-index: 1200;
-        display: grid;
-        place-items: center;
-        padding: 16px;
-        background: color-mix(in srgb, black 55%, transparent);
-    }
-
-    .link-card {
-        width: min(520px, 100%);
-        border-radius: 22px;
-        overflow: hidden;
-        background: color-mix(in srgb, var(--md-sys-color-surface) 90%, transparent);
-        border: 1px solid var(--md-sys-color-outline-variant);
-        box-shadow: 0 26px 60px color-mix(in srgb, black 35%, transparent);
-        backdrop-filter: blur(14px);
-        display: grid;
-        gap: 12px;
-        padding: 14px;
-        color: var(--md-sys-color-on-surface);
-    }
-
-    .link-head {
-        display: flex;
-        align-items: start;
-        justify-content: space-between;
-        gap: 10px;
-    }
-
-    .link-title {
-        display: grid;
-        gap: 2px;
-    }
-
-    .link-title span {
-        font-size: 0.9rem;
-        color: color-mix(in srgb, var(--md-sys-color-on-surface) 70%, transparent);
-    }
-
-    .link-x {
-        width: 34px;
-        height: 34px;
-        border-radius: 10px;
-        border: 1px solid var(--md-sys-color-outline-variant);
-        background: transparent;
-        color: inherit;
-        cursor: pointer;
-        font-size: 1.2rem;
-        line-height: 1;
-    }
-
-    .link-user {
-        display: grid;
-        grid-template-columns: 44px 1fr;
-        gap: 12px;
-        align-items: center;
-        padding: 10px;
-        border-radius: 16px;
-        border: 1px solid var(--md-sys-color-outline-variant);
-        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 35%, transparent);
-    }
-
-    .link-avatar {
-        width: 44px;
-        height: 44px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 1px solid var(--md-sys-color-outline-variant);
-        background: color-mix(in srgb, var(--md-sys-color-surface) 70%, transparent);
-    }
-
-    .link-name {
-        font-weight: 750;
-        letter-spacing: -0.01em;
-    }
-
-    .link-email {
-        font-size: 0.9rem;
-        opacity: 0.9;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .link-field {
-        display: grid;
-        gap: 6px;
-    }
-
-    .link-field span {
-        font-size: 0.92rem;
-        color: var(--md-sys-color-on-surface-variant);
-    }
-
-    .link-field input {
-        width: 100%;
-        border: 1px solid var(--md-sys-color-outline-variant);
-        border-radius: 12px;
-        height: 44px;
-        padding: 0 12px;
-        font: inherit;
-        color: var(--md-sys-color-on-surface);
-        background: color-mix(in srgb, var(--md-sys-color-surface) 88%, var(--md-sys-color-surface-variant));
-    }
-
-    .link-error {
-        color: var(--md-sys-color-error);
-        font-size: 0.92rem;
-    }
-
-    .link-actions {
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
-        gap: 10px;
-    }
-
-    .link-btn {
-        height: 44px;
-        border-radius: 14px;
-        border: 1px solid var(--md-sys-color-outline-variant);
-        background: transparent;
-        color: inherit;
-        cursor: pointer;
-        font-size: 0.98rem;
-        font-weight: 700;
-    }
-
-    .link-btn.primary {
-        border: 0;
-        color: var(--md-sys-color-on-primary);
-        background: var(--md-sys-color-primary);
-        box-shadow: 0 10px 20px color-mix(in srgb, var(--md-sys-color-primary) 35%, transparent);
-    }
-
-    .link-btn:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-    }
-
-    .auth0-or {
-        margin: 4px 0 0;
-        text-align: center;
-        font-size: 0.8rem;
-        color: var(--md-sys-color-on-surface-variant);
     }
 </style>

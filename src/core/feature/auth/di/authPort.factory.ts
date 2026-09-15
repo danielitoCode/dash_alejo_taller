@@ -4,14 +4,16 @@ import { ENV } from "../../../infrastructure/env";
 
 export type AuthProviderId = "auth0" | "appwrite";
 
-/** Auth0 si flag auth0; si DATA_PROVIDER=turso y no hay flag, preferir auth0. */
+/**
+ * Panel Core6: Auth0 por defecto.
+ * Solo Appwrite si VITE_AUTH_PROVIDER=appwrite explícito (legacy).
+ */
 export function resolveAuthProvider(): AuthProviderId {
     const p = (ENV.authProvider ?? "").toLowerCase().trim();
-    if (p === "auth0") return "auth0";
     if (p === "appwrite") return "appwrite";
-    const data = String(ENV.dataProvider ?? "").toLowerCase().trim();
-    if (data === "turso") return "auth0";
-    return "appwrite";
+    if (p === "auth0") return "auth0";
+    // Default endurecido: Auth0 (Turso o sin flag)
+    return "auth0";
 }
 
 export function createAuthPort(): AuthPort | null {
@@ -26,4 +28,9 @@ export function getAuthPort(): AuthPort | null {
         cached = createAuthPort();
     }
     return cached;
+}
+
+/** true si no debe usarse Account/Databases Appwrite para auth. */
+export function isAppwriteAuthDisabled(): boolean {
+    return resolveAuthProvider() === "auth0";
 }

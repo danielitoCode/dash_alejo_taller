@@ -3,7 +3,7 @@ import {
     type Auth0Client,
     type RedirectLoginOptions,
 } from "@auth0/auth0-spa-js";
-import type { AuthPort } from "../domain/AuthPort";
+import type { AuthPort, AuthLoginOptions } from "../domain/AuthPort";
 import {
     AUTH_ROLES_CLAIM,
     type AuthSession,
@@ -15,18 +15,14 @@ import {
 import { ENV, parseCsvEnv } from "../../../infrastructure/env";
 import { logger } from "../../../infrastructure/presentation/util/logger.service";
 
-/**
- * Un solo rol de negocio (app_metadata.role → claim).
- * Acepta string o array de 1 elemento en el JWT; dominio interno: roles[].
- * Nunca app_metadata en el cliente.
- * @see .roadmap/Core6/AUTH0_ROLES_ACTION.md
- */
+/** Connection Database Auth0 (usuario/contraseña). No usar google-oauth2 en panel. */
+export const AUTH0_DB_CONNECTION = "Username-Password-Authentication";
+
 function parseRoleClaim(raw: unknown): BusinessRole[] {
     if (typeof raw === "string" && raw.trim()) {
         return [normalizeBusinessRole(raw.trim())];
     }
     if (Array.isArray(raw) && raw.length > 0) {
-        // compat claim antiguo array; se usa el primero (un rol por cuenta)
         const first = raw.map(String).map((s) => s.trim()).filter(Boolean)[0];
         return first ? [normalizeBusinessRole(first)] : [];
     }
@@ -59,12 +55,10 @@ function resolveRolesFromTokens(
         const roles = parseRoleClaim(fromAccess[AUTH_ROLES_CLAIM]);
         if (roles.length > 0) return roles;
     }
-
     if (idTokenUser && AUTH_ROLES_CLAIM in idTokenUser) {
         const roles = parseRoleClaim(idTokenUser[AUTH_ROLES_CLAIM]);
         if (roles.length > 0) return roles;
     }
-
     return ["viewer"];
 }
 
@@ -154,18 +148,21 @@ export class Auth0AuthAdapter implements AuthPort {
         return this.client;
     }
 
-    async loginWithRedirect(appState?: { returnTo?: string; connection?: string }): Promise<void> {
+    async loginWithRedirect(appState?: AuthLoginOptions): Promise<void> {
         const client = await this.ensureClient();
         const cfg = requireAuth0Config();
-        const connection = appState?.connection;
+        // Panel: Database por defecto (sin Google). Override explícito solo si se pasa connection.
+        const connection = appState?.connection ?? AUTH0_DB_CONNECTION;
+        const loginHint = appState?.loginHint?.trim();
         logger.info(
-            `[Auth0] loginWithRedirect connection=${connection ?? "universal"} returnTo=${appState?.returnTo ?? cfg.redirectUri}`,
+            `[Auth0] loginWithRedirect connection=${connection} hint=${loginHint ? mask(loginHint, 4) : "—"}`,
         );
         const options: RedirectLoginOptions = {
             authorizationParams: {
                 redirect_uri: cfg.redirectUri,
+                connection,
                 ...(cfg.audience ? { audience: cfg.audience } : {}),
-                ...(connection ? { connection } : {}),
+                ...(loginHint ? { login_hint: loginHint } : {}),
             },
             appState: appState?.returnTo ? { returnTo: appState.returnTo } : undefined,
         };

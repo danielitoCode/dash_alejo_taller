@@ -2,9 +2,8 @@
     import { onMount } from "svelte";
     import { logger } from "../../../../infrastructure/presentation/util/logger.service";
     import type { NavController } from "../../../../../lib/navigation/NavController";
-    import { getAuthPort } from "../../di/authPort.factory";
+    import { getAuthPort, resolveAuthProvider } from "../../di/authPort.factory";
     import { canAccessDashboard, dashboardDeniedMessage } from "../../domain/config/RoleConfig";
-    import { authContainer } from "../../di/auth.container";
     import { userLikeFromAuthSession } from "../../domain/util/authSessionBridge";
     import alejoIcon from "/alejoicon_clean.svg";
 
@@ -35,7 +34,6 @@
         return email || "usuario";
     }
 
-    /** Entrada al shell del panel (ruta histórica = home). */
     function goHome(userId: string) {
         logger.info(`[Auth] navigate → home id=${userId.slice(0, 12)}…`);
         navController.navigate("home", { id: userId });
@@ -44,43 +42,38 @@
     onMount(async () => {
         status = "loading";
         try {
-            const authPort = getAuthPort();
-
-            if (authPort) {
-                logger.info("[Auth] Splash: provider=auth0");
-                await authPort.init();
-                await authPort.handleRedirectCallback();
-                const session = await authPort.getSession();
-                if (!session) {
-                    logger.info("[Auth] Splash: sin sesión Auth0 → welcome");
-                    await holdStatus("guest");
-                    navController.navigate("welcome");
-                    return;
-                }
-                logger.info(
-                    `[Auth] Splash: sesión OK roles=[${session.roles.join(",")}]`,
+            // Core6 endurecido: solo Auth0. Appwrite legacy no se invoca.
+            if (resolveAuthProvider() !== "auth0") {
+                logger.warn(
+                    "[Auth] Splash: VITE_AUTH_PROVIDER=appwrite no soportado en Core6 panel → welcome",
                 );
-                const user = userLikeFromAuthSession(session);
-                if (!canAccessDashboard(user.role)) {
-                    logger.warn(`[Auth] acceso denegado role=${user.role}`);
-                    denyMessage = dashboardDeniedMessage();
-                    await holdStatus("denied", resolveDisplayName(user));
-                    navController.navigate("unauthorized", {
-                        message: denyMessage,
-                    });
-                    return;
-                }
-                await holdStatus("authenticated", resolveDisplayName(user));
-                goHome(user.id);
+                await holdStatus("guest");
+                navController.navigate("welcome");
                 return;
             }
 
-            logger.info("[Auth] Splash: provider=appwrite (legacy)");
-            const user = await authContainer.useCases.accounts.getCurrentUser();
-            const userId =
-                (user as { $id?: string; id?: string }).$id ??
-                (user as { id?: string }).id ??
-                "";
+            const authPort = getAuthPort();
+            if (!authPort) {
+                logger.error("[Auth] Splash: Auth0 activo pero sin port");
+                await holdStatus("guest");
+                navController.navigate("welcome");
+                return;
+            }
+
+            logger.info("[Auth] Splash: provider=auth0 (Appwrite auth desconectado)");
+            await authPort.init();
+            await authPort.handleRedirectCallback();
+            const session = await authPort.getSession();
+            if (!session) {
+                logger.info("[Auth] Splash: sin sesión Auth0 → welcome");
+                await holdStatus("guest");
+                navController.navigate("welcome");
+                return;
+            }
+            logger.info(
+                `[Auth] Splash: sesión OK roles=[${session.roles.join(",")}]`,
+            );
+            const user = userLikeFromAuthSession(session);
             if (!canAccessDashboard(user.role)) {
                 logger.warn(`[Auth] acceso denegado role=${user.role}`);
                 denyMessage = dashboardDeniedMessage();
@@ -91,7 +84,7 @@
                 return;
             }
             await holdStatus("authenticated", resolveDisplayName(user));
-            goHome(userId);
+            goHome(user.id);
         } catch (e) {
             logger.error(
                 `[Auth] Splash error: ${e instanceof Error ? e.message : String(e)}`,
@@ -112,7 +105,7 @@
 
     $: subtitle =
         status === "loading"
-            ? "Auth0 / sesión de staff"
+            ? "Auth0 · sin Appwrite"
             : status === "authenticated"
               ? "Abriendo panel de gestión"
               : status === "denied"
