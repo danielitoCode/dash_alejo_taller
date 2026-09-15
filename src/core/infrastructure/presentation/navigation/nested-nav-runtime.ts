@@ -2,6 +2,8 @@ import type { BusinessRole } from "../../../feature/auth/domain/entity/BusinessR
 import { normalizeBusinessRole } from "../../../feature/auth/domain/entity/BusinessRole"
 import { canAccessDashboard, canAccessRoute } from "../../../feature/auth/domain/config/RoleConfig"
 import { authContainer } from "../../../feature/auth/di/auth.container"
+import { getAuthPort, resolveAuthProvider } from "../../../feature/auth/di/authPort.factory"
+import { userLikeFromAuthSession } from "../../../feature/auth/domain/util/authSessionBridge"
 import { productStore } from "../../../feature/product/presentation/viewmodel/product.store"
 import { categoryStore } from "../../../feature/category/presentation/viewmodel/category.store"
 import { promotionStore } from "../../../feature/notification/presentation/viewmodel/promotion.store"
@@ -17,6 +19,7 @@ import {
 } from "../../data/alset-pulse/stock-pulse"
 import { client } from "../../di/appwrite.config"
 import { ENV } from "../../env"
+import { isTursoDataProvider } from "../../turso/turso.client"
 import { get } from "svelte/store"
 import { BuyState } from "../../../feature/sale/domain/entity/enums"
 import type { NavController } from "../../../../lib/navigation/NavController"
@@ -29,6 +32,27 @@ export type NestedNavRuntimeCtx = {
     firstAllowedPath: (role: BusinessRole) => string
     internalNavigate: (path: string) => void
     outerNavigate: NavController
+}
+
+/** Usuario mínimo para gates de rol (Auth0 o Appwrite). */
+type PanelUser = {
+    role?: string | null
+    labels?: unknown
+    id?: string
+    name?: string
+    email?: string
+}
+
+async function resolvePanelUser(): Promise<PanelUser> {
+    if (resolveAuthProvider() === "auth0") {
+        const auth = getAuthPort()
+        if (!auth) throw new Error("Auth0 no configurado")
+        await auth.init()
+        const session = await auth.getSession()
+        if (!session) throw new Error("No hay sesión Auth0")
+        return userLikeFromAuthSession(session)
+    }
+    return authContainer.useCases.accounts.getCurrentUser() as Promise<PanelUser>
 }
 
 export function createNestedNavRuntime(ctx: NestedNavRuntimeCtx) {
@@ -44,6 +68,8 @@ export function createNestedNavRuntime(ctx: NestedNavRuntimeCtx) {
     let stopPulseRefresh: (() => void) | null = null
     let stopStockFanout: (() => void) | null = null
     let stopAppwriteProductRt: (() => void) | null = null
+
+    const appwriteDataDisabled = isTursoDataProvider() || resolveAuthProvider() === "auth0"
 
     function scheduleStockRefresh(productIds: string[]) {
         for (const id of productIds) {
@@ -146,10 +172,6 @@ export function createNestedNavRuntime(ctx: NestedNavRuntimeCtx) {
         }
     }
 
-    /**
-     * Appwrite Realtime sobre `sale`: aplica delta al espejo (sin listar toda la colección).
-     * create/update → upsert; delete → remove.
-     */
     async function applySaleRealtimeDelta(events: string[], payload: unknown) {
         const ev = events.map((e) => String(e).toLowerCase())
         const isDelete = ev.some((e) => e.includes(".delete"))
@@ -163,23 +185,17 @@ export function createNestedNavRuntime(ctx: NestedNavRuntimeCtx) {
 
         if (id && dto && typeof dto === "object") {
             await saleStore.applyRealtimeSale(dto as SaleDTO)
-            const beforePending = get(saleStore).items.filter(
-                (s) => s.verified === BuyState.UNVERIFIED && s.id !== id
-            ).length
-            // toast only for brand-new pending-ish traffic is noisy; keep subtle log
             logger.info(`[sale-rt] delta applied id=${id}`)
-            void beforePending
             return
         }
 
-        // Payload incompleto → smart sync (incremental / full según meta)
         scheduleSalesSync()
     }
 
     async function refreshUserRole() {
         try {
             logger.info("[NestedNav] Refrescando rol del usuario...")
-            const u = await authContainer.useCases.accounts.getCurrentUser()
+            const u = await resolvePanelUser()
             const newRole = normalizeBusinessRole(u.role)
             const oldRole = ctx.getRole()
             if (newRole !== oldRole) {
@@ -203,14 +219,14 @@ export function createNestedNavRuntime(ctx: NestedNavRuntimeCtx) {
     }
 
     function mount() {
-        authContainer.useCases.accounts
-            .getCurrentUser()
+        resolvePanelUser()
             .then((u) => {
                 const role = normalizeBusinessRole(u.role)
                 ctx.setRole(role)
+                logger.info(`[NestedNav] session role=${role} provider=${resolveAuthProvider()}`)
                 if (u.role === null || u.role === undefined) {
                     logger.warn(
-                        `[NestedNav] Usuario sin rol. Labels: ${JSON.stringify(u.labels ?? [])}`
+                        `[NestedNav] Usuario sin rol. Labels: ${JSON.stringify((u as any).labels ?? [])}`
                     )
                     toastStore.error(
                         "⚠️ Tu cuenta no tiene rol configurado. Contacta al administrador. (viewer por defecto)"
@@ -228,14 +244,41 @@ export function createNestedNavRuntime(ctx: NestedNavRuntimeCtx) {
                     ctx.internalNavigate(allowedPath)
                 }
             })
-            .catch(() => {
+            .catch((e) => {
+                // Antes: Appwrite 402 / sin sesión → login al instante aunque Auth0 estuviera OK.
+                const msg = e instanceof Error ? e.message : String(e)
+                logger.error(`[NestedNav] resolvePanelUser falló: ${msg}`)
+                if (resolveAuthProvider() === "auth0") {
+                    toastStore.error("Sesión Auth0 no disponible. Vuelve a iniciar sesión.")
+                }
                 ctx.outerNavigate.navigate("login")
             })
 
-        productStore.syncAll().catch(() => toastStore.error("Error al sincronizar datos"))
-        categoryStore.syncAll().catch(() => toastStore.error("Error al sincronizar datos"))
-        promotionStore.syncAll().catch(() => toastStore.error("Error al sincronizar datos"))
-        saleStore.syncAll().catch(() => toastStore.error("Error al sincronizar ventas"))
+        // Datos: product/category ya van a Turso si VITE_DATA_PROVIDER=turso.
+        productStore.syncAll().catch((e) => {
+            logger.warn(`[NestedNav] product sync: ${e instanceof Error ? e.message : e}`)
+            toastStore.error("Error al sincronizar productos")
+        })
+        categoryStore.syncAll().catch((e) => {
+            logger.warn(`[NestedNav] category sync: ${e instanceof Error ? e.message : e}`)
+            toastStore.error("Error al sincronizar categorías")
+        })
+
+        if (appwriteDataDisabled) {
+            logger.info(
+                "[NestedNav] Appwrite data/RT desconectado (Auth0+Turso). Promo/sale/support no usan Account API."
+            )
+            // Sale/promo siguen en Appwrite → fallan con 402; no tumbar el shell.
+            saleStore.syncAll().catch((e) => {
+                logger.warn(`[NestedNav] sale sync (legacy): ${e instanceof Error ? e.message : e}`)
+            })
+            promotionStore.syncAll().catch((e) => {
+                logger.warn(`[NestedNav] promo sync (legacy): ${e instanceof Error ? e.message : e}`)
+            })
+        } else {
+            promotionStore.syncAll().catch(() => toastStore.error("Error al sincronizar datos"))
+            saleStore.syncAll().catch(() => toastStore.error("Error al sincronizar ventas"))
+        }
 
         logger.info(
             `[Pusher] init key=${ENV.pusherKey ? ENV.pusherKey.slice(0, 6) + "…" : "N/A"} cluster=${ENV.pusherCluster ?? "N/A"}`
@@ -278,7 +321,6 @@ export function createNestedNavRuntime(ctx: NestedNavRuntimeCtx) {
             )
             if (targets.includes("support")) scheduleSupportSync()
             if (targets.includes("sales")) {
-                // Pusher no trae el documento: smartSync (incremental o full)
                 scheduleSalesSync()
                 scheduleStockRefresh([])
             }
@@ -291,7 +333,8 @@ export function createNestedNavRuntime(ctx: NestedNavRuntimeCtx) {
             scheduleStockRefresh(body.productIds)
         })
 
-        if (ENV.databaseId) {
+        // Appwrite Realtime solo si no estamos en modo Turso/Auth0
+        if (!appwriteDataDisabled && ENV.databaseId) {
             const db = ENV.databaseId
             const productChannel = `databases.${db}.collections.product.documents`
             const saleChannel = `databases.${db}.collections.sale.documents`
@@ -333,6 +376,8 @@ export function createNestedNavRuntime(ctx: NestedNavRuntimeCtx) {
             } catch (e: any) {
                 logger.warn(`[stock-rt][appwrite] subscribe failed: ${e?.message ?? e}`)
             }
+        } else if (appwriteDataDisabled) {
+            logger.info("[NestedNav] skip Appwrite product/sale RT (Turso/Auth0 mode)")
         }
     }
 
