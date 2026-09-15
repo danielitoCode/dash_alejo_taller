@@ -50,7 +50,7 @@
 
     function isHttpUrl(value: string): boolean {
         const t = value.trim();
-        if (!t) return true; // vacío ok
+        if (!t) return true;
         try {
             const u = new URL(t);
             return u.protocol === "http:" || u.protocol === "https:";
@@ -191,7 +191,6 @@
         draftPrice = Number(product.price) > 0 ? Number(product.price) : product.price;
         const parsed = parseProductImages(product.photoUrl ?? "");
         draftPhotoUrls = parsed;
-        // Si hay una sola URL, también en campo manual para editar fácil
         draftPhotoUrlManual = parsed.length === 1 ? parsed[0] : "";
         draftCategoryId = String(product.categoryId || "").trim();
         draftStatus = product.status === "inactive" ? "inactive" : "active";
@@ -263,7 +262,6 @@
     $: availableCategories = $categoryStore.items.filter(
         (category) => category.status === "active" || category.id === draftCategoryId,
     );
-    /** Categoría del producto en edición aunque no esté en la lista cargada */
     $: orphanCategory =
         draftCategoryId && !availableCategories.some((c) => c.id === draftCategoryId)
             ? draftCategoryId
@@ -562,12 +560,140 @@
 />
 
 <style>
+    .products-workspace {
+        display: grid;
+        grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+        gap: 16px;
+        align-items: start;
+    }
+    .product-form-panel {
+        position: sticky;
+        top: 12px;
+        max-height: calc(100dvh - 96px);
+        overflow: auto;
+        border: 1px solid var(--md-sys-color-outline-variant);
+        border-radius: 14px;
+        background: var(--md-sys-color-surface);
+        padding: 14px 16px 16px;
+    }
+    .product-list-panel { min-width: 0; }
+    .list-panel-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+    .list-title { margin: 0; font-size: 0.95rem; font-weight: 750; }
+    .form-title { margin: 0 0 10px; font-size: 0.95rem; font-weight: 750; }
+    .form-banner {
+        margin: 0 0 12px;
+        padding: 8px 10px;
+        border-radius: 8px;
+        font-size: 0.82rem;
+        font-weight: 650;
+        color: #fecaca;
+        background: color-mix(in srgb, #ef4444 14%, transparent);
+        border: 1px solid color-mix(in srgb, #ef4444 35%, transparent);
+    }
+    .form-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+    .form-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .product-form { margin: 0; padding: 0; border: 0; }
+    .product-images-field { margin-top: 10px; }
+    .product-images-field.invalid {
+        outline: 1px solid color-mix(in srgb, #ef4444 50%, transparent);
+        border-radius: 10px;
+        padding: 6px;
+    }
+    .mgmt-field.invalid .mgmt-input,
+    .mgmt-field.invalid .mgmt-select {
+        border-color: color-mix(in srgb, #ef4444 55%, var(--md-sys-color-outline-variant));
+        box-shadow: 0 0 0 1px color-mix(in srgb, #ef4444 25%, transparent);
+    }
+    .field-error {
+        display: block;
+        margin-top: 4px;
+        font-size: 0.75rem;
+        font-weight: 650;
+        color: #fca5a5;
+    }
+    .req { color: #f87171; font-style: normal; font-weight: 800; }
+    .filter-field.search {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid var(--md-sys-color-outline-variant);
+        border-radius: 10px;
+        padding: 0 12px;
+        flex: 1 1 200px;
+        max-width: 320px;
+        margin-left: auto;
+    }
+    .filter-field.search input {
+        width: 100%;
+        height: 40px;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+    }
+    .stock-readonly-title {
+        font-size: 0.78rem;
+        font-weight: 700;
+        margin-bottom: 6px;
+        color: var(--md-sys-color-on-surface-variant);
+    }
+    .stock-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .stock-chip {
+        font-size: 0.78rem;
+        padding: 4px 8px;
+        border-radius: 8px;
+        border: 1px solid var(--md-sys-color-outline-variant);
+        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 20%, transparent);
+    }
+    .stock-chip.accent {
+        border-color: color-mix(in srgb, var(--md-sys-color-primary) 35%, var(--md-sys-color-outline-variant));
+        color: var(--md-sys-color-primary);
+    }
+    .thumb {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        object-fit: cover;
+        flex-shrink: 0;
+    }
+    .thumb.placeholder {
+        display: grid;
+        place-items: center;
+        background: color-mix(in srgb, var(--md-sys-color-surface-variant) 30%, transparent);
+        color: var(--md-sys-color-on-surface-variant);
+    }
+    .mgmt-row-left {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        min-width: 0;
+    }
+    @media (max-width: 960px) {
+        .products-workspace { grid-template-columns: 1fr; }
+        .product-form-panel { position: static; max-height: none; }
+        .filter-field.search { max-width: none; margin-left: 0; width: 100%; }
+        .list-panel-head { flex-direction: column; align-items: stretch; }
+    }
     .mgmt-textarea {
         min-height: 4.5rem;
         resize: vertical;
         padding: 10px 12px;
         line-height: 1.4;
         font: inherit;
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid var(--md-sys-color-outline-variant);
+        border-radius: 12px;
+        color: var(--md-sys-color-on-surface);
+        background: color-mix(in srgb, var(--md-sys-color-surface) 88%, var(--md-sys-color-surface-variant));
     }
     .form-banner.soft {
         background: color-mix(in srgb, var(--md-sys-color-tertiary-container) 55%, transparent);
@@ -581,4 +707,5 @@
         white-space: nowrap;
         font-size: 0.82rem;
     }
+    .mgmt-row-meta { display: grid; gap: 2px; min-width: 0; }
 </style>
