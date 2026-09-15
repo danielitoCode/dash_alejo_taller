@@ -1,40 +1,60 @@
-import { logStore} from "../viewmodel/log.store";
+import { logStore } from "../viewmodel/log.store";
+
+function safeArgToString(value: unknown): string {
+    if (value == null) return String(value);
+    const t = typeof value;
+    if (t === "string") return value as string;
+    if (t === "number" || t === "boolean" || t === "bigint") return String(value);
+    if (t === "symbol") return (value as symbol).toString();
+    if (value instanceof Error) {
+        const anyErr = value as Error & { code?: unknown; type?: unknown };
+        const extra = [
+            anyErr.code != null ? `code=${anyErr.code}` : null,
+            typeof anyErr.type === "string" ? `type=${anyErr.type}` : null,
+        ]
+            .filter(Boolean)
+            .join(" ");
+        return extra ? `${value.message} ${extra}` : value.message || value.name;
+    }
+    try {
+        return JSON.stringify(value);
+    } catch {
+        try {
+            return Object.prototype.toString.call(value);
+        } catch {
+            return "[unprintable]";
+        }
+    }
+}
 
 export function initGlobalLogger() {
-
-    // Console interception
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const consoleAny = console as unknown as Record<string, (...args: any[]) => void>;
-    ["log", "info", "warn", "error"].forEach(level => {
-        const original = consoleAny[level];
-
-        consoleAny[level] = (...args: any[]) => {
-            original(...args);
-
-            const stack =
-                level === "error"
-                    ? new Error().stack
-                    : undefined;
-
-            logStore.add(args.join(" "), level as any, stack);
+    ["log", "info", "warn", "error"].forEach((level) => {
+        const original = (console[level as keyof Console] as Function).bind(console);
+        (console as any)[level] = (...args: any[]) => {
+            try {
+                original(...args);
+            } catch {
+                /* ignore */
+            }
+            try {
+                const stack = level === "error" ? new Error().stack : undefined;
+                const message = args.map(safeArgToString).join(" ");
+                logStore.add(message, level as any, stack);
+            } catch {
+                /* never break app */
+            }
         };
     });
 
-    // Runtime errors
     window.addEventListener("error", (event) => {
-        logStore.add(
-            event.message,
-            "error",
-            event.error?.stack
-        );
+        logStore.add(event.message, "error", event.error?.stack);
     });
 
-    // Unhandled promises
     window.addEventListener("unhandledrejection", (event) => {
         logStore.add(
-            `Unhandled Promise: ${event.reason}`,
+            `Unhandled Promise: ${safeArgToString(event.reason)}`,
             "error",
-            event.reason?.stack
+            (event.reason as Error)?.stack,
         );
     });
 }
