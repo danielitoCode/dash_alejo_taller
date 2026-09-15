@@ -49,17 +49,41 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
 function resolveRolesFromTokens(
     accessToken: string,
     idTokenUser: Record<string, unknown> | undefined,
-): BusinessRole[] {
+): { roles: BusinessRole[]; source: string } {
     const fromAccess = decodeJwtPayload(accessToken);
     if (fromAccess && AUTH_ROLES_CLAIM in fromAccess) {
         const roles = parseRoleClaim(fromAccess[AUTH_ROLES_CLAIM]);
-        if (roles.length > 0) return roles;
+        if (roles.length > 0) {
+            return { roles, source: "access_token_claim" };
+        }
+        logger.warn(
+            `[Auth0] claim ${AUTH_ROLES_CLAIM} presente en access token pero vacío/inválido: ${JSON.stringify(fromAccess[AUTH_ROLES_CLAIM])}`,
+        );
     }
+
     if (idTokenUser && AUTH_ROLES_CLAIM in idTokenUser) {
         const roles = parseRoleClaim(idTokenUser[AUTH_ROLES_CLAIM]);
-        if (roles.length > 0) return roles;
+        if (roles.length > 0) {
+            return { roles, source: "id_token_claim" };
+        }
     }
-    return ["viewer"];
+
+    // Diagnóstico: app_metadata NUNCA viene en getUser() del SPA de forma confiable
+    const metaKeys = idTokenUser
+        ? Object.keys(idTokenUser).filter(
+              (k) =>
+                  k.includes("role") ||
+                  k.includes("metadata") ||
+                  k.startsWith("https://"),
+          )
+        : [];
+    logger.warn(
+        `[Auth0] sin claim ${AUTH_ROLES_CLAIM} → role=viewer. ` +
+            `app_metadata.role en Dashboard NO llega al browser sin Action Post-Login. ` +
+            `keys relevantes en profile: [${metaKeys.join(", ") || "ninguna"}]`,
+    );
+
+    return { roles: ["viewer"], source: "default_viewer" };
 }
 
 function applyAdminAllowlist(
@@ -151,7 +175,6 @@ export class Auth0AuthAdapter implements AuthPort {
     async loginWithRedirect(appState?: AuthLoginOptions): Promise<void> {
         const client = await this.ensureClient();
         const cfg = requireAuth0Config();
-        // Panel: Database por defecto (sin Google). Override explícito solo si se pasa connection.
         const connection = appState?.connection ?? AUTH0_DB_CONNECTION;
         const loginHint = appState?.loginHint?.trim();
         logger.info(
@@ -259,14 +282,15 @@ export class Auth0AuthAdapter implements AuthPort {
             return null;
         }
 
-        let roles = resolveRolesFromTokens(
+        const resolved = resolveRolesFromTokens(
             accessToken,
             user as Record<string, unknown>,
         );
-        roles = applyAdminAllowlist(user.sub, user.email ?? null, roles);
+        let roles = applyAdminAllowlist(user.sub, user.email ?? null, resolved.roles);
 
         logger.info(
-            `[Auth0] session sub=${mask(user.sub, 12)} email=${user.email ?? "—"} role=${roles[0] ?? "viewer"} claim=${AUTH_ROLES_CLAIM}`,
+            `[Auth0] session sub=${mask(user.sub, 12)} email=${user.email ?? "—"} ` +
+                `role=${roles[0] ?? "viewer"} source=${resolved.source} claim=${AUTH_ROLES_CLAIM}`,
         );
 
         return {
