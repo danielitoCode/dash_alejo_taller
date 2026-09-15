@@ -47,6 +47,8 @@
         photoUrl?: string;
     };
 
+    let validationNow: FieldErrors = {};
+
     function isHttpUrl(value: string): boolean {
         const t = value.trim();
         if (!t) return true;
@@ -87,9 +89,21 @@
         return errors;
     }
 
-    $: _deps = [draftName, draftDescription, draftPrice, draftCategoryId, draftStatus, draftPhotoUrlManual, imagePending, formSaving, editId, formEpoch];
-    $: fieldErrors = formTried ? validateForm() : ({} as FieldErrors);
-    $: validationNow = (_deps, validateForm());
+    // Tocar deps en el bloque reactivo (sin operador coma — TS noUnusedExpressions)
+    $: {
+        void draftName;
+        void draftDescription;
+        void draftPrice;
+        void draftCategoryId;
+        void draftStatus;
+        void draftPhotoUrlManual;
+        void imagePending;
+        void formSaving;
+        void editId;
+        void formEpoch;
+        validationNow = validateForm();
+    }
+    $: fieldErrors = formTried ? validationNow : ({} as FieldErrors);
     $: hasErrors = Object.keys(validationNow).length > 0;
     $: canSubmit = !hasErrors && !imagePending && !formSaving;
     $: disabledHint = (() => {
@@ -98,7 +112,9 @@
         const e = validationNow;
         if (e.name) {
             const raw = String(draftName ?? "");
-            return raw.trim() ? e.name : `El nombre es obligatorio (interno vacío). Escribe o re-abre con el lápiz.`;
+            return raw.trim()
+                ? e.name
+                : "El nombre es obligatorio (interno vacío). Escribe o re-abre con el lápiz.";
         }
         if (e.price) return e.price;
         if (e.categoryId) return e.categoryId;
