@@ -1,5 +1,6 @@
 import { infrastructureContainer } from "../../../infrastructure/di/infrastructure.container";
 import { SaleNetRepository } from "../data/repository/sale.net.repository";
+import { SaleTursoRepository } from "../data/repository/sale.turso.repository";
 import { SaleOfflineFirstRepository } from "../data/repository/sale.offline-first.repository";
 import { GetSalesCaseUse } from "../domain/caseuse/GetSalesCaseUse";
 import { UpdateSaleVerifiedCaseUse } from "../domain/caseuse/UpdateSaleVerifiedCaseUse";
@@ -13,12 +14,18 @@ import { authContainer } from "../../auth/di/auth.container";
 import { createStockMovement } from "../../inventory/domain/entity/StockMovement";
 import type { Sale } from "../domain/entity/Sale";
 import { logger } from "../../../infrastructure/presentation/util/logger.service";
+import { isTursoDataProvider } from "../../../infrastructure/turso/turso.client";
 
 const netDatabases = infrastructureContainer.appwrite.databases;
 
-const saleNetRepository = new SaleNetRepository(netDatabases);
+const saleNetRepository = isTursoDataProvider()
+    ? (new SaleTursoRepository() as unknown as SaleNetRepository)
+    : new SaleNetRepository(netDatabases);
 const saleOfflineFirstRepository = new SaleOfflineFirstRepository(saleNetRepository);
-const productNetRepository = new ProductNetRepository(netDatabases);
+
+/** Mismo net que productContainer (Turso si activo) — no forzar Appwrite. */
+const productNetRepository = productContainer.repositories
+    .net as unknown as ProductNetRepository;
 
 const getSalesCaseUse = new GetSalesCaseUse(saleOfflineFirstRepository);
 const updateSaleVerifiedCaseUse = new UpdateSaleVerifiedCaseUse(saleOfflineFirstRepository);
