@@ -2,6 +2,8 @@ import type { Sale } from "../entity/Sale";
 import type { SaleRepository } from "../repository/SaleRepository";
 import { BuyState } from "../entity/enums";
 import { logger } from "../../../../infrastructure/presentation/util/logger.service";
+import { publishSaleEvent } from "../../../../infrastructure/data/alset-pulse/sale-pulse";
+import { publishStockChanged } from "../../../../infrastructure/data/alset-pulse/stock-pulse";
 
 /** Contrato mínimo de stock (paridad operador). */
 export interface PanelStockApplicator {
@@ -73,6 +75,22 @@ export class ConfirmSaleFromPanelCaseUse {
         const updated = await this.salesRepository.updateVerified(sale.id, BuyState.VERIFIED);
         logger.info(`[ConfirmSale] VERIFIED saleId=${sale.id} lines=${sale.products.length}`);
         await this.ensureFinance(updated);
+        const productIds = (sale.products ?? []).map((p) => p.productId).filter(Boolean);
+        void publishSaleEvent("sale:confirmed", {
+            saleId: sale.id,
+            userId: (sale as any).userId ?? null,
+            decision: "confirmed",
+            verified: BuyState.VERIFIED,
+            productIds,
+        });
+        if (productIds.length) {
+            void publishStockChanged({
+                productIds,
+                reason: "consume",
+                saleId: sale.id,
+                timestamp: new Date().toISOString(),
+            });
+        }
         return updated;
     }
 
@@ -134,7 +152,6 @@ export class ConfirmSaleFromPanelCaseUse {
                         userId,
                     });
                 } catch (e: any) {
-                    // Soft-fail: stock ya aplicado; no bloquear confirmación
                     logger.error(
                         `[ConfirmSale] salida_venta failed saleId=${sale.id} productId=${item.productId}: ${e?.message ?? e}`,
                         e?.stack
