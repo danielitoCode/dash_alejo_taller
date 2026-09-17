@@ -30,6 +30,9 @@ export const ENV = {
     auth0RedirectUri: import.meta.env.VITE_AUTH0_REDIRECT_URI as string | undefined,
     auth0LogoutReturnTo: import.meta.env.VITE_AUTH0_LOGOUT_RETURN_TO as string | undefined,
 
+    /** Clerk (IdP principal Core6 — libre de restricción geo Auth0) */
+    clerkPublishableKey: import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined,
+
     /** appwrite | turso */
     dataProvider: import.meta.env.VITE_DATA_PROVIDER as string | undefined,
     tursoUrl: import.meta.env.VITE_TURSO_URL as string | undefined,
@@ -49,8 +52,8 @@ export const ENV = {
         | undefined,
 
     /**
-     * Bootstrap admin sin Action Auth0.
-     * Coma-separado: subjects (sub) y/o emails que reciben rol admin.
+     * Bootstrap admin sin metadata en Clerk.
+     * Coma-separado: subjects (user id) y/o emails que reciben rol admin.
      */
     adminSubjects: import.meta.env.VITE_ADMIN_SUBJECTS as string | undefined,
     adminEmails: import.meta.env.VITE_ADMIN_EMAILS as string | undefined,
