@@ -18,7 +18,8 @@
     let displayName = "";
     let denyMessage = "";
 
-    const STATUS_HOLD_MS = 900;
+    /** Hold corto solo si hay sesión OK; sin sesión ir a login ya. */
+    const STATUS_HOLD_MS = 500;
     const provider = resolveAuthProvider();
 
     function sleep(ms: number) {
@@ -44,34 +45,36 @@
         navController.navigate("home", { id: userId });
     }
 
+    /** Sin sesión / sin port → login (Login auto-redirige a Clerk). */
+    function goLogin(reason: string) {
+        logger.info(`[Auth] Splash → login (${reason})`);
+        navController.navigate("login");
+    }
+
     onMount(async () => {
         status = "loading";
         try {
             if (!isExternalAuthProvider()) {
                 logger.warn(
-                    `[Auth] Splash: provider=${provider} no soportado en Core6 panel → welcome`,
+                    `[Auth] Splash: provider=${provider} no soportado en Core6 panel → login`,
                 );
-                await holdStatus("guest");
-                navController.navigate("welcome");
+                goLogin("provider-unsupported");
                 return;
             }
 
             const authPort = getAuthPort();
             if (!authPort) {
                 logger.error(`[Auth] Splash: ${provider} activo pero sin port`);
-                await holdStatus("guest");
-                navController.navigate("welcome");
+                goLogin("no-auth-port");
                 return;
             }
 
-            logger.info(`[Auth] Splash: provider=${provider} (Appwrite auth desconectado)`);
+            logger.info(`[Auth] Splash: provider=${provider}`);
             await authPort.init();
             await authPort.handleRedirectCallback();
             const session = await authPort.getSession();
             if (!session) {
-                logger.info(`[Auth] Splash: sin sesión ${provider} → welcome`);
-                await holdStatus("guest");
-                navController.navigate("welcome");
+                goLogin(`sin-sesión-${provider}`);
                 return;
             }
             logger.info(
@@ -93,8 +96,7 @@
             logger.error(
                 `[Auth] Splash error: ${e instanceof Error ? e.message : String(e)}`,
             );
-            await holdStatus("guest");
-            navController.navigate("welcome");
+            goLogin("splash-error");
         }
     });
 
@@ -109,7 +111,7 @@
 
     $: subtitle =
         status === "loading"
-            ? `${provider} · sin Appwrite`
+            ? `${provider}`
             : status === "authenticated"
               ? "Abriendo panel de gestión"
               : status === "denied"
