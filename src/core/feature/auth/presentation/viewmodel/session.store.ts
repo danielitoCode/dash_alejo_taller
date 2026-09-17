@@ -1,6 +1,6 @@
 import { derived, writable } from "svelte/store";
 import { infrastructureContainer } from "../../../../infrastructure/di/infrastructure.container";
-import { getAuthPort, resolveAuthProvider } from "../../di/authPort.factory";
+import { getAuthPort, isExternalAuthProvider } from "../../di/authPort.factory";
 import { userLikeFromAuthSession } from "../../domain/util/authSessionBridge";
 
 interface SessionState {
@@ -38,12 +38,12 @@ function createSessionStore() {
 
     async function getCurrentUser(): Promise<Record<string, unknown>> {
         return runAction("getCurrentUser", async () => {
-            if (resolveAuthProvider() === "auth0") {
+            if (isExternalAuthProvider()) {
                 const auth = getAuthPort();
-                if (!auth) throw new Error("Auth0 no configurado");
+                if (!auth) throw new Error("Clerk no configurado");
                 await auth.init();
                 const session = await auth.getSession();
-                if (!session) throw new Error("No hay sesión Auth0");
+                if (!session) throw new Error("No hay sesión autenticada");
                 const u = userLikeFromAuthSession(session);
                 return {
                     ...u,
