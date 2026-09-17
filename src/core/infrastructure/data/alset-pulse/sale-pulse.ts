@@ -15,6 +15,7 @@ export interface SalePulsePayload {
 
 export function getSalesChannelName(): string {
     return (
+        ENV.pusherSalesChannel?.trim() ||
         (import.meta.env.VITE_PUSHER_SALES_CHANNEL as string | undefined)?.trim() ||
         "sale-updates"
     );
@@ -50,7 +51,7 @@ export async function publishSaleEvent(
         timestamp: payload.timestamp || new Date().toISOString(),
     };
     const result = await triggerPusherEvent(getSalesChannelName(), event, body);
-    if (result.ok) console.info(`[sale-rt] publish ${event} via=${result.via}`);
+    if (result.ok) console.info(`[sale-rt] publish ${event} via=${result.via} ch=${getSalesChannelName()}`);
     else console.warn(`[sale-rt] publish ${event} omitido: ${result.reason}`);
 
     if (body.userId && (event === "sale:confirmed" || event === "sale:rejected")) {
@@ -72,6 +73,7 @@ export function subscribeSaleUpdates(
     const channelName = getSalesChannelName();
     const channel: Channel = pusher.subscribe(channelName);
     const events = ["sale:created", "sale:updated", "sale:confirmed", "sale:rejected"];
+    console.info(`[sale-rt] subscribe channel=${channelName}`);
     for (const eventName of events) {
         channel.bind(eventName, (payload: unknown) => {
             const p = (payload ?? {}) as Partial<SalePulsePayload>;

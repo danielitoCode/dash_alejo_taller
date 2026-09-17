@@ -19,6 +19,11 @@ export const ENV = {
     pusherKey: import.meta.env.VITE_PUSHER_KEY,
     pusherCluster: import.meta.env.VITE_PUSHER_CLUSTER,
     pusherSupportChannel: import.meta.env.VITE_PUSHER_SUPPORT_CHANNEL,
+    pusherStockChannel: import.meta.env.VITE_PUSHER_STOCK_CHANNEL,
+    pusherSalesChannel: import.meta.env.VITE_PUSHER_SALES_CHANNEL,
+    pusherPromoChannel: import.meta.env.VITE_PUSHER_PROMO_CHANNEL,
+    pusherNotificationChannel: import.meta.env.VITE_PUSHER_NOTIFICATION_CHANNEL,
+    pusherIaChannel: import.meta.env.VITE_PUSHER_IA_CHANNEL,
     directorioCubanoApiUrl:
         import.meta.env.VITE_DIRECTORIO_CUBANO_API_URL ||
         "https://widgets.directoriocubano.info/api/tasas",
@@ -33,10 +38,6 @@ export const ENV = {
     tursoUrl: import.meta.env.VITE_TURSO_URL as string | undefined,
     tursoAuthToken: import.meta.env.VITE_TURSO_AUTH_TOKEN as string | undefined,
 
-    /**
-     * Files: cloudinary | appwrite
-     * Si falta, auto-activa Cloudinary cuando hay cloud_name + preset.
-     */
     filesProvider: import.meta.env.VITE_FILES_PROVIDER as string | undefined,
     cloudinaryCloudName: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME as string | undefined,
     cloudinaryPresetProducts: import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET_PRODUCTS as
@@ -46,10 +47,6 @@ export const ENV = {
         | string
         | undefined,
 
-    /**
-     * Bootstrap admin sin metadata en Clerk.
-     * Coma-separado: subjects (user id) y/o emails que reciben rol admin.
-     */
     adminSubjects: import.meta.env.VITE_ADMIN_SUBJECTS as string | undefined,
     adminEmails: import.meta.env.VITE_ADMIN_EMAILS as string | undefined,
 };

@@ -1,3 +1,4 @@
+import { ENV } from "../../env";
 import { triggerPusherEvent } from "./pusher-trigger";
 
 export type StockChangeReason = "hold" | "release" | "consume" | "entry" | "adjustment";
@@ -14,6 +15,7 @@ export const STOCK_BROADCAST_NAME = "alejo-stock-updates";
 
 export function getStockChannelName(): string {
     return (
+        ENV.pusherStockChannel?.trim() ||
         (import.meta.env.VITE_PUSHER_STOCK_CHANNEL as string | undefined)?.trim() ||
         "stock-updates"
     );
@@ -84,6 +86,6 @@ export async function publishStockChanged(payload: StockChangedPayload): Promise
     };
     emitLocal(body);
     const result = await triggerPusherEvent(getStockChannelName(), "stock:changed", body);
-    if (result.ok) console.info(`[stock-rt] publish OK via=${result.via}`);
+    if (result.ok) console.info(`[stock-rt] publish OK via=${result.via} ch=${getStockChannelName()}`);
     else console.warn(`[stock-rt] publish omitido: ${result.reason}`);
 }
