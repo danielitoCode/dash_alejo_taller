@@ -57,7 +57,9 @@ export async function publishSaleEvent(
     if (body.userId && (event === "sale:confirmed" || event === "sale:rejected")) {
         await triggerPusherEvent(`sale-verification-${body.userId}`, event, {
             saleId: body.saleId,
+            userId: body.userId,
             decision: event === "sale:confirmed" ? "confirmed" : "rejected",
+            productIds: body.productIds ?? [],
             timestamp: body.timestamp,
         });
     }
