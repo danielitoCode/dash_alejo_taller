@@ -29,7 +29,7 @@ function getPusher(): Pusher | null {
 export function subscribeSupportInbox(handler: (eventName: string, payload: unknown) => void): PulseUnsubscribe {
     const pusher = getPusher();
     if (!pusher) return () => {};
-    const channelName = ENV.pusherSupportChannel || "support-inbox";
+    const channelName = ENV.pusherSupportChannel || "support-updates";
     const channel = pusher.subscribe(channelName);
     const events = ["support:new", "support:updated", "support:status"];
     for (const e of events) channel.bind(e, (p: unknown) => handler(e, p));
@@ -43,7 +43,7 @@ export function subscribePulseChannelAll(handler: (eventName: string, payload: u
     const pusher = getPusher();
     if (!pusher) return () => {};
     const names = [
-        ENV.pusherSupportChannel || "support-inbox",
+        ENV.pusherSupportChannel || "support-updates",
         getStockChannelName(),
         getSalesChannelName(),
     ];
