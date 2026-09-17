@@ -32,7 +32,7 @@
 
     onMount(() => {
         logger.warn(
-            `[Auth] Unauthorized screen — ${finalMessage} | Revisa claim https://alejotaller.app/roles (Action Post-Login + app_metadata.role) o VITE_ADMIN_EMAILS`,
+            `[Auth] Unauthorized screen — ${finalMessage} | Revisa publicMetadata.role en Clerk (admin|owner|sales) o VITE_ADMIN_EMAILS`,
         );
 
         const id = window.setInterval(() => {
@@ -60,9 +60,9 @@
         <p>{finalMessage}</p>
 
         <p class="detail">
-            Login Auth0 OK, pero el token no trae rol staff (<code>admin</code> / <code>owner</code> / <code>sales</code>).
-            <code>app_metadata.role</code> solo llega al front si hay <strong>Action Post-Login</strong> que copie el claim
-            <code>https://alejotaller.app/roles</code>. Mientras tanto: <code>VITE_ADMIN_EMAILS=tu@mail.com</code>.
+            Login Clerk OK, pero no hay rol staff (<code>admin</code> / <code>owner</code> / <code>sales</code>).
+            En Clerk Dashboard → usuario → <code>publicMetadata</code>:
+            <code>{"role":"admin"}</code>. Mientras tanto: <code>VITE_ADMIN_EMAILS=tu@mail.com</code>.
         </p>
 
         <div class="hint" aria-live="polite">
