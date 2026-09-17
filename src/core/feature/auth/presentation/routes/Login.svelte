@@ -1,9 +1,9 @@
 <script lang="ts">
     /**
-     * Login panel: Clerk Universal Login (email/password).
-     * Sin Google en el panel — se configura en Clerk Dashboard (desactivar OAuth si se desea).
-     * Un toque → redirect a Clerk.
+     * Login panel: auto-redirect a Clerk (mínima fricción).
+     * Si el redirect falla, queda el botón manual.
      */
+    import { onMount } from "svelte";
     import type { NavController } from "../../../../../lib/navigation/NavController";
     import { getAuthPort, resolveAuthProvider } from "../../di/authPort.factory";
     import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
@@ -15,6 +15,7 @@
     let loading = false;
     let error: string | null = null;
     let contentVisible = false;
+    let autoTried = false;
 
     const glowAlpha = 0.45;
     const provider = resolveAuthProvider();
@@ -31,7 +32,7 @@
             error =
                 provider === "clerk"
                     ? "Clerk no está activo. Configura VITE_CLERK_PUBLISHABLE_KEY."
-                    : "Auth no configurado. Usa VITE_CLERK_PUBLISHABLE_KEY (recomendado) o Auth0.";
+                    : "Auth no configurado. Configura VITE_CLERK_PUBLISHABLE_KEY.";
             return;
         }
 
@@ -52,6 +53,13 @@
             loading = false;
         }
     }
+
+    onMount(() => {
+        if (autoTried) return;
+        autoTried = true;
+        // Un tick para pintar UI; luego Clerk
+        void Promise.resolve().then(() => signIn());
+    });
 </script>
 
 <section class="login-screen" aria-label="Iniciar sesión">
@@ -62,29 +70,28 @@
                 <img src="/alejoicon_clean.svg" alt="App icon" class="logo" />
             </div>
             <h1>Iniciar sesión</h1>
-            <p>Panel de gestión · Clerk (usuario y contraseña)</p>
+            <p>Panel de gestión · abriendo Clerk…</p>
         </section>
 
         <section class="form-card" aria-label="Acceso al panel">
-            <p class="hint">
-                Acceso staff. Serás redirigido a la pantalla segura de Clerk para
-                email y contraseña. El rol se lee de
-                <code>publicMetadata.role</code> (admin / owner / sales).
-            </p>
-
-            {#if error}
+            {#if !error}
+                <p class="hint">
+                    Redirigiendo a la pantalla segura de autenticación.
+                    Si no avanza, usa el botón de abajo.
+                </p>
+            {:else}
                 <p class="error">{error}</p>
             {/if}
 
             <div class="actions">
                 <button class="btn primary" type="button" on:click={signIn} disabled={loading}>
                     <Icon icon={LogIn} size={18} className="btn-ico" ariaLabel="Entrar" />
-                    {#if loading}Abriendo Clerk…{:else}Entrar al panel{/if}
+                    {#if loading}Abriendo Clerk…{:else}Reintentar entrada{/if}
                 </button>
             </div>
 
             <p class="foot">
-                Provider: <code>{provider}</code> · Sin Appwrite auth
+                Solo staff · <code>publicMetadata.role</code>
             </p>
         </section>
     </div>
@@ -177,10 +184,6 @@
         font-size: 0.88rem;
         color: var(--md-sys-color-on-surface-variant);
         line-height: 1.4;
-    }
-
-    .hint code {
-        font-size: 0.8rem;
     }
 
     .error {
