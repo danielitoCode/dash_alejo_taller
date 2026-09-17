@@ -5,7 +5,7 @@ function toTargetsFromEventName(eventName: string): PulseRefreshTarget[] {
     if (name.includes("all")) return ["support", "sales"];
     const targets: PulseRefreshTarget[] = [];
     if (name.includes("support")) targets.push("support");
-    if (name.includes("sales") || name.startsWith("sale:") || name.includes("sale-")) {
+    if (name.includes("sales") || name.includes("sale") || name.startsWith("sale:") || name.includes("sale-")) {
         targets.push("sales");
     }
     return targets;
