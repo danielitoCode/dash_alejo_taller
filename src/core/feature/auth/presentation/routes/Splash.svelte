@@ -2,7 +2,11 @@
     import { onMount } from "svelte";
     import { logger } from "../../../../infrastructure/presentation/util/logger.service";
     import type { NavController } from "../../../../../lib/navigation/NavController";
-    import { getAuthPort, resolveAuthProvider } from "../../di/authPort.factory";
+    import {
+        getAuthPort,
+        isExternalAuthProvider,
+        resolveAuthProvider,
+    } from "../../di/authPort.factory";
     import { canAccessDashboard, dashboardDeniedMessage } from "../../domain/config/RoleConfig";
     import { userLikeFromAuthSession } from "../../domain/util/authSessionBridge";
     import alejoIcon from "/alejoicon_clean.svg";
@@ -15,6 +19,7 @@
     let denyMessage = "";
 
     const STATUS_HOLD_MS = 900;
+    const provider = resolveAuthProvider();
 
     function sleep(ms: number) {
         return new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -42,10 +47,9 @@
     onMount(async () => {
         status = "loading";
         try {
-            // Core6 endurecido: solo Auth0. Appwrite legacy no se invoca.
-            if (resolveAuthProvider() !== "auth0") {
+            if (!isExternalAuthProvider()) {
                 logger.warn(
-                    "[Auth] Splash: VITE_AUTH_PROVIDER=appwrite no soportado en Core6 panel → welcome",
+                    `[Auth] Splash: provider=${provider} no soportado en Core6 panel → welcome`,
                 );
                 await holdStatus("guest");
                 navController.navigate("welcome");
@@ -54,24 +58,24 @@
 
             const authPort = getAuthPort();
             if (!authPort) {
-                logger.error("[Auth] Splash: Auth0 activo pero sin port");
+                logger.error(`[Auth] Splash: ${provider} activo pero sin port`);
                 await holdStatus("guest");
                 navController.navigate("welcome");
                 return;
             }
 
-            logger.info("[Auth] Splash: provider=auth0 (Appwrite auth desconectado)");
+            logger.info(`[Auth] Splash: provider=${provider} (Appwrite auth desconectado)`);
             await authPort.init();
             await authPort.handleRedirectCallback();
             const session = await authPort.getSession();
             if (!session) {
-                logger.info("[Auth] Splash: sin sesión Auth0 → welcome");
+                logger.info(`[Auth] Splash: sin sesión ${provider} → welcome`);
                 await holdStatus("guest");
                 navController.navigate("welcome");
                 return;
             }
             logger.info(
-                `[Auth] Splash: sesión OK roles=[${session.roles.join(",")}]`,
+                `[Auth] Splash: sesión OK roles=[${session.roles.join(",") || "none"}]`,
             );
             const user = userLikeFromAuthSession(session);
             if (!canAccessDashboard(user.role)) {
@@ -105,7 +109,7 @@
 
     $: subtitle =
         status === "loading"
-            ? "Auth0 · sin Appwrite"
+            ? `${provider} · sin Appwrite`
             : status === "authenticated"
               ? "Abriendo panel de gestión"
               : status === "denied"
