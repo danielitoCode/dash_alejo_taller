@@ -1,0 +1,45 @@
+name: Pulse Worker
+
+on:
+  push:
+    branches: [master, Core6]
+  pull_request:
+    branches: [master, Core6]
+  workflow_dispatch:
+
+concurrency:
+  group: pulse-worker-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Pulse worker unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: infra/pulse-worker
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install (no lock required)
+        run: npm install --no-audit --no-fund
+
+      - name: Unit tests (sign / auth / cors)
+        run: npm test
+
+      - name: Typecheck worker entry
+        run: npx tsc --noEmit -p tsconfig.json
+
+      - name: Structure check
+        run: |
+          test -f wrangler.toml
+          grep -q 'name = "alejo-pulse"' wrangler.toml
+          grep -q 'main = "src/index.ts"' wrangler.toml
+          test -f src/index.ts
+          test -f src/pusher-sign.js
+          echo "pulse-worker structure OK"
