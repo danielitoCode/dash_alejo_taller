@@ -12,6 +12,7 @@ import { supportInboxStore } from "../../../feature/support/presentation/viewmod
 import { toastStore } from "../viewmodel/toast.store"
 import { logger } from "../util/logger.service"
 import { subscribePulseChannelAll } from "../../data/alset-pulse/pulse.realtime"
+import { subscribeSaleUpdates } from "../../data/alset-pulse/sale-pulse"
 import { pulseRefreshTargets } from "../../data/alset-pulse/pulse.refresh-targets"
 import {
     parseStockChangedPayload,
@@ -34,7 +35,6 @@ export type NestedNavRuntimeCtx = {
     outerNavigate: NavController
 }
 
-/** Usuario mínimo para gates de rol (Clerk o Appwrite legacy). */
 type PanelUser = {
     role?: string | null
     labels?: unknown
@@ -66,6 +66,7 @@ export function createNestedNavRuntime(ctx: NestedNavRuntimeCtx) {
     let queuedSupport = false
     let queuedSales = false
     let stopPulseRefresh: (() => void) | null = null
+    let stopSalePulse: (() => void) | null = null
     let stopStockFanout: (() => void) | null = null
     let stopAppwriteProductRt: (() => void) | null = null
 
@@ -266,7 +267,6 @@ export function createNestedNavRuntime(ctx: NestedNavRuntimeCtx) {
             logger.info(
                 "[NestedNav] Appwrite data/RT desconectado (Clerk+Turso). Promo/sale/support no usan Account API."
             )
-            // Sales vía Turso; promo puede fallar si aún no migró.
             saleStore.syncAll().catch((e) => {
                 logger.warn(`[NestedNav] sale sync (turso): ${e instanceof Error ? e.message : e}`)
             })
@@ -300,7 +300,6 @@ export function createNestedNavRuntime(ctx: NestedNavRuntimeCtx) {
             ) {
                 scheduleStockRefresh(stockFromPulse.productIds)
             }
-            // sale:created | sale:confirmed | sale:rejected → siempre ventas
             if (name.startsWith("sale:") || name.includes("sale-")) {
                 scheduleSalesSync()
                 const ids = (() => {
@@ -334,6 +333,20 @@ export function createNestedNavRuntime(ctx: NestedNavRuntimeCtx) {
             if (targets.includes("sales")) {
                 scheduleSalesSync()
                 scheduleStockRefresh([])
+            }
+        })
+
+        stopSalePulse = subscribeSaleUpdates((eventName, payload) => {
+            logger.info(`[sale-rt] event=${eventName} saleId=${payload.saleId}`)
+            if (
+                eventName === "sale:created" ||
+                eventName === "sale:updated" ||
+                eventName === "sale:confirmed" ||
+                eventName === "sale:rejected"
+            ) {
+                scheduleSalesSync()
+                if (payload.productIds?.length) scheduleStockRefresh(payload.productIds)
+                else scheduleStockRefresh([])
             }
         })
 
@@ -400,6 +413,8 @@ export function createNestedNavRuntime(ctx: NestedNavRuntimeCtx) {
         stockSyncTimer = null
         stopPulseRefresh?.()
         stopPulseRefresh = null
+        stopSalePulse?.()
+        stopSalePulse = null
         stopStockFanout?.()
         stopStockFanout = null
         stopAppwriteProductRt?.()
