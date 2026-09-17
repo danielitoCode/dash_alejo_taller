@@ -19,7 +19,7 @@ function md5Hex(message: string): string {
         return cmn(b ^ c ^ d, a, b, x, s, t);
     }
     function ii(a: number, b: number, c: number, d: number, x: number, s: number, t: number) {
-        return cmn(n ^ (b | ~d), a, b, x, s, t);
+        return cmn(c ^ (b | ~d), a, b, x, s, t);
     }
     const bytes = new TextEncoder().encode(message);
     const n = bytes.length;
@@ -103,7 +103,7 @@ export async function triggerPusherEvent(channel: string, event: string, data: u
                 body: JSON.stringify({ channel: ch, event: ev, data }),
             });
             if (res.ok) return { ok: true, via: "pulse-http" };
-        } catch { /* fallback REST */ }
+        } catch { /* fallback */ }
     }
 
     const key = ENV.pusherKey?.trim();
