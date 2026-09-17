@@ -6,12 +6,12 @@ import type {
     SupportStatus
 } from "../../domain/entity/SupportMessage";
 import { sessionStore } from "../../../auth/presentation/viewmodel/session.store";
+import { isAppwriteDataStackDisabled } from "../../../../infrastructure/platform.flags";
 
 type SupportInboxState = {
     items: SupportMessage[];
     loading: boolean;
     error: string | null;
-    /** Mensajes del hilo abierto en detail (cache). */
     activeThreadId: string | null;
     messages: SupportChatMessage[];
     messagesLoading: boolean;
@@ -42,16 +42,15 @@ function createSupportInboxStore() {
     const { subscribe, update } = writable<SupportInboxState>(initialState);
     let unsubscribe: (() => void) | null = null;
     let syncTimer: number | null = null;
-    /** NestedNav + Detail pueden compartir la misma suscripción RT. */
     let rtRefCount = 0;
 
     function getState(): SupportInboxState {
-        let snap: SupportInboxState = initialState;
-        const unsub = subscribe((s) => {
-            snap = s;
+        let s: SupportInboxState = initialState;
+        const u = subscribe((v) => {
+            s = v;
         });
-        unsub();
-        return snap;
+        u();
+        return s;
     }
 
     async function syncAll(): Promise<void> {
@@ -65,14 +64,6 @@ function createSupportInboxStore() {
         } finally {
             update((s) => ({ ...s, loading: false }));
         }
-    }
-
-    async function setStatus(id: string, status: SupportStatus): Promise<void> {
-        await supportContainer.useCases.inbox.updateStatus(id, status);
-        update((s) => ({
-            ...s,
-            items: s.items.map((m) => (m.id === id ? { ...m, status } : m))
-        }));
     }
 
     async function loadMessages(threadId: string): Promise<void> {
@@ -93,55 +84,46 @@ function createSupportInboxStore() {
         }
     }
 
-    async function markStaffRead(threadId: string): Promise<void> {
+    async function updateStatus(id: string, status: SupportStatus): Promise<void> {
         try {
-            await supportContainer.useCases.threads.markRead(threadId, "staff");
+            await supportContainer.useCases.inbox.updateStatus(id, status);
             update((s) => ({
                 ...s,
-                items: s.items.map((m) =>
-                    m.id === threadId ? { ...m, unreadStaff: 0 } : m
-                )
+                items: s.items.map((m) => (m.id === id ? { ...m, status } : m))
             }));
-        } catch {
-            // no bloquear UI
+        } catch (e) {
+            update((s) => ({ ...s, error: normalizeError(e) }));
+            throw e;
         }
     }
 
     async function postStaffReply(threadId: string, body: string): Promise<void> {
         const text = body.trim();
+        const id = threadId?.trim();
         if (!text) throw new Error("Escribe un mensaje");
+        if (!id) throw new Error("Consulta inválida");
 
         update((s) => ({ ...s, posting: true, error: null }));
         try {
-            let senderId = "staff";
-            let senderName = "Soporte";
-            try {
-                const user = await sessionStore.getCurrentUser();
-                // getCurrentUser → Record (Auth0 o Appwrite); no asumir tipado Models.User
-                senderId =
-                    asString(user.$id) ||
-                    asString(user.id) ||
-                    asString(user.sub) ||
-                    senderId;
-                senderName =
-                    asString(user.name) ||
-                    asString(user.email) ||
-                    senderName;
-            } catch {
-                // sesión no disponible: snapshot genérico
-            }
-
+            const user = await sessionStore.getCurrentUser();
+            const u = user as Record<string, unknown>;
             await supportContainer.useCases.threads.postMessage({
-                threadId,
+                threadId: id,
                 senderRole: "staff",
-                senderId,
-                senderName,
-                body: text,
-                nextStatus: "en_proceso"
+                senderId: asString(u.$id) || asString(u.id),
+                senderName: asString(u.name) || "Staff",
+                body: text
             });
-
-            await loadMessages(threadId);
-            await syncAll();
+            try {
+                await loadMessages(id);
+            } catch {
+                /* ignore */
+            }
+            try {
+                await syncAll();
+            } catch {
+                /* ignore */
+            }
         } catch (e) {
             update((s) => ({ ...s, error: normalizeError(e) }));
             throw e;
@@ -160,6 +142,9 @@ function createSupportInboxStore() {
     }
 
     function startRealtime(): () => void {
+        if (isAppwriteDataStackDisabled()) {
+            return () => {};
+        }
         rtRefCount += 1;
         if (!unsubscribe) {
             unsubscribe = supportContainer.useCases.inbox.subscribe(() => {
@@ -172,7 +157,6 @@ function createSupportInboxStore() {
                         } catch {
                             /* badge/list best-effort */
                         }
-                        // Chat abierto: recargar burbujas (badge solo no basta)
                         if (activeId) {
                             try {
                                 await loadMessages(activeId);
@@ -220,15 +204,14 @@ function createSupportInboxStore() {
 
     return {
         subscribe,
+        counts,
         syncAll,
-        setStatus,
         loadMessages,
-        markStaffRead,
+        updateStatus,
         postStaffReply,
         clearActiveThread,
         startRealtime,
-        stopRealtime,
-        counts
+        stopRealtime
     };
 }
 
