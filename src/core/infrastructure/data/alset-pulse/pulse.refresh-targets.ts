@@ -5,17 +5,17 @@ function toTargetsFromEventName(eventName: string): PulseRefreshTarget[] {
     if (name.includes("all")) return ["support", "sales"];
     const targets: PulseRefreshTarget[] = [];
     if (name.includes("support")) targets.push("support");
-    if (name.includes("sales")) targets.push("sales");
+    if (name.includes("sales") || name.startsWith("sale:") || name.includes("sale-")) {
+        targets.push("sales");
+    }
     return targets;
 }
 
 function readTargetsFromPayload(payload: unknown): PulseRefreshTarget[] {
     if (!payload) return [];
     if (typeof payload === "string") return toTargetsFromEventName(payload);
-
     if (typeof payload !== "object") return [];
     const anyPayload = payload as any;
-
     const rawTargets = anyPayload.targets ?? anyPayload.target ?? anyPayload.resources ?? anyPayload.refresh;
     if (Array.isArray(rawTargets)) {
         const targets: PulseRefreshTarget[] = [];
@@ -26,11 +26,9 @@ function readTargetsFromPayload(payload: unknown): PulseRefreshTarget[] {
         }
         return targets;
     }
-
     const targets: PulseRefreshTarget[] = [];
     if (anyPayload.support === true) targets.push("support");
     if (anyPayload.sales === true || anyPayload.ventas === true) targets.push("sales");
-
     if (typeof rawTargets === "string") return [...targets, ...toTargetsFromEventName(rawTargets)];
     return targets;
 }
@@ -41,4 +39,3 @@ export function pulseRefreshTargets(eventName: string, payload: unknown): PulseR
     const merged = new Set<PulseRefreshTarget>([...fromName, ...fromPayload]);
     return [...merged];
 }
-
