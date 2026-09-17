@@ -1,3 +1,4 @@
+import { isAppwriteDataStackDisabled } from "../../../../infrastructure/platform.flags";
 import { ID, Query, type Databases, type Models } from "appwrite";
 import { client } from "../../../../infrastructure/di/appwrite.config";
 import { ENV } from "../../../../infrastructure/env";
@@ -139,6 +140,10 @@ export class SupportAppwriteRepository implements SupportRepository {
     }
 
     subscribe(handler: (event: SupportRealtimeEvent) => void): SupportRealtimeUnsubscribe {
+        if (isAppwriteDataStackDisabled()) {
+            console.info(`${LOG} RT skipped (Clerk/Turso mode)`);
+            return () => {};
+        }
         if (!ENV.appwriteEndpoint || !ENV.appwriteProjectId || !ENV.databaseId) {
             console.warn(`${LOG} RT omitido: Appwrite no configurado`);
             return () => {};
