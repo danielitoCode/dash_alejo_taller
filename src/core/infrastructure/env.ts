@@ -24,13 +24,8 @@ export const ENV = {
         "https://widgets.directoriocubano.info/api/tasas",
 
     authProvider: import.meta.env.VITE_AUTH_PROVIDER as string | undefined,
-    auth0Domain: import.meta.env.VITE_AUTH0_DOMAIN as string | undefined,
-    auth0ClientId: import.meta.env.VITE_AUTH0_CLIENT_ID as string | undefined,
-    auth0Audience: import.meta.env.VITE_AUTH0_AUDIENCE as string | undefined,
-    auth0RedirectUri: import.meta.env.VITE_AUTH0_REDIRECT_URI as string | undefined,
-    auth0LogoutReturnTo: import.meta.env.VITE_AUTH0_LOGOUT_RETURN_TO as string | undefined,
 
-    /** Clerk (IdP principal Core6 — libre de restricción geo Auth0) */
+    /** Clerk — único IdP del panel Core6 */
     clerkPublishableKey: import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined,
 
     /** appwrite | turso */
