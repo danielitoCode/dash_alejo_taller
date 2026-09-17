@@ -1,39 +1,37 @@
 <script lang="ts">
     /**
-     * Login panel: SOLO Auth0 Database (usuario/contraseña).
-     * Sin Google, sin Appwrite openSession.
-     * SPA no puede enviar password al IdP de forma segura → redirect
-     * a Universal Login con connection Username-Password-Authentication.
+     * Login panel: Clerk Universal Login (email/password).
+     * Sin Google en el panel — se configura en Clerk Dashboard (desactivar OAuth si se desea).
+     * Un toque → redirect a Clerk.
      */
     import type { NavController } from "../../../../../lib/navigation/NavController";
-    import { getAuthPort } from "../../di/authPort.factory";
-    import { AUTH0_DB_CONNECTION } from "../../data/Auth0AuthAdapter";
+    import { getAuthPort, resolveAuthProvider } from "../../di/authPort.factory";
     import Icon from "../../../../infrastructure/presentation/components/Icon.svelte";
     import { LogIn } from "lucide-svelte";
     import { logger } from "../../../../infrastructure/presentation/util/logger.service";
 
     export let navController: NavController;
 
-    let email = "";
     let loading = false;
     let error: string | null = null;
     let contentVisible = false;
 
     const glowAlpha = 0.45;
-
-    $: canSubmit = email.trim().length > 3 && !loading;
+    const provider = resolveAuthProvider();
 
     setTimeout(() => {
         contentVisible = true;
     }, 20);
 
     async function signIn() {
-        if (!canSubmit) return;
+        if (loading) return;
 
         const auth = getAuthPort();
         if (!auth) {
             error =
-                "Auth0 no está activo. Configura VITE_AUTH_PROVIDER=auth0 y VITE_AUTH0_DOMAIN / CLIENT_ID.";
+                provider === "clerk"
+                    ? "Clerk no está activo. Configura VITE_CLERK_PUBLISHABLE_KEY."
+                    : "Auth no configurado. Usa VITE_CLERK_PUBLISHABLE_KEY (recomendado) o Auth0.";
             return;
         }
 
@@ -41,24 +39,18 @@
         error = null;
 
         try {
-            const hint = email.trim();
-            logger.info(`[Auth] Login panel → Auth0 DB connection hint=${hint.slice(0, 4)}…`);
+            logger.info(`[Auth] Login panel → ${provider} redirect`);
             await auth.init();
             await auth.loginWithRedirect({
-                connection: AUTH0_DB_CONNECTION,
-                loginHint: hint,
+                screenHint: "login",
                 returnTo: typeof window !== "undefined" ? window.location.origin : undefined,
             });
             // redirect: no vuelve aquí
         } catch (e) {
-            error = e instanceof Error ? e.message : "No se pudo iniciar sesión con Auth0";
+            error = e instanceof Error ? e.message : "No se pudo iniciar sesión";
             logger.error(`[Auth] Login falló: ${error}`);
             loading = false;
         }
-    }
-
-    function onKeydown(e: KeyboardEvent) {
-        if (e.key === "Enter" && canSubmit) void signIn();
     }
 </script>
 
@@ -70,39 +62,29 @@
                 <img src="/alejoicon_clean.svg" alt="App icon" class="logo" />
             </div>
             <h1>Iniciar sesión</h1>
-            <p>Panel de gestión · Auth0 (usuario y contraseña)</p>
+            <p>Panel de gestión · Clerk (usuario y contraseña)</p>
         </section>
 
-        <section class="form-card" aria-label="Formulario de acceso">
+        <section class="form-card" aria-label="Acceso al panel">
             <p class="hint">
-                Introduce tu correo de staff. Auth0 pedirá la contraseña de la conexión
-                <strong>Database</strong> (sin Google).
+                Acceso staff. Serás redirigido a la pantalla segura de Clerk para
+                email y contraseña. El rol se lee de
+                <code>publicMetadata.role</code> (admin / owner / sales).
             </p>
-
-            <label class="field">
-                <span>Correo</span>
-                <input
-                    type="email"
-                    bind:value={email}
-                    placeholder="correo@dominio.com"
-                    autocomplete="username"
-                    on:keydown={onKeydown}
-                />
-            </label>
 
             {#if error}
                 <p class="error">{error}</p>
             {/if}
 
             <div class="actions">
-                <button class="btn primary" type="button" on:click={signIn} disabled={!canSubmit}>
+                <button class="btn primary" type="button" on:click={signIn} disabled={loading}>
                     <Icon icon={LogIn} size={18} className="btn-ico" ariaLabel="Entrar" />
-                    {#if loading}Redirigiendo a Auth0…{:else}Entrar{/if}
+                    {#if loading}Abriendo Clerk…{:else}Entrar al panel{/if}
                 </button>
             </div>
 
             <p class="foot">
-                Roles vía <code>app_metadata.role</code> + Action. Sin Appwrite.
+                Provider: <code>{provider}</code> · Sin Appwrite auth
             </p>
         </section>
     </div>
@@ -197,26 +179,8 @@
         line-height: 1.4;
     }
 
-    .field {
-        display: grid;
-        gap: 6px;
-    }
-
-    .field span {
-        font-size: 0.92rem;
-        color: var(--md-sys-color-on-surface-variant);
-    }
-
-    input {
-        width: 100%;
-        border: 1px solid var(--md-sys-color-outline-variant);
-        border-radius: 12px;
-        height: 44px;
-        padding: 0 12px;
-        font: inherit;
-        color: var(--md-sys-color-on-surface);
-        background: color-mix(in srgb, var(--md-sys-color-surface) 88%, var(--md-sys-color-surface-variant));
-        box-sizing: border-box;
+    .hint code {
+        font-size: 0.8rem;
     }
 
     .error {
