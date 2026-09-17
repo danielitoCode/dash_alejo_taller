@@ -3,16 +3,9 @@ import type { SaleRepository } from "../repository/SaleRepository";
 import { BuyState } from "../entity/enums";
 import type { PanelStockApplicator } from "./ConfirmSaleFromPanelCaseUse";
 import { logger } from "../../../../infrastructure/presentation/util/logger.service";
+import { publishSaleEvent } from "../../../../infrastructure/data/alset-pulse/sale-pulse";
+import { publishStockChanged } from "../../../../infrastructure/data/alset-pulse/stock-pulse";
 
-/**
- * Core1 5.2 — Rechazar venta desde panel con semántica de stock = operador.
- *
- * DELETED: por línea reserved -= qty; existence sin cambio
- * Idempotente: si ya DELETED, no vuelve a liberar reserved
- * No rechaza VERIFIED (el consume físico ya ocurrió)
- *
- * Orden: stock (Appwrite) → buy_state DELETED
- */
 export class RejectSaleFromPanelCaseUse {
     constructor(
         private readonly salesRepository: SaleRepository,
@@ -42,12 +35,27 @@ export class RejectSaleFromPanelCaseUse {
 
         const updated = await this.salesRepository.updateVerified(sale.id, BuyState.DELETED);
         logger.info(`[RejectSale] DELETED saleId=${sale.id} lines=${sale.products.length}`);
+        const productIds = (sale.products ?? []).map((p) => p.productId).filter(Boolean);
+        void publishSaleEvent("sale:rejected", {
+            saleId: sale.id,
+            userId: (sale as any).userId ?? null,
+            decision: "rejected",
+            verified: BuyState.DELETED,
+            productIds,
+        });
+        if (productIds.length) {
+            void publishStockChanged({
+                productIds,
+                reason: "release",
+                saleId: sale.id,
+                timestamp: new Date().toISOString(),
+            });
+        }
         return updated;
     }
 
     private async resolveSale(saleId: string, snapshot?: Sale | null): Promise<Sale> {
         if (snapshot && snapshot.id === saleId) return snapshot;
-
         const all = await this.salesRepository.getAllSales();
         const found = all.find((s) => s.id === saleId);
         if (!found) throw new Error(`Venta no encontrada: ${saleId}`);
@@ -59,16 +67,13 @@ export class RejectSaleFromPanelCaseUse {
             logger.warn(`[RejectSale] empty products saleId=${sale.id}`);
             return;
         }
-
         for (const item of sale.products) {
             const qty = Math.max(0, Number(item.quantity) || 0);
             if (qty === 0 || !item.productId) continue;
-
             const after = await this.stock.applyStockDeltas(item.productId, {
                 confirmed: false,
                 qty,
             });
-
             logger.info(
                 `[RejectSale] line saleId=${sale.id} productId=${item.productId} qty=${qty} ` +
                     `existenceAfter=${after.existence} reservedAfter=${after.reserved}`
