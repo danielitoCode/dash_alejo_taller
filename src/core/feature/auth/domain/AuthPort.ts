@@ -2,25 +2,21 @@ import type { AuthSession } from "./entity/AuthSession";
 
 export type AuthLoginOptions = {
     returnTo?: string;
-    /**
-     * Legacy Auth0 connection. Panel: no usar Google.
-     * Ignorado por Clerk (email/password en UI hosted).
-     */
-    connection?: string;
-    /** Prefill email (Auth0 login_hint). */
+    /** Prefill email si el IdP lo soporta. */
     loginHint?: string;
     /** Clerk: "login" | "signup". Default login. */
     screenHint?: "login" | "signup";
 };
 
 /**
- * Puerto de autenticación (migración plataforma).
- * Case uses / UI dependen de esto; Clerk/Auth0 viven solo en el adapter.
+ * Puerto de autenticación.
+ * Case uses / UI dependen de esto; Clerk vive solo en el adapter.
+ * Auth0 eliminado del panel Core6.
  */
 export interface AuthPort {
     init(): Promise<void>;
 
-    /** Redirect al IdP (Clerk Universal Login o Auth0 Database). */
+    /** Redirect a Clerk Universal Login. */
     loginWithRedirect(appState?: AuthLoginOptions): Promise<void>;
 
     handleRedirectCallback(): Promise<void>;
