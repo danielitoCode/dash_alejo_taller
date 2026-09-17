@@ -69,6 +69,8 @@ export function createNestedNavRuntime(ctx: NestedNavRuntimeCtx) {
     let stopSalePulse: (() => void) | null = null
     let stopStockFanout: (() => void) | null = null
     let stopAppwriteProductRt: (() => void) | null = null
+    let salesPollTimer: number | null = null
+    let knownSaleIds = new Set<string>()
 
     const appwriteDataDisabled = isTursoDataProvider() || isExternalAuthProvider()
 
@@ -161,15 +163,72 @@ export function createNestedNavRuntime(ctx: NestedNavRuntimeCtx) {
         try {
             await saleStore.syncAll()
             const afterItems = get(saleStore).items
+            for (const s of afterItems) knownSaleIds.add(s.id)
             const afterPending = afterItems.filter((s) => s.verified === BuyState.UNVERIFIED).length
             const delta = Math.max(0, afterPending - beforePending)
-            toastStore.success(delta > 0 ? `Nueva venta (+${delta})` : "Ventas actualizadas", 1100)
+            const appeared = afterItems.filter((s) => !beforeItems.some((b) => b.id === s.id)).length
+            if (appeared > 0 || delta > 0) {
+                toastStore.success(
+                    `Nueva venta pendiente (+${Math.max(appeared, delta)})`,
+                    2800
+                )
+            } else {
+                toastStore.success("Ventas actualizadas", 1100)
+            }
         } catch (e: any) {
             logger.error(e?.message ?? e, e?.stack)
             toastStore.error("No se pudieron actualizar las ventas")
         } finally {
             syncingSales = false
             if (queuedSales) void syncSales()
+        }
+    }
+
+    /** Poll Turso: el publish sale:created desde el cliente falla por CORS en Pusher REST. */
+    async function pollNewSalesSilent() {
+        if (syncingSales) return
+        try {
+            const beforeItems = get(saleStore).items
+            if (knownSaleIds.size === 0 && beforeItems.length > 0) {
+                for (const s of beforeItems) knownSaleIds.add(s.id)
+            }
+            const beforeIds = new Set(beforeItems.map((s) => s.id))
+            syncingSales = true
+            await saleStore.syncAll()
+            const afterItems = get(saleStore).items
+            for (const s of afterItems) knownSaleIds.add(s.id)
+            const appeared = afterItems.filter((s) => !beforeIds.has(s.id))
+            if (appeared.length > 0) {
+                const pendingNew = appeared.filter((s) => s.verified === BuyState.UNVERIFIED).length
+                const n = appeared.length
+                logger.info(`[sale-rt] poll detect nueva venta n=${n} pendingNew=${pendingNew}`)
+                toastStore.success(
+                    pendingNew > 0
+                        ? `Nueva venta pendiente (+${pendingNew})`
+                        : `Nueva venta (+${n})`,
+                    2800
+                )
+            }
+        } catch (e: any) {
+            logger.warn(`[sale-rt] poll failed: ${e?.message ?? e}`)
+        } finally {
+            syncingSales = false
+        }
+    }
+
+    function startSalesPolling() {
+        if (salesPollTimer != null) return
+        for (const s of get(saleStore).items) knownSaleIds.add(s.id)
+        salesPollTimer = window.setInterval(() => {
+            void pollNewSalesSilent()
+        }, 4000)
+        logger.info("[sale-rt] poll Turso cada 4s (fallback CORS publish)")
+    }
+
+    function stopSalesPolling() {
+        if (salesPollTimer != null) {
+            window.clearInterval(salesPollTimer)
+            salesPollTimer = null
         }
     }
 
@@ -267,9 +326,14 @@ export function createNestedNavRuntime(ctx: NestedNavRuntimeCtx) {
             logger.info(
                 "[NestedNav] Appwrite data/RT desconectado (Clerk+Turso). Promo/sale/support no usan Account API."
             )
-            saleStore.syncAll().catch((e) => {
-                logger.warn(`[NestedNav] sale sync (turso): ${e instanceof Error ? e.message : e}`)
-            })
+            saleStore
+                .syncAll()
+                .then(() => {
+                    for (const s of get(saleStore).items) knownSaleIds.add(s.id)
+                })
+                .catch((e) => {
+                    logger.warn(`[NestedNav] sale sync (turso): ${e instanceof Error ? e.message : e}`)
+                })
             promotionStore.syncAll().catch((e) => {
                 logger.warn(`[NestedNav] promo sync (legacy): ${e instanceof Error ? e.message : e}`)
             })
@@ -401,6 +465,7 @@ export function createNestedNavRuntime(ctx: NestedNavRuntimeCtx) {
             }
         } else if (appwriteDataDisabled) {
             logger.info("[NestedNav] skip Appwrite product/sale RT (Turso/Clerk mode)")
+            startSalesPolling()
         }
     }
 
@@ -411,6 +476,7 @@ export function createNestedNavRuntime(ctx: NestedNavRuntimeCtx) {
         supportSyncTimer = null
         salesSyncTimer = null
         stockSyncTimer = null
+        stopSalesPolling()
         stopPulseRefresh?.()
         stopPulseRefresh = null
         stopSalePulse?.()
