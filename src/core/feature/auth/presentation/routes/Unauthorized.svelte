@@ -12,6 +12,9 @@
     export let message =
         "Tu usuario no está autorizado para acceder a la plataforma.";
 
+    /** Texto literal: no poner {"role":...} suelto en el markup (Svelte lo parsea como expresión). */
+    const roleMetaExample = '{"role":"admin"}';
+
     let seconds = 20;
     $: finalMessage = navBackStackEntry?.args?.message ?? message;
 
@@ -62,7 +65,7 @@
         <p class="detail">
             Login Clerk OK, pero no hay rol staff (<code>admin</code> / <code>owner</code> / <code>sales</code>).
             En Clerk Dashboard → usuario → <code>publicMetadata</code>:
-            <code>{"role":"admin"}</code>. Mientras tanto: <code>VITE_ADMIN_EMAILS=tu@mail.com</code>.
+            <code>{roleMetaExample}</code>. Mientras tanto: <code>VITE_ADMIN_EMAILS=tu@mail.com</code>.
         </p>
 
         <div class="hint" aria-live="polite">
