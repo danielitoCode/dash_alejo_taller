@@ -1,8 +1,13 @@
 import { ENV } from "./env";
 import { resolveAuthProvider } from "../feature/auth/di/authPort.factory";
 
+/** @deprecated Auth0 eliminado — siempre false */
 export function isAuth0Provider(): boolean {
-    return resolveAuthProvider() === "auth0";
+    return false;
+}
+
+export function isClerkProvider(): boolean {
+    return resolveAuthProvider() === "clerk";
 }
 
 export function isTursoDataProvider(): boolean {
@@ -11,13 +16,17 @@ export function isTursoDataProvider(): boolean {
 
 /** Auth: no Account Appwrite. */
 export function isAppwriteAuthDisabled(): boolean {
-    return isAuth0Provider();
+    return isClerkProvider();
 }
 
 /**
- * Datos / RT Appwrite desconectados mientras operamos Auth0+Turso.
- * El código Appwrite permanece; no se invoca en el camino caliente.
+ * Datos / RT Appwrite desconectados mientras operamos Clerk+Turso.
  */
 export function isAppwriteDataStackDisabled(): boolean {
-    return isAuth0Provider() || isTursoDataProvider();
+    return isClerkProvider() || isTursoDataProvider();
+}
+
+/** Alias */
+export function isAppwriteDataDisabled(): boolean {
+    return isAppwriteDataStackDisabled();
 }
